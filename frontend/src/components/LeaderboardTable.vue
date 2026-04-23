@@ -21,7 +21,7 @@ const medals: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' }
     </div>
 
     <!-- Rows -->
-    <div class="divide-y divide-stone-50">
+    <div v-auto-animate class="divide-y divide-stone-50">
       <div
         v-for="(courier, index) in couriers"
         :key="courier.id"

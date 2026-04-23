@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { Package, Trophy, Plus, Wallet, LogOut, Menu, X } from 'lucide-vue-next'
+import { PhPackage as Package, PhTrophy as Trophy, PhPlus as Plus, PhWallet as Wallet, PhSignOut as LogOut, PhList as Menu, PhX as X } from '@phosphor-icons/vue'
 import { useWalletStore } from '@/stores/useWalletStore'
 
 const wallet = useWalletStore()
@@ -41,7 +41,7 @@ function handleCreate() {
           class="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium text-stone-500 transition-all hover:bg-stone-100 hover:text-stone-900"
           active-class="bg-stone-100 text-stone-900"
         >
-          <component :is="link.icon" class="size-4" />
+          <component :is="link.icon" class="size-4" weight="bold" />
           {{ link.label }}
         </RouterLink>
       </nav>
@@ -52,7 +52,7 @@ function handleCreate() {
           class="hidden btn-primary md:flex"
           @click="handleCreate"
         >
-          <Plus class="size-4" />
+          <Plus class="size-4" weight="bold" />
           Teslimat Oluştur
         </button>
 
@@ -103,7 +103,7 @@ function handleCreate() {
             active-class="bg-stone-100 text-stone-900"
             @click="mobileOpen = false"
           >
-            <component :is="link.icon" class="size-4" />
+            <component :is="link.icon" class="size-4" weight="bold" />
             {{ link.label }}
           </RouterLink>
           <div v-if="!wallet.connected" class="mt-2 grid grid-cols-2 gap-2">
@@ -115,7 +115,7 @@ function handleCreate() {
             </RouterLink>
           </div>
           <button class="mt-2 btn-primary w-full justify-center" @click="handleCreate">
-            <Plus class="size-4" />
+            <Plus class="size-4" weight="bold" />
             Teslimat Oluştur
           </button>
         </nav>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import { MapPin, Clock, Weight, Package, ChevronRight } from 'lucide-vue-next'
+import { PhMapPin as MapPin, PhClock as Clock, PhBarbell as Weight, PhPackage as Package, PhCaretRight as ChevronRight } from '@phosphor-icons/vue'
 import type { Delivery } from '@/stores/useDeliveryStore'
 import StatusBadge from '@/components/StatusBadge.vue'
 import TokenAmount from '@/components/TokenAmount.vue'
@@ -19,7 +19,7 @@ function formatTime(dateStr: string) {
     <div class="mb-4 flex items-start justify-between gap-3">
       <div class="flex items-center gap-3">
         <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-orange-100">
-          <Package class="size-4 text-orange-600" />
+          <Package class="size-5 text-orange-600" weight="duotone" />
         </div>
         <div>
           <h3 class="text-sm font-semibold text-stone-900 leading-tight">{{ delivery.title }}</h3>
@@ -44,9 +44,9 @@ function formatTime(dateStr: string) {
 
     <!-- Meta -->
     <div class="mb-4 flex flex-wrap gap-3 text-xs text-stone-400">
-      <span class="flex items-center gap-1"><MapPin class="size-3" />{{ delivery.distance }}</span>
-      <span class="flex items-center gap-1"><Weight class="size-3" />{{ delivery.weight }}</span>
-      <span class="flex items-center gap-1"><Clock class="size-3" />{{ formatTime(delivery.deadline) }}'e kadar</span>
+      <span class="flex items-center gap-1"><MapPin class="size-4" weight="fill" />{{ delivery.distance }}</span>
+      <span class="flex items-center gap-1"><Weight class="size-4" weight="fill" />{{ delivery.weight }}</span>
+      <span class="flex items-center gap-1"><Clock class="size-4" weight="fill" />{{ formatTime(delivery.deadline) }}'e kadar</span>
     </div>
 
     <!-- Budget & Actions -->
@@ -67,7 +67,7 @@ function formatTime(dateStr: string) {
           :to="`/delivery/${delivery.id}`"
           class="flex items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:bg-stone-100"
         >
-          Detay <ChevronRight class="size-3" />
+          Detay <ChevronRight class="size-3.5" weight="bold" />
         </RouterLink>
       </div>
     </div>

@@ -39,7 +39,7 @@ const store = useCourierStore()
     </div>
 
     <!-- Podium -->
-    <div class="mb-8 grid gap-4 sm:grid-cols-3">
+    <div v-auto-animate class="mb-8 grid gap-4 sm:grid-cols-3">
       <div class="sm:order-1"><TopCourierCard :courier="store.topThree[1]" :rank="2" /></div>
       <div class="sm:order-0"><TopCourierCard :courier="store.topThree[0]" :rank="1" /></div>
       <div class="sm:order-2"><TopCourierCard :courier="store.topThree[2]" :rank="3" /></div>

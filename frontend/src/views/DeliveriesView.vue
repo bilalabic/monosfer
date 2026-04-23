@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Search } from 'lucide-vue-next'
+import { PhMagnifyingGlass as Search } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import DeliveryCard from '@/components/DeliveryCard.vue'
 import BidModal from '@/components/BidModal.vue'
@@ -45,7 +45,7 @@ const filtered = computed(() => {
     <!-- Search + Filters -->
     <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div class="relative max-w-xs flex-1">
-        <Search class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
+        <Search class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" weight="bold" />
         <input
           v-model="search"
           placeholder="Adres veya başlık ara..."
@@ -69,7 +69,7 @@ const filtered = computed(() => {
 
     <p class="mb-4 text-sm text-stone-400">{{ filtered.length }} teslimat</p>
 
-    <div v-if="filtered.length > 0" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div v-if="filtered.length > 0" v-auto-animate class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <DeliveryCard
         v-for="d in filtered"
         :key="d.id"

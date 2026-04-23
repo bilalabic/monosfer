@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { User, Mail, Lock, ArrowRight, Package, Truck } from 'lucide-vue-next'
+import { PhUser as User, PhEnvelopeSimple as Mail, PhLockKey as Lock, PhArrowRight as ArrowRight, PhPackage as Package, PhTruck as Truck } from '@phosphor-icons/vue'
 
 const router = useRouter()
 const accountType = ref<'customer' | 'courier'>('customer')
@@ -43,7 +43,7 @@ async function handleRegister() {
             ]"
             @click="accountType = 'customer'"
           >
-            <Package class="size-4" :class="accountType === 'customer' ? 'text-orange-500' : ''" />
+            <Package class="size-4" :class="accountType === 'customer' ? 'text-orange-500' : ''" weight="duotone" />
             Müşteri
           </button>
           <button
@@ -56,16 +56,16 @@ async function handleRegister() {
             ]"
             @click="accountType = 'courier'"
           >
-            <Truck class="size-4" :class="accountType === 'courier' ? 'text-orange-500' : ''" />
+            <Truck class="size-4" :class="accountType === 'courier' ? 'text-orange-500' : ''" weight="duotone" />
             Kurye
           </button>
         </div>
 
-        <form @submit.prevent="handleRegister" class="space-y-4">
+        <form @submit.prevent="handleRegister" v-auto-animate class="space-y-4">
           <div>
             <label class="mb-1.5 block text-sm font-medium text-stone-700">Ad Soyad</label>
             <div class="relative">
-              <User class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
+              <User class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" weight="bold" />
               <input
                 v-model="name"
                 type="text"
@@ -79,7 +79,7 @@ async function handleRegister() {
           <div>
             <label class="mb-1.5 block text-sm font-medium text-stone-700">E-posta Adresi</label>
             <div class="relative">
-              <Mail class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
+              <Mail class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" weight="bold" />
               <input
                 v-model="email"
                 type="email"
@@ -93,7 +93,7 @@ async function handleRegister() {
           <div>
             <label class="mb-1.5 block text-sm font-medium text-stone-700">Şifre</label>
             <div class="relative">
-              <Lock class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
+              <Lock class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" weight="bold" />
               <input
                 v-model="password"
                 type="password"
@@ -114,7 +114,7 @@ async function handleRegister() {
             class="mt-2 btn-primary w-full justify-center disabled:opacity-50"
           >
             {{ loading ? 'Hesap oluşturuluyor...' : 'Kayıt Ol' }}
-            <ArrowRight v-if="!loading" class="size-4" />
+            <ArrowRight v-if="!loading" class="size-4" weight="bold" />
           </button>
         </form>
 

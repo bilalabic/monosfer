@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, MapPin, Clock, Weight, Package, Shield, Users } from 'lucide-vue-next'
+import { PhArrowLeft as ArrowLeft, PhMapPin as MapPin, PhClock as Clock, PhBarbell as Weight, PhPackage as Package, PhShieldCheck as Shield, PhUsers as Users } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import StatusBadge from '@/components/StatusBadge.vue'
 import TokenAmount from '@/components/TokenAmount.vue'
@@ -21,7 +21,7 @@ function formatDate(s: string) {
 <template>
   <div v-if="delivery" class="mx-auto max-w-5xl px-5 py-10 sm:px-8">
     <button class="mb-5 flex items-center gap-1.5 text-sm text-stone-500 transition hover:text-stone-900" @click="router.back()">
-      <ArrowLeft class="size-4" /> Teslimatlar
+      <ArrowLeft class="size-4" weight="bold" /> Teslimatlar
     </button>
 
     <!-- Header -->
@@ -29,7 +29,7 @@ function formatDate(s: string) {
       <div>
         <div class="mb-2 flex items-center gap-3">
           <div class="flex size-9 items-center justify-center rounded-lg bg-orange-100">
-            <Package class="size-4 text-orange-600" />
+            <Package class="size-5 text-orange-600" weight="duotone" />
           </div>
           <h1 class="text-xl font-bold text-stone-900">{{ delivery.title }}</h1>
         </div>
@@ -66,17 +66,17 @@ function formatDate(s: string) {
         <!-- Info grid -->
         <div class="grid grid-cols-3 gap-3">
           <div class="card rounded-xl bg-white p-4 text-center">
-            <MapPin class="mx-auto mb-1.5 size-4 text-stone-400" />
+            <MapPin class="mx-auto mb-1.5 size-5 text-stone-400" weight="fill" />
             <p class="text-sm font-bold text-stone-900">{{ delivery.distance }}</p>
             <p class="text-xs text-stone-400">Mesafe</p>
           </div>
           <div class="card rounded-xl bg-white p-4 text-center">
-            <Weight class="mx-auto mb-1.5 size-4 text-stone-400" />
+            <Weight class="mx-auto mb-1.5 size-5 text-stone-400" weight="fill" />
             <p class="text-sm font-bold text-stone-900">{{ delivery.weight }}</p>
             <p class="text-xs text-stone-400">Ağırlık</p>
           </div>
           <div class="card rounded-xl bg-white p-4 text-center">
-            <Clock class="mx-auto mb-1.5 size-4 text-stone-400" />
+            <Clock class="mx-auto mb-1.5 size-5 text-stone-400" weight="fill" />
             <p class="text-sm font-bold text-stone-900">{{ new Date(delivery.deadline).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) }}</p>
             <p class="text-xs text-stone-400">Son Saat</p>
           </div>
@@ -91,7 +91,7 @@ function formatDate(s: string) {
         <!-- Bids -->
         <div class="card rounded-xl bg-white p-5">
           <p class="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
-            <Users class="size-4" /> Teklifler ({{ delivery.bids.length }})
+            <Users class="size-4" weight="fill" /> Teklifler ({{ delivery.bids.length }})
           </p>
           <div v-if="delivery.bids.length > 0" class="space-y-3">
             <CourierBidCard
@@ -121,7 +121,7 @@ function formatDate(s: string) {
         <!-- Escrow badge -->
         <div class="rounded-xl border border-orange-200 bg-orange-50 p-5">
           <div class="mb-2 flex items-center gap-2">
-            <Shield class="size-4 text-orange-600" />
+            <Shield class="size-5 text-orange-600" weight="duotone" />
             <p class="text-sm font-semibold text-orange-700">Escrow Güvencesi</p>
           </div>
           <p class="text-xs leading-relaxed text-stone-600">
@@ -140,7 +140,7 @@ function formatDate(s: string) {
     <div class="text-4xl">🔍</div>
     <h2 class="font-semibold text-stone-900">Teslimat bulunamadı</h2>
     <button class="btn-primary" @click="router.push('/deliveries')">
-      <ArrowLeft class="size-4" /> Teslimatlar
+      <ArrowLeft class="size-4" weight="bold" /> Teslimatlar
     </button>
   </div>
 </template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ChevronRight, ChevronLeft, Check } from 'lucide-vue-next'
+import { PhCaretRight as ChevronRight, PhCaretLeft as ChevronLeft, PhCheck as Check } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 
 const router = useRouter()
@@ -46,7 +46,7 @@ async function submit() {
             'flex size-8 items-center justify-center rounded-full border-2 text-xs font-semibold transition-all',
             index < currentStep ? 'border-green-500 bg-green-500 text-white' : index === currentStep ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-stone-200 text-stone-400',
           ]">
-            <Check v-if="index < currentStep" class="size-3.5" />
+            <Check v-if="index < currentStep" class="size-3.5" weight="bold" />
             <span v-else>{{ index + 1 }}</span>
           </div>
         </div>
@@ -62,7 +62,7 @@ async function submit() {
     </div>
 
     <!-- Form card -->
-    <div v-else class="card rounded-xl bg-white p-7">
+    <div v-else v-auto-animate class="card rounded-xl bg-white p-7">
       <!-- Step 0 -->
       <div v-if="currentStep === 0" class="space-y-4">
         <h2 class="mb-4 font-semibold text-stone-900">📍 Adres Bilgileri</h2>
@@ -133,7 +133,7 @@ async function submit() {
           class="btn-secondary disabled:opacity-30 disabled:cursor-not-allowed"
           @click="currentStep--"
         >
-          <ChevronLeft class="size-4" /> Geri
+          <ChevronLeft class="size-4" weight="bold" /> Geri
         </button>
         <button
           v-if="currentStep < steps.length - 1"
@@ -141,7 +141,7 @@ async function submit() {
           class="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
           @click="currentStep++"
         >
-          İleri <ChevronRight class="size-4" />
+          İleri <ChevronRight class="size-4" weight="bold" />
         </button>
         <button
           v-else

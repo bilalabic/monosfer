@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { Mail, Lock, ArrowRight } from 'lucide-vue-next'
+import { PhEnvelopeSimple as Mail, PhLockKey as Lock, PhArrowRight as ArrowRight } from '@phosphor-icons/vue'
 
 const router = useRouter()
 const email = ref('')
@@ -38,7 +38,7 @@ async function handleLogin() {
           <div>
             <label class="mb-1.5 block text-sm font-medium text-stone-700">E-posta Adresi</label>
             <div class="relative">
-              <Mail class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
+              <Mail class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" weight="bold" />
               <input
                 v-model="email"
                 type="email"
@@ -55,7 +55,7 @@ async function handleLogin() {
               <a href="#" class="text-xs font-medium text-orange-600 hover:text-orange-500 transition">Şifremi Unuttum</a>
             </div>
             <div class="relative">
-              <Lock class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
+              <Lock class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" weight="bold" />
               <input
                 v-model="password"
                 type="password"
@@ -72,7 +72,7 @@ async function handleLogin() {
             class="btn-primary w-full justify-center disabled:opacity-50"
           >
             {{ loading ? 'Giriş yapılıyor...' : 'Giriş Yap' }}
-            <ArrowRight v-if="!loading" class="size-4" />
+            <ArrowRight v-if="!loading" class="size-4" weight="bold" />
           </button>
         </form>
 

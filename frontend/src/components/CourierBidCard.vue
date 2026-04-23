@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircle2 } from 'lucide-vue-next'
+import { PhCheckCircle as CheckCircle2 } from '@phosphor-icons/vue'
 import type { Bid } from '@/stores/useDeliveryStore'
 import StarRating from '@/components/StarRating.vue'
 import TokenAmount from '@/components/TokenAmount.vue'
@@ -23,7 +23,7 @@ const emit = defineEmits<{ select: [bidId: string] }>()
         <div>
           <div class="flex items-center gap-1.5">
             <span class="text-sm font-semibold text-stone-900">{{ bid.courierName }}</span>
-            <CheckCircle2 v-if="isSelected" class="size-4 text-green-500" />
+            <CheckCircle2 v-if="isSelected" class="size-4 text-green-500" weight="fill" />
           </div>
           <StarRating :rating="bid.courierRating" class="mt-0.5" />
           <p class="mt-0.5 text-xs text-stone-400">{{ bid.courierDeliveries }} teslimat · {{ bid.estimatedTime }}</p>

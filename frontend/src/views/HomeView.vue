@@ -10,15 +10,15 @@ import { RouterLink } from 'vue-router'
 <template>
   <div>
     <HeroSection />
-    <StatsSection />
-    <FeaturesSection />
-    <HowItWorksSection />
-    <SecuritySection />
+    <StatsSection v-motion-slide-visible-bottom :duration="500" />
+    <FeaturesSection v-motion-slide-visible-bottom :duration="500" />
+    <HowItWorksSection v-motion-slide-visible-bottom :duration="500" />
+    <SecuritySection v-motion-slide-visible-bottom :duration="500" />
 
     <!-- CTA -->
     <section class="px-5 py-16 sm:px-8">
       <div class="mx-auto max-w-2xl text-center">
-        <div class="rounded-2xl border border-orange-200 bg-orange-50 p-10">
+        <div v-motion-slide-visible-bottom :duration="500" class="rounded-2xl border border-orange-200 bg-orange-50 p-10">
           <h2 class="mb-3 text-2xl font-bold text-stone-900">Hemen Başla</h2>
           <p class="mb-7 text-stone-500">Blockchain güvencesiyle teslimatınızı oluşturun veya kurye olarak teklif verin.</p>
           <div class="flex flex-col justify-center gap-3 sm:flex-row">

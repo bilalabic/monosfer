@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Package, Users, CheckCircle2, Star, Zap, BadgeCheck } from 'lucide-vue-next'
+import { PhPackage as Package, PhUsers as Users, PhCheckCircle as CheckCircle2, PhStar as Star, PhLightning as Zap, PhSealCheck as BadgeCheck } from '@phosphor-icons/vue'
 
 const steps = [
   {
@@ -63,7 +63,7 @@ const steps = [
         >
           <div class="mb-3 flex items-center gap-3">
             <div :class="['flex size-9 items-center justify-center rounded-lg', step.color]">
-              <component :is="step.icon" class="size-4" />
+              <component :is="step.icon" class="size-5" weight="duotone" />
             </div>
             <span class="text-xs font-bold text-stone-400">Adım {{ step.num }}</span>
           </div>

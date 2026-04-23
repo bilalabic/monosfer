@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Lock, Gavel, Trophy, TrendingUp } from 'lucide-vue-next'
+import { PhLock as Lock, PhGavel as Gavel, PhTrophy as Trophy, PhTrendUp as TrendingUp } from '@phosphor-icons/vue'
 
 const features = [
   {
@@ -54,7 +54,7 @@ const features = [
         >
           <div class="mb-4 flex items-start justify-between">
             <div :class="['flex size-10 items-center justify-center rounded-lg', f.iconClass]">
-              <component :is="f.icon" class="size-5" />
+              <component :is="f.icon" class="size-6" weight="duotone" />
             </div>
             <span :class="['rounded-full border px-2.5 py-0.5 text-xs font-medium', f.tagClass]">
               {{ f.tag }}

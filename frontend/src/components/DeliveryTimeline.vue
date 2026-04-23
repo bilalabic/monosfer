@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircle2, Package, User, Truck, Flag } from 'lucide-vue-next'
+import { PhCheckCircle as CheckCircle2, PhPackage as Package, PhUser as User, PhTruck as Truck, PhFlag as Flag } from '@phosphor-icons/vue'
 
 interface Step { step: string; label: string; completed: boolean; time?: string }
 defineProps<{ timeline: Step[] }>()
@@ -19,8 +19,8 @@ const icons: Record<string, any> = { created: Package, accepted: User, pickup: T
               : 'border-stone-200 bg-white text-stone-400',
           ]"
         >
-          <CheckCircle2 v-if="item.completed" class="size-3.5" />
-          <component v-else :is="icons[item.step] || Package" class="size-3" />
+          <CheckCircle2 v-if="item.completed" class="size-3.5" weight="fill" />
+          <component v-else :is="icons[item.step] || Package" class="size-3" weight="bold" />
         </div>
         <div v-if="index < timeline.length - 1" :class="['mt-1 mb-1 w-0.5 h-7', item.completed ? 'bg-green-300' : 'bg-stone-200']" />
       </div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { X, AlertCircle } from 'lucide-vue-next'
+import { PhX as X, PhWarningCircle as AlertCircle } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
 
@@ -54,7 +54,7 @@ async function submit() {
             <p class="text-xs text-stone-400">Teklif + %20 teminat yatır</p>
           </div>
           <button class="flex size-8 items-center justify-center rounded-lg border border-stone-200 text-stone-400 hover:text-stone-700" @click="emit('close')">
-            <X class="size-4" />
+            <X class="size-4" weight="bold" />
           </button>
         </div>
 
@@ -89,7 +89,7 @@ async function submit() {
           </div>
 
           <div v-if="collateral" class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-            <AlertCircle class="mt-0.5 size-4 shrink-0 text-amber-600" />
+            <AlertCircle class="mt-0.5 size-4 shrink-0 text-amber-600" weight="fill" />
             <p class="text-xs text-amber-700">
               <strong>{{ collateral }} MON teminat</strong> kilitlenecek. Teslimatı tamamlarsan iade edilir.
             </p>
