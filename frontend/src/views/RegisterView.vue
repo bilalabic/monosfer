@@ -1,22 +1,25 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { PhUser as User, PhEnvelopeSimple as Mail, PhLockKey as Lock, PhArrowRight as ArrowRight, PhPackage as Package, PhTruck as Truck } from '@phosphor-icons/vue'
+import { PhUser as User, PhEnvelopeSimple as Mail, PhLockKey as Lock, PhArrowRight as ArrowRight, PhPackage as Package, PhTruck as Truck, PhPhone as Phone } from '@phosphor-icons/vue'
+import { useWalletStore } from '@/stores/useWalletStore'
 
 const router = useRouter()
+const wallet = useWalletStore()
 const accountType = ref<'customer' | 'courier'>('customer')
 const name = ref('')
 const email = ref('')
+const phone = ref('')
 const password = ref('')
 const loading = ref(false)
 
 async function handleRegister() {
-  if (!name.value || !email.value || !password.value) return
+  if (!name.value || !email.value || !phone.value || !password.value) return
   loading.value = true
-  // Mock register delay
   await new Promise(r => setTimeout(r, 1000))
   loading.value = false
-  router.push('/deliveries')
+  wallet.register({ name: name.value, email: email.value, phone: phone.value, role: accountType.value })
+  router.push('/dashboard')
 }
 </script>
 
@@ -72,6 +75,19 @@ async function handleRegister() {
                 placeholder="Adınız Soyadınız"
                 class="input pl-10"
                 required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Telefon Numarası</label>
+            <div class="relative">
+              <Phone class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" weight="bold" />
+              <input
+                v-model="phone"
+                type="tel"
+                placeholder="Örn: 0555 123 4567"
+                class="input pl-10"
               />
             </div>
           </div>

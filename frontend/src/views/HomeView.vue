@@ -5,6 +5,7 @@ import FeaturesSection from '@/components/FeaturesSection.vue'
 import StatsSection from '@/components/StatsSection.vue'
 import SecuritySection from '@/components/SecuritySection.vue'
 import { RouterLink } from 'vue-router'
+import { PhRocketLaunch, PhTrophy } from '@phosphor-icons/vue'
 </script>
 
 <template>
@@ -23,10 +24,12 @@ import { RouterLink } from 'vue-router'
           <p class="mb-7 text-stone-500">Blockchain güvencesiyle teslimatınızı oluşturun veya kurye olarak teklif verin.</p>
           <div class="flex flex-col justify-center gap-3 sm:flex-row">
             <RouterLink to="/create" class="btn-primary justify-center text-center">
-              🚀 Teslimat Oluştur
+              <PhRocketLaunch class="size-5" weight="duotone" />
+              Teslimat Oluştur
             </RouterLink>
             <RouterLink to="/couriers" class="btn-secondary justify-center text-center">
-              🏆 Leaderboard'a Bak
+              <PhTrophy class="size-5 text-orange-500" weight="duotone" />
+              Leaderboard'a Bak
             </RouterLink>
           </div>
         </div>

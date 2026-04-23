@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { PhCaretRight as ChevronRight, PhCaretLeft as ChevronLeft, PhCheck as Check } from '@phosphor-icons/vue'
+import { PhCaretRight as ChevronRight, PhCaretLeft as ChevronLeft, PhCheck as Check, PhConfetti, PhMapPin, PhPackage, PhCurrencyDollar, PhEye, PhCheckCircle } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 
 const router = useRouter()
@@ -10,14 +10,14 @@ const currentStep = ref(0)
 const submitting = ref(false)
 const done = ref(false)
 
-const form = ref({ title: '', pickupAddress: '', dropoffAddress: '', weight: '', description: '', maxBudget: '', deadline: '' })
+const form = ref({ title: '', pickupAddress: '', dropoffAddress: '', weight: '', description: '', maxBudget: '', deadline: '', date: '' })
 
 const steps = ['Adres Bilgileri', 'Paket Detayları', 'Bütçe & Süre', 'Önizleme']
 
 const canNext = computed(() => {
   if (currentStep.value === 0) return form.value.pickupAddress && form.value.dropoffAddress && form.value.title
   if (currentStep.value === 1) return form.value.weight
-  if (currentStep.value === 2) return form.value.maxBudget && form.value.deadline
+  if (currentStep.value === 2) return form.value.maxBudget && form.value.deadline && form.value.date
   return true
 })
 
@@ -56,7 +56,7 @@ async function submit() {
 
     <!-- Success -->
     <div v-if="done" class="rounded-xl border border-green-200 bg-green-50 p-10 text-center">
-      <div class="mb-3 text-5xl">🎉</div>
+      <PhConfetti class="mx-auto mb-3 size-12 text-green-500" weight="duotone" />
       <h2 class="text-xl font-bold text-green-700">Teslimat Oluşturuldu!</h2>
       <p class="mt-2 text-stone-500">Ödemeniz kilitlendi. Yönlendiriliyorsunuz...</p>
     </div>
@@ -65,7 +65,9 @@ async function submit() {
     <div v-else v-auto-animate class="card rounded-xl bg-white p-7">
       <!-- Step 0 -->
       <div v-if="currentStep === 0" class="space-y-4">
-        <h2 class="mb-4 font-semibold text-stone-900">📍 Adres Bilgileri</h2>
+        <h2 class="mb-4 flex items-center gap-2 font-semibold text-stone-900">
+          <PhMapPin class="size-5 text-orange-500" weight="duotone" /> Adres Bilgileri
+        </h2>
         <div>
           <label class="mb-1.5 block text-sm font-medium text-stone-700">Başlık</label>
           <input v-model="form.title" class="input" placeholder="Örn: Elektronik ürün teslimatı" />
@@ -82,7 +84,9 @@ async function submit() {
 
       <!-- Step 1 -->
       <div v-else-if="currentStep === 1" class="space-y-4">
-        <h2 class="mb-4 font-semibold text-stone-900">📦 Paket Detayları</h2>
+        <h2 class="mb-4 flex items-center gap-2 font-semibold text-stone-900">
+          <PhPackage class="size-5 text-orange-500" weight="duotone" /> Paket Detayları
+        </h2>
         <div>
           <label class="mb-1.5 block text-sm font-medium text-stone-700">Ağırlık (kg)</label>
           <input v-model="form.weight" type="number" step="0.1" min="0.1" class="input" placeholder="Örn: 2.5" />
@@ -95,7 +99,9 @@ async function submit() {
 
       <!-- Step 2 -->
       <div v-else-if="currentStep === 2" class="space-y-4">
-        <h2 class="mb-4 font-semibold text-stone-900">💰 Bütçe & Süre</h2>
+        <h2 class="mb-4 flex items-center gap-2 font-semibold text-stone-900">
+          <PhCurrencyDollar class="size-5 text-orange-500" weight="duotone" /> Bütçe & Süre
+        </h2>
         <div>
           <label class="mb-1.5 block text-sm font-medium text-stone-700">Maks. Bütçe (MON)</label>
           <div class="relative">
@@ -104,25 +110,34 @@ async function submit() {
           </div>
           <p class="mt-1 text-xs text-stone-400">Bu tutar escrow'a kilitlenecek.</p>
         </div>
-        <div>
-          <label class="mb-1.5 block text-sm font-medium text-stone-700">Son Teslim Saati</label>
-          <input v-model="form.deadline" type="time" class="input" />
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Tarih</label>
+            <input v-model="form.date" type="date" class="input" />
+          </div>
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Son Teslim Saati</label>
+            <input v-model="form.deadline" type="time" class="input" />
+          </div>
         </div>
       </div>
 
       <!-- Step 3 Preview -->
       <div v-else class="space-y-4">
-        <h2 class="mb-4 font-semibold text-stone-900">👁️ Önizleme</h2>
+        <h2 class="mb-4 flex items-center gap-2 font-semibold text-stone-900">
+          <PhEye class="size-5 text-orange-500" weight="duotone" /> Önizleme
+        </h2>
         <div class="space-y-2.5 rounded-lg border border-stone-100 bg-stone-50 p-4 text-sm">
           <div class="flex justify-between"><span class="text-stone-500">Başlık</span><span class="font-medium text-stone-900">{{ form.title }}</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Nereden</span><span class="font-medium text-stone-900">{{ form.pickupAddress }}</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Nereye</span><span class="font-medium text-stone-900">{{ form.dropoffAddress }}</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Ağırlık</span><span class="font-medium text-stone-900">{{ form.weight }} kg</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Bütçe</span><span class="font-semibold text-orange-600">{{ form.maxBudget }} MON</span></div>
-          <div class="flex justify-between"><span class="text-stone-500">Son Saat</span><span class="font-medium text-stone-900">{{ form.deadline }}</span></div>
+          <div class="flex justify-between"><span class="text-stone-500">Son Teslim</span><span class="font-medium text-stone-900">{{ form.date }} - {{ form.deadline }}</span></div>
         </div>
-        <div class="rounded-lg border border-orange-200 bg-orange-50 p-3 text-xs text-orange-700">
-          ✅ Onayladıktan sonra <strong>{{ form.maxBudget }} MON</strong> akıllı sözleşmeye kilitlenecek
+        <div class="flex items-start gap-2 rounded-lg border border-orange-200 bg-orange-50 p-3 text-xs text-orange-700">
+          <PhCheckCircle class="mt-0.5 size-4 shrink-0" weight="fill" />
+          <span>Onayladıktan sonra <strong>{{ form.maxBudget }} MON</strong> akıllı sözleşmeye kilitlenecek</span>
         </div>
       </div>
 

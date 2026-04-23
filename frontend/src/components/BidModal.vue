@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { PhX as X, PhWarningCircle as AlertCircle } from '@phosphor-icons/vue'
+import { PhX as X, PhWarningCircle as AlertCircle, PhConfetti } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
 
@@ -60,7 +60,7 @@ async function submit() {
 
         <!-- Success -->
         <div v-if="submitted" class="py-6 text-center">
-          <div class="mb-3 text-5xl">🎉</div>
+          <PhConfetti class="mx-auto mb-3 size-12 text-green-500" weight="duotone" />
           <h3 class="font-semibold text-green-600">Teklif Verildi!</h3>
           <p class="mt-1 text-sm text-stone-500">Müşterinin seçmesi bekleniyor.</p>
         </div>

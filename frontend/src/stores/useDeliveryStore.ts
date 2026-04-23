@@ -15,6 +15,14 @@ export interface Bid {
   createdAt: string
 }
 
+export interface TimelineStep {
+  step: string
+  label: string
+  completed: boolean
+  time?: string
+  role?: 'sender' | 'courier' | 'recipient' | 'system'
+}
+
 export interface Delivery {
   id: string
   title: string
@@ -30,12 +38,8 @@ export interface Delivery {
   selectedBidId?: string
   createdAt: string
   deadline: string
-  timeline: {
-    step: string
-    label: string
-    completed: boolean
-    time?: string
-  }[]
+  rating?: number
+  timeline: TimelineStep[]
 }
 
 export const useDeliveryStore = defineStore('delivery', () => {
@@ -147,11 +151,13 @@ export const useDeliveryStore = defineStore('delivery', () => {
       createdAt: '2026-04-23T09:15:00Z',
       deadline: '2026-04-23T11:00:00Z',
       timeline: [
-        { step: 'created', label: 'Talep Oluşturuldu', completed: true, time: '09:15' },
-        { step: 'accepted', label: 'Kurye Seçildi', completed: true, time: '09:32' },
-        { step: 'pickup', label: 'Ürün Alındı', completed: true, time: '09:50' },
-        { step: 'transit', label: 'Yolda', completed: false },
-        { step: 'delivered', label: 'Teslim Edildi', completed: false },
+        { step: 'created', label: 'Talep Oluşturuldu', completed: true, time: '09:15', role: 'sender' },
+        { step: 'escrow', label: 'Ödeme Escrow\'a Kilitlendi', completed: true, time: '09:16', role: 'system' },
+        { step: 'accepted', label: 'Kurye Seçildi (Zeynep Arslan)', completed: true, time: '09:32', role: 'system' },
+        { step: 'pickup', label: 'Paket Teslim Alındı', completed: true, time: '09:50', role: 'courier' },
+        { step: 'transit', label: 'Yolda', completed: false, role: 'courier' },
+        { step: 'notification', label: 'Alıcıya Bildirim Gönderildi', completed: false, role: 'recipient' },
+        { step: 'delivered', label: 'Teslim Edildi', completed: false, role: 'recipient' },
       ],
     },
     {
@@ -181,12 +187,15 @@ export const useDeliveryStore = defineStore('delivery', () => {
       ],
       createdAt: '2026-04-22T13:45:00Z',
       deadline: '2026-04-22T18:00:00Z',
+      rating: 4.9,
       timeline: [
-        { step: 'created', label: 'Talep Oluşturuldu', completed: true, time: '13:45' },
-        { step: 'accepted', label: 'Kurye Seçildi', completed: true, time: '14:02' },
-        { step: 'pickup', label: 'Ürün Alındı', completed: true, time: '14:25' },
-        { step: 'transit', label: 'Yolda', completed: true, time: '14:28' },
-        { step: 'delivered', label: 'Teslim Edildi', completed: true, time: '15:05' },
+        { step: 'created', label: 'Talep Oluşturuldu', completed: true, time: '13:45', role: 'sender' },
+        { step: 'escrow', label: 'Ödeme Escrow\'a Kilitlendi', completed: true, time: '13:46', role: 'system' },
+        { step: 'accepted', label: 'Kurye Seçildi (Ahmet Yılmaz)', completed: true, time: '14:02', role: 'system' },
+        { step: 'pickup', label: 'Paket Teslim Alındı', completed: true, time: '14:25', role: 'courier' },
+        { step: 'transit', label: 'Yolda', completed: true, time: '14:28', role: 'courier' },
+        { step: 'notification', label: 'Alıcıya Bildirim Gönderildi', completed: true, time: '14:55', role: 'recipient' },
+        { step: 'delivered', label: 'Teslim Edildi', completed: true, time: '15:05', role: 'recipient' },
       ],
     },
     {
@@ -239,8 +248,11 @@ export const useDeliveryStore = defineStore('delivery', () => {
     if (!delivery) return
     delivery.selectedBidId = bidId
     delivery.status = 'in_progress'
-    delivery.timeline[1].completed = true
-    delivery.timeline[1].time = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+    const acceptedStep = delivery.timeline.find(s => s.step === 'accepted')
+    if (acceptedStep) {
+      acceptedStep.completed = true
+      acceptedStep.time = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+    }
   }
 
   return { deliveries, filteredDeliveries, selectedFilter, getDelivery, addBid, selectBid }

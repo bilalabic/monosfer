@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useWalletStore } from '../stores/useWalletStore'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
@@ -41,7 +42,31 @@ const router = createRouter({
       name: 'register',
       component: RegisterView,
     },
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('../views/DashboardView.vue'),
+      meta: { requiresAuth: true }
+    },
   ],
+})
+
+router.beforeEach((to, from, next) => {
+  const wallet = useWalletStore()
+
+  // Protect routes that require auth
+  if (to.meta.requiresAuth || to.path === '/create') {
+    if (!wallet.connected) {
+      return next('/login')
+    }
+  }
+
+  // Redirect away from login/register if already connected
+  if ((to.path === '/login' || to.path === '/register') && wallet.connected) {
+    return next('/dashboard')
+  }
+
+  next()
 })
 
 export default router

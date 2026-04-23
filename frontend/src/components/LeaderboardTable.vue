@@ -2,10 +2,11 @@
 import type { Courier } from '@/stores/useCourierStore'
 import StarRating from '@/components/StarRating.vue'
 import TokenAmount from '@/components/TokenAmount.vue'
+import { PhMedal, PhUser } from '@phosphor-icons/vue'
 
 defineProps<{ couriers: Courier[] }>()
 
-const medals: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' }
+const medalColors: Record<number, string> = { 0: 'text-amber-500', 1: 'text-stone-400', 2: 'text-orange-700' }
 </script>
 
 <template>
@@ -27,14 +28,14 @@ const medals: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' }
         :key="courier.id"
         class="grid grid-cols-12 items-center gap-4 px-5 py-3.5 transition hover:bg-stone-50"
       >
-        <div class="col-span-1">
-          <span v-if="index < 3" class="text-base">{{ medals[index + 1] }}</span>
+        <div class="col-span-1 flex items-center justify-center sm:justify-start">
+          <PhMedal v-if="index < 3" :class="['size-5', medalColors[index]]" weight="fill" />
           <span v-else class="text-sm font-medium text-stone-400">{{ index + 1 }}</span>
         </div>
 
         <div class="col-span-4 flex items-center gap-2.5">
-          <div class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-xs font-bold text-stone-600">
-            {{ courier.avatar }}
+          <div class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-600">
+            <PhUser class="size-4" weight="duotone" />
           </div>
           <div class="min-w-0">
             <p class="truncate text-sm font-medium text-stone-900">{{ courier.name }}</p>

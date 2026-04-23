@@ -1,20 +1,23 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { PhEnvelopeSimple as Mail, PhLockKey as Lock, PhArrowRight as ArrowRight } from '@phosphor-icons/vue'
+import { PhEnvelopeSimple as Mail, PhLockKey as Lock, PhArrowRight as ArrowRight, PhPhone as Phone } from '@phosphor-icons/vue'
+import { useWalletStore } from '@/stores/useWalletStore'
 
 const router = useRouter()
+const wallet = useWalletStore()
 const email = ref('')
+const phone = ref('')
 const password = ref('')
 const loading = ref(false)
 
 async function handleLogin() {
   if (!email.value || !password.value) return
   loading.value = true
-  // Mock login delay
   await new Promise(r => setTimeout(r, 800))
   loading.value = false
-  router.push('/deliveries')
+  wallet.connect(email.value, phone.value)
+  router.push('/dashboard')
 }
 </script>
 
@@ -50,6 +53,19 @@ async function handleLogin() {
           </div>
 
           <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Telefon Numarası</label>
+            <div class="relative">
+              <Phone class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" weight="bold" />
+              <input
+                v-model="phone"
+                type="tel"
+                placeholder="Örn: 0555 123 4567"
+                class="input pl-10"
+              />
+            </div>
+          </div>
+
+          <div>
             <div class="mb-1.5 flex items-center justify-between">
               <label class="block text-sm font-medium text-stone-700">Şifre</label>
               <a href="#" class="text-xs font-medium text-orange-600 hover:text-orange-500 transition">Şifremi Unuttum</a>
@@ -76,7 +92,17 @@ async function handleLogin() {
           </button>
         </form>
 
-        <div class="mt-6 text-center text-sm text-stone-500">
+        <div class="mt-4">
+          <button
+            type="button"
+            class="w-full rounded-lg border border-dashed border-stone-300 py-2.5 text-sm text-stone-400 hover:border-stone-400 hover:text-stone-600 transition"
+            @click="wallet.connect(); router.push('/dashboard')"
+          >
+            Şimdilik geç, demo olarak görüntüle →
+          </button>
+        </div>
+
+        <div class="mt-4 text-center text-sm text-stone-500">
           Hesabınız yok mu?
           <RouterLink to="/register" class="font-semibold text-orange-600 hover:text-orange-500 transition">
             Hemen Kayıt Olun

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { PhMagnifyingGlass as Search } from '@phosphor-icons/vue'
+import { PhMagnifyingGlass as Search, PhPackage } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import DeliveryCard from '@/components/DeliveryCard.vue'
 import BidModal from '@/components/BidModal.vue'
@@ -79,7 +79,7 @@ const filtered = computed(() => {
     </div>
 
     <div v-else class="py-20 text-center">
-      <div class="mb-3 text-5xl">📦</div>
+      <PhPackage class="mx-auto mb-3 size-12 text-stone-300" weight="duotone" />
       <h3 class="font-semibold text-stone-900">Teslimat bulunamadı</h3>
       <p class="mt-1 text-sm text-stone-500">Farklı filtre deneyin</p>
     </div>

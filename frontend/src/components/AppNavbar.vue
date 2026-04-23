@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { PhPackage as Package, PhTrophy as Trophy, PhPlus as Plus, PhWallet as Wallet, PhSignOut as LogOut, PhList as Menu, PhX as X } from '@phosphor-icons/vue'
+import { PhPackage as Package, PhTrophy as Trophy, PhPlus as Plus, PhWallet as Wallet, PhSignOut as LogOut, PhList as Menu, PhX as X, PhUser as User } from '@phosphor-icons/vue'
 import { useWalletStore } from '@/stores/useWalletStore'
 
 const wallet = useWalletStore()
@@ -11,6 +11,10 @@ const mobileOpen = ref(false)
 const navLinks = [
   { to: '/deliveries', label: 'Teslimatlar', icon: Package },
   { to: '/couriers', label: 'Kuryeler', icon: Trophy },
+]
+
+const authLinks = [
+  { to: '/dashboard', label: 'Panel', icon: User },
 ]
 
 function handleCreate() {
@@ -44,11 +48,23 @@ function handleCreate() {
           <component :is="link.icon" class="size-4" weight="bold" />
           {{ link.label }}
         </RouterLink>
+        <RouterLink
+          v-if="wallet.connected"
+          v-for="link in authLinks"
+          :key="link.to"
+          :to="link.to"
+          class="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium text-stone-500 transition-all hover:bg-stone-100 hover:text-stone-900"
+          active-class="bg-stone-100 text-stone-900"
+        >
+          <component :is="link.icon" class="size-4" weight="bold" />
+          {{ link.label }}
+        </RouterLink>
       </nav>
 
       <!-- Actions -->
       <div class="flex items-center gap-2.5">
         <button
+          v-if="wallet.connected"
           class="hidden btn-primary md:flex"
           @click="handleCreate"
         >
@@ -65,11 +81,11 @@ function handleCreate() {
           </RouterLink>
         </div>
 
-        <div v-else class="flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-1.5 shadow-sm">
+        <div v-else class="flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-1.5 shadow-sm hover:bg-stone-50 transition cursor-pointer" @click="router.push('/dashboard')">
           <span class="size-2 rounded-full bg-green-500 animate-pulse-dot" />
-          <span class="hidden text-sm font-medium text-stone-700 sm:inline">{{ wallet.displayAddress() }}</span>
+          <span class="hidden text-sm font-medium text-stone-700 sm:inline">{{ wallet.userProfile.name || wallet.displayAddress() }}</span>
           <span class="text-sm font-semibold text-orange-600">{{ wallet.balance }} MON</span>
-          <button class="ml-1 rounded p-0.5 text-stone-400 hover:text-stone-700" @click="wallet.disconnect()">
+          <button class="ml-1 rounded p-0.5 text-stone-400 hover:text-stone-700 hover:bg-stone-200 transition" @click.stop="wallet.disconnect(); router.push('/')">
             <LogOut class="size-3.5" />
           </button>
         </div>
@@ -106,6 +122,18 @@ function handleCreate() {
             <component :is="link.icon" class="size-4" weight="bold" />
             {{ link.label }}
           </RouterLink>
+          <RouterLink
+            v-if="wallet.connected"
+            v-for="link in authLinks"
+            :key="link.to"
+            :to="link.to"
+            class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-stone-600 transition hover:bg-stone-50 hover:text-stone-900"
+            active-class="bg-stone-100 text-stone-900"
+            @click="mobileOpen = false"
+          >
+            <component :is="link.icon" class="size-4" weight="bold" />
+            {{ link.label }}
+          </RouterLink>
           <div v-if="!wallet.connected" class="mt-2 grid grid-cols-2 gap-2">
             <RouterLink to="/login" class="flex justify-center rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50" @click="mobileOpen = false">
               Giriş Yap
@@ -114,7 +142,7 @@ function handleCreate() {
               Kayıt Ol
             </RouterLink>
           </div>
-          <button class="mt-2 btn-primary w-full justify-center" @click="handleCreate">
+          <button v-if="wallet.connected" class="mt-2 btn-primary w-full justify-center" @click="handleCreate">
             <Plus class="size-4" weight="bold" />
             Teslimat Oluştur
           </button>

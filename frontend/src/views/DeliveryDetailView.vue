@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { PhArrowLeft as ArrowLeft, PhMapPin as MapPin, PhClock as Clock, PhBarbell as Weight, PhPackage as Package, PhShieldCheck as Shield, PhUsers as Users } from '@phosphor-icons/vue'
+import { PhArrowLeft as ArrowLeft, PhMapPin as MapPin, PhClock as Clock, PhBarbell as Weight, PhPackage as Package, PhShieldCheck as Shield, PhUsers as Users, PhMagnifyingGlass } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import StatusBadge from '@/components/StatusBadge.vue'
 import TokenAmount from '@/components/TokenAmount.vue'
@@ -136,8 +136,8 @@ function formatDate(s: string) {
     </div>
   </div>
 
-  <div v-else class="flex h-64 flex-col items-center justify-center gap-3">
-    <div class="text-4xl">🔍</div>
+  <div v-else class="flex min-h-[50vh] flex-col items-center justify-center gap-3">
+    <PhMagnifyingGlass class="size-12 text-stone-300" weight="duotone" />
     <h2 class="font-semibold text-stone-900">Teslimat bulunamadı</h2>
     <button class="btn-primary" @click="router.push('/deliveries')">
       <ArrowLeft class="size-4" weight="bold" /> Teslimatlar
