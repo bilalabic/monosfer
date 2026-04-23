@@ -1,10 +1,21 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useCourierStore } from '@/stores/useCourierStore'
 import TopCourierCard from '@/components/TopCourierCard.vue'
 import LeaderboardTable from '@/components/LeaderboardTable.vue'
 import { PhTrophy, PhMedal, PhChartBar } from '@phosphor-icons/vue'
 
 const store = useCourierStore()
+
+const podium = computed(() => {
+  const [first, second, third] = store.topThree
+
+  if (!first || !second || !third) {
+    return null
+  }
+
+  return { first, second, third }
+})
 </script>
 
 <template>
@@ -49,10 +60,10 @@ const store = useCourierStore()
     </div>
 
     <!-- Podium -->
-    <div class="mb-8 grid items-end gap-4 sm:grid-cols-3">
-      <TopCourierCard :courier="store.topThree[1]" :rank="2" />
-      <TopCourierCard :courier="store.topThree[0]" :rank="1" />
-      <TopCourierCard :courier="store.topThree[2]" :rank="3" />
+    <div v-if="podium" class="mb-8 grid items-end gap-4 sm:grid-cols-3">
+      <TopCourierCard :courier="podium.second" :rank="2" />
+      <TopCourierCard :courier="podium.first" :rank="1" />
+      <TopCourierCard :courier="podium.third" :rank="3" />
     </div>
 
     <!-- Full Table -->

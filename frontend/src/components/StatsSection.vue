@@ -14,6 +14,8 @@ const animated = ref(false)
 onMounted(() => {
   const observer = new IntersectionObserver(
     ([entry]) => {
+      if (!entry) return
+
       if (entry.isIntersecting && !animated.value) {
         animated.value = true
         stats.forEach((stat, i) => {
@@ -47,7 +49,7 @@ onMounted(() => {
           :class="['rounded-xl border border-stone-200 bg-white p-5 text-center shadow-sm', stat.bg.replace('bg-', 'border-').replace('50', '200')]"
         >
           <div :class="['text-3xl font-extrabold tabular-nums', stat.color]">
-            {{ stat.suffix === '%' ? displayed[i].toFixed(1) : Number(displayed[i]).toLocaleString('tr-TR') }}{{ stat.suffix }}
+            {{ stat.suffix === '%' ? Number(displayed[i] ?? 0).toFixed(1) : Number(displayed[i] ?? 0).toLocaleString('tr-TR') }}{{ stat.suffix }}
           </div>
           <div class="mt-1 text-sm font-medium text-stone-600">{{ stat.label }}</div>
         </div>

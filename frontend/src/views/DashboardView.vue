@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { RouterLink } from 'vue-router'
 import { useWalletStore } from '@/stores/useWalletStore'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import {
   PhUser, PhPackage, PhClockCounterClockwise, PhPhone, PhEnvelopeSimple,
-  PhStar, PhTruck, PhArrowRight, PhMapPin, PhCheckCircle, PhClock,
+  PhStar, PhTruck, PhMapPin, PhCheckCircle, PhClock,
   PhShieldCheck, PhHandshake, PhBell
 } from '@phosphor-icons/vue'
 import DeliveryCard from '@/components/DeliveryCard.vue'
@@ -54,14 +53,6 @@ const avgRating = computed(() =>
         <h1 class="text-2xl font-bold text-stone-900 sm:text-3xl">Kullanıcı Paneli</h1>
         <p class="mt-1 text-stone-500">Hoş geldin, {{ wallet.userProfile.name || wallet.displayAddress() }}</p>
       </div>
-      <RouterLink
-        to="/create"
-        class="btn-primary mt-3 self-start sm:mt-0"
-      >
-        <PhPackage class="size-4" weight="duotone" />
-        Yeni Teslimat Oluştur
-        <PhArrowRight class="size-4" weight="bold" />
-      </RouterLink>
     </div>
 
     <div class="flex flex-col gap-8 md:flex-row">
@@ -199,10 +190,7 @@ const avgRating = computed(() =>
             <div v-else class="py-12 text-center">
               <PhPackage class="mx-auto mb-3 size-12 text-stone-300" weight="duotone" />
               <p class="text-stone-500 font-medium">Şu an aktif bir teslimatınız bulunmuyor.</p>
-              <RouterLink to="/create" class="mt-4 inline-flex btn-primary">
-                Teslimat Oluştur
-                <PhArrowRight class="size-4" weight="bold" />
-              </RouterLink>
+              <p class="mt-2 text-sm text-stone-400">Yeni teslimat başlatmak için üst menüdeki butonu kullanın.</p>
             </div>
           </div>
         </div>
