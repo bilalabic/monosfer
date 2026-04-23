@@ -48,3 +48,24 @@ export async function loginUser({ walletAddress, email, name, phone, role }) {
   const token = signToken(user)
   return { user: formatUser(user), token }
 }
+
+export async function getCurrentUser({ userId, walletAddress }) {
+  const query = userId ? { _id: userId } : { walletAddress: walletAddress?.toLowerCase() }
+  const user = await User.findOne(query)
+  if (!user) throw Object.assign(new Error('Kullanıcı bulunamadı'), { statusCode: 404 })
+  return { user: formatUser(user) }
+}
+
+export async function updateCurrentUser({ userId, walletAddress }, data) {
+  const query = userId ? { _id: userId } : { walletAddress: walletAddress?.toLowerCase() }
+  const user = await User.findOne(query)
+  if (!user) throw Object.assign(new Error('Kullanıcı bulunamadı'), { statusCode: 404 })
+
+  if (typeof data.name === 'string') user.name = data.name.trim()
+  if (typeof data.phone === 'string') user.phone = data.phone.trim()
+  if (typeof data.email === 'string') user.email = data.email.trim().toLowerCase()
+  if (['customer', 'courier', 'both'].includes(data.role)) user.role = data.role
+
+  await user.save()
+  return { user: formatUser(user) }
+}

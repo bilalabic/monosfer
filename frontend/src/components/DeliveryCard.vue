@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { PhMapPin as MapPin, PhClock as Clock, PhBarbell as Weight, PhPackage as Package, PhCaretRight as ChevronRight, PhLockKey, PhQrCode } from '@phosphor-icons/vue'
 import type { Delivery } from '@/stores/useDeliveryStore'
@@ -11,6 +12,9 @@ const emit = defineEmits<{ bid: [deliveryId: string] }>()
 
 const router = useRouter()
 const wallet = useWalletStore()
+
+const isOwner = computed(() => !!wallet.address && wallet.address.toLowerCase() === props.delivery.senderId)
+const isAssignedCourier = computed(() => !!wallet.address && wallet.address.toLowerCase() === props.delivery.assignedCourierId)
 
 function formatTime(dateStr: string) {
   return new Date(dateStr).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
@@ -61,21 +65,21 @@ function formatTime(dateStr: string) {
       </div>
       <div class="grid grid-cols-2 gap-2">
         <button
-          v-if="delivery.status === 'open'"
+          v-if="delivery.status === 'open' && !isOwner"
           class="btn-primary px-3 py-2 text-xs"
           @click="emit('bid', delivery.id)"
         >
           Teklif Ver
         </button>
         <button
-          v-if="delivery.status === 'open' && wallet.connected"
+          v-if="delivery.status === 'open' && isOwner"
           class="flex items-center justify-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-medium text-orange-700 transition hover:bg-orange-100"
           @click="router.push(`/payment/${delivery.id}`)"
         >
           <PhLockKey class="size-3.5" weight="bold" /> Öde
         </button>
         <button
-          v-if="delivery.status === 'in_progress' && delivery.selectedBidId && wallet.connected"
+          v-if="delivery.status === 'in_progress' && delivery.selectedBidId && isAssignedCourier"
           class="flex items-center justify-center gap-1 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-medium text-green-700 transition hover:bg-green-100"
           @click="router.push(`/courier/receive/${delivery.id}`)"
         >

@@ -60,6 +60,8 @@ export async function toFrontend(delivery) {
   const bids = await Bid.find({ deliveryId: delivery._id }).lean()
   const populatedBids = await populateBids(bids, delivery.selectedBidId)
 
+  const selectedBid = populatedBids.find(b => b.id === delivery.selectedBidId?.toString())
+
   return {
     id: delivery._id.toString(),
     title: delivery.title || 'Teslimat',
@@ -73,6 +75,8 @@ export async function toFrontend(delivery) {
     status: STATUS_TO_FRONTEND[delivery.status] || 'open',
     bids: populatedBids,
     selectedBidId: delivery.selectedBidId?.toString(),
+    senderId: delivery.customer,
+    assignedCourierId: selectedBid?.courierId ?? null,
     createdAt: delivery.createdAt.toISOString(),
     deadline: delivery.deadline?.toISOString() || new Date().toISOString(),
     rating: delivery.rating,
@@ -146,6 +150,9 @@ export async function addBid(deliveryId, bidData, walletAddress) {
   const delivery = await Delivery.findById(deliveryId)
   if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
   if (delivery.status !== 'OpenForBids') throw Object.assign(new Error('Teslimat teklife kapalı'), { statusCode: 400 })
+  if (delivery.customer === walletAddress.toLowerCase()) throw Object.assign(new Error('Kendi teslimatınıza teklif veremezsiniz'), { statusCode: 403 })
+  const existing = await Bid.findOne({ deliveryId, courier: walletAddress.toLowerCase() })
+  if (existing) throw Object.assign(new Error('Bu teslimat için zaten teklif verdiniz'), { statusCode: 400 })
 
   const bid = await Bid.create({
     deliveryId,
@@ -160,9 +167,10 @@ export async function addBid(deliveryId, bidData, walletAddress) {
   return populated.find(b => b.id === bid._id.toString())
 }
 
-export async function selectBid(deliveryId, bidId) {
+export async function selectBid(deliveryId, bidId, walletAddress) {
   const delivery = await Delivery.findById(deliveryId)
   if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
+  if (delivery.customer !== walletAddress.toLowerCase()) throw Object.assign(new Error('Sadece gönderici teklif seçebilir'), { statusCode: 403 })
 
   const bid = await Bid.findById(bidId)
   if (!bid) throw Object.assign(new Error('Teklif bulunamadı'), { statusCode: 404 })
@@ -182,9 +190,10 @@ export async function selectBid(deliveryId, bidId) {
   return toFrontend(delivery.toObject())
 }
 
-export async function lockEscrow(deliveryId) {
+export async function lockEscrow(deliveryId, walletAddress) {
   const delivery = await Delivery.findById(deliveryId)
   if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
+  if (delivery.customer !== walletAddress.toLowerCase()) throw Object.assign(new Error('Sadece gönderici escrow kilitleyebilir'), { statusCode: 403 })
 
   delivery.escrowBalance = delivery.maxBudget
   let escrowStep = delivery.timeline.find(s => s.step === 'escrow')
@@ -198,9 +207,11 @@ export async function lockEscrow(deliveryId) {
   return toFrontend(delivery.toObject())
 }
 
-export async function confirmPickup(deliveryId) {
+export async function confirmPickup(deliveryId, walletAddress) {
   const delivery = await Delivery.findById(deliveryId)
   if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
+  const assignedBid = delivery.selectedBidId ? await Bid.findById(delivery.selectedBidId) : null
+  if (!assignedBid || assignedBid.courier !== walletAddress.toLowerCase()) throw Object.assign(new Error('Sadece atanan kurye teslim alımı onaylayabilir'), { statusCode: 403 })
 
   delivery.status = 'InTransit'
   delivery.pickedUpAt = new Date()
@@ -214,9 +225,11 @@ export async function confirmPickup(deliveryId) {
   return toFrontend(delivery.toObject())
 }
 
-export async function completeDelivery(deliveryId) {
+export async function completeDelivery(deliveryId, walletAddress) {
   const delivery = await Delivery.findById(deliveryId)
   if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
+  const assignedBid = delivery.selectedBidId ? await Bid.findById(delivery.selectedBidId) : null
+  if (!assignedBid || assignedBid.courier !== walletAddress.toLowerCase()) throw Object.assign(new Error('Sadece atanan kurye teslimatı tamamlayabilir'), { statusCode: 403 })
 
   delivery.status = 'Delivered'
   delivery.deliveredAt = new Date()

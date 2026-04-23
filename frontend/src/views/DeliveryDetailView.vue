@@ -15,6 +15,9 @@ const store = useDeliveryStore()
 const wallet = useWalletStore()
 const delivery = computed(() => store.getDelivery(route.params.id as string))
 
+const isOwner = computed(() => !!wallet.address && wallet.address.toLowerCase() === delivery.value?.senderId)
+const isAssignedCourier = computed(() => !!wallet.address && wallet.address.toLowerCase() === delivery.value?.assignedCourierId)
+
 function formatDate(s: string) {
   return new Date(s).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
@@ -101,7 +104,7 @@ function formatDate(s: string) {
               :key="bid.id"
               :bid="bid"
               :is-selected="delivery.selectedBidId === bid.id"
-              :can-select="delivery.status === 'open'"
+              :can-select="delivery.status === 'open' && isOwner"
               @select="store.selectBid(delivery!.id, $event)"
             />
           </div>
@@ -138,7 +141,7 @@ function formatDate(s: string) {
         <!-- Action buttons -->
         <template v-if="wallet.connected">
           <button
-            v-if="delivery.status === 'open'"
+            v-if="delivery.status === 'open' && isOwner"
             class="btn-primary w-full justify-center"
             @click="router.push(`/payment/${delivery.id}`)"
           >
@@ -146,7 +149,7 @@ function formatDate(s: string) {
             Ödemeyi Kilitle (Escrow)
           </button>
           <button
-            v-if="delivery.status === 'in_progress' && delivery.selectedBidId"
+            v-if="delivery.status === 'in_progress' && delivery.selectedBidId && isAssignedCourier"
             class="w-full justify-center rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 flex items-center gap-2 text-sm font-semibold text-orange-700 hover:bg-orange-100 transition"
             @click="router.push(`/courier/receive/${delivery.id}`)"
           >

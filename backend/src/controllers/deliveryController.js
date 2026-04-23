@@ -25,21 +25,21 @@ export async function addBid(req, res) {
 export async function selectBid(req, res) {
   const { bidId } = req.body
   if (!bidId) return res.status(400).json({ error: { message: 'bidId zorunlu' } })
-  const delivery = await deliveryService.selectBid(req.params.id, bidId)
+  const delivery = await deliveryService.selectBid(req.params.id, bidId, req.user.walletAddress)
   res.json(delivery)
 }
 
 export async function lockEscrow(req, res) {
-  const delivery = await deliveryService.lockEscrow(req.params.id)
+  const delivery = await deliveryService.lockEscrow(req.params.id, req.user.walletAddress)
   res.json(delivery)
 }
 
 export async function confirmPickup(req, res) {
-  const delivery = await deliveryService.confirmPickup(req.params.id)
+  const delivery = await deliveryService.confirmPickup(req.params.id, req.user.walletAddress)
   res.json(delivery)
 }
 
 export async function complete(req, res) {
-  const delivery = await deliveryService.completeDelivery(req.params.id)
+  const delivery = await deliveryService.completeDelivery(req.params.id, req.user.walletAddress)
   res.json(delivery)
 }

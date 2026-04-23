@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useWalletStore } from '@/stores/useWalletStore'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import {
@@ -17,11 +17,31 @@ const activeTab = ref<'tracking' | 'past' | 'ratings' | 'settings'>('tracking')
 const editPhone = ref(wallet.userProfile.phone)
 const editName = ref(wallet.userProfile.name)
 const savedMsg = ref('')
+const saveError = ref('')
+const savingProfile = ref(false)
 
-function saveSettings() {
-  wallet.updateProfile({ phone: editPhone.value, name: editName.value })
-  savedMsg.value = 'Ayarlar kaydedildi!'
-  setTimeout(() => savedMsg.value = '', 3000)
+watch(
+  () => [wallet.userProfile.name, wallet.userProfile.phone],
+  ([name, phone]) => {
+    editName.value = name
+    editPhone.value = phone
+  },
+  { immediate: true },
+)
+
+async function saveSettings() {
+  savedMsg.value = ''
+  saveError.value = ''
+  savingProfile.value = true
+  try {
+    await wallet.updateProfile({ phone: editPhone.value, name: editName.value })
+    savedMsg.value = 'Ayarlar kaydedildi!'
+    setTimeout(() => savedMsg.value = '', 3000)
+  } catch (error) {
+    saveError.value = error instanceof Error ? error.message : 'Profil kaydedilemedi'
+  } finally {
+    savingProfile.value = false
+  }
 }
 
 const activeDelivery = computed(() => deliveryStore.deliveries.find(d => d.status === 'in_progress'))
@@ -33,6 +53,12 @@ const roleConfig: Record<string, { label: string; color: string; icon: any }> = 
   recipient: { label: 'Alıcı',     color: 'bg-green-100 text-green-700', icon: PhBell },
   system:    { label: 'Sistem',    color: 'bg-stone-100 text-stone-600', icon: PhShieldCheck },
 }
+
+const profileRoleLabel = computed(() => {
+  if (wallet.userProfile.role === 'courier') return 'Kurye'
+  if (wallet.userProfile.role === 'both') return 'Müşteri + Kurye'
+  return 'Müşteri'
+})
 
 </script>
 
@@ -270,15 +296,18 @@ const roleConfig: Record<string, { label: string; color: string; icon: any }> = 
                 <div class="flex items-center gap-2 rounded-lg border border-stone-100 bg-stone-50 px-3 py-2.5">
                   <PhHandshake class="size-4 text-stone-400" />
                   <span class="text-sm text-stone-700 capitalize">
-                    {{ wallet.userProfile.role === 'courier' ? 'Kurye' : 'Müşteri' }}
+                    {{ profileRoleLabel }}
                   </span>
                 </div>
               </div>
 
               <div class="pt-2">
-                <button type="submit" class="btn-primary w-full justify-center">Kaydet</button>
+                <button type="submit" class="btn-primary w-full justify-center" :disabled="savingProfile">
+                  {{ savingProfile ? 'Kaydediliyor...' : 'Kaydet' }}
+                </button>
               </div>
               <p v-if="savedMsg" class="text-sm text-green-600 text-center font-medium">{{ savedMsg }}</p>
+              <p v-if="saveError" class="text-sm text-red-600 text-center font-medium">{{ saveError }}</p>
             </form>
           </div>
 

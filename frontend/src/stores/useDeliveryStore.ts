@@ -37,6 +37,8 @@ export interface Delivery {
   status: DeliveryStatus
   bids: Bid[]
   selectedBidId?: string
+  senderId?: string
+  assignedCourierId?: string | null
   createdAt: string
   deadline: string
   rating?: number

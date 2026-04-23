@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { PhX as X, PhWarningCircle as AlertCircle, PhConfetti } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
@@ -15,6 +15,10 @@ const estimatedTime = ref('')
 const collateral = ref<number | null>(null)
 const submitting = ref(false)
 const submitted = ref(false)
+const errorMsg = ref('')
+
+const delivery = computed(() => store.getDelivery(props.deliveryId))
+const alreadyBid = computed(() => delivery.value?.bids.some(b => b.courierId === wallet.address.toLowerCase()))
 
 function handleAmountInput(e: Event) {
   const val = Number((e.target as HTMLInputElement).value)
@@ -24,20 +28,25 @@ function handleAmountInput(e: Event) {
 
 async function submit() {
   if (!tokenAmount.value || !estimatedTime.value) return
+  errorMsg.value = ''
   submitting.value = true
-  await new Promise(r => setTimeout(r, 1000))
-  store.addBid(props.deliveryId, {
-    courierId: 'me',
-    courierName: wallet.displayAddress() || 'Sen',
-    courierAvatar: '👤',
-    courierRating: 4.5,
-    courierDeliveries: 1,
-    tokenAmount: tokenAmount.value,
-    estimatedTime: estimatedTime.value,
-  })
-  submitting.value = false
-  submitted.value = true
-  setTimeout(() => emit('success'), 1400)
+  try {
+    await store.addBid(props.deliveryId, {
+      courierId: wallet.address,
+      courierName: wallet.displayAddress() || 'Sen',
+      courierAvatar: '',
+      courierRating: 0,
+      courierDeliveries: 0,
+      tokenAmount: tokenAmount.value,
+      estimatedTime: estimatedTime.value,
+    })
+    submitted.value = true
+    setTimeout(() => emit('success'), 1400)
+  } catch (e: unknown) {
+    errorMsg.value = (e as { message?: string })?.message ?? 'Bir hata oluştu'
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
@@ -65,8 +74,16 @@ async function submit() {
           <p class="mt-1 text-sm text-stone-500">Müşterinin seçmesi bekleniyor.</p>
         </div>
 
+        <!-- Already bid warning -->
+        <div v-else-if="alreadyBid" class="py-6 text-center">
+          <p class="text-2xl mb-2">🔒</p>
+          <p class="font-semibold text-stone-700">Bu teslimat için zaten teklif verdiniz.</p>
+          <button class="mt-4 text-sm text-stone-500 underline" @click="emit('close')">Kapat</button>
+        </div>
+
         <!-- Form -->
         <div v-else class="space-y-4">
+          <div v-if="errorMsg" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{{ errorMsg }}</div>
           <div>
             <label class="mb-1.5 block text-sm font-medium text-stone-700">Token Miktarı (MON)</label>
             <div class="relative">
@@ -96,7 +113,7 @@ async function submit() {
           </div>
 
           <button
-            :disabled="!tokenAmount || !estimatedTime || submitting"
+            :disabled="!tokenAmount || !estimatedTime || submitting || !!alreadyBid"
             class="btn-primary w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed"
             @click="submit"
           >

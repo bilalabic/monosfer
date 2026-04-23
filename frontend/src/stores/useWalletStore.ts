@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { authApi } from '@/api/auth'
+import { authApi, type AuthUser, type UserRole } from '@/api/auth'
 import { setToken, clearToken, getToken } from '@/api/client'
+
+type UserProfile = Pick<AuthUser, 'name' | 'email' | 'phone' | 'role' | 'rating'>
 
 export const useWalletStore = defineStore('wallet', () => {
   const connected = ref(false)
@@ -12,14 +14,14 @@ export const useWalletStore = defineStore('wallet', () => {
     name: '',
     email: '',
     phone: '',
-    role: 'customer' as 'customer' | 'courier',
+    role: 'customer' as UserRole,
     rating: 0,
   })
 
   const displayAddress = () =>
     address.value ? `${address.value.slice(0, 6)}...${address.value.slice(-4)}` : ''
 
-  function applyAuth(user: { walletAddress: string; name: string; email: string; phone: string; role: 'customer' | 'courier'; rating: number; balance: number }) {
+  function applyAuth(user: AuthUser) {
     connected.value = true
     address.value = user.walletAddress
     balance.value = user.balance ?? 0
@@ -59,14 +61,15 @@ export const useWalletStore = defineStore('wallet', () => {
     await fetchBalance()
   }
 
-  async function registerMetaMask(data: { walletAddress: string; name: string; phone: string; role: 'customer' | 'courier' }) {
+  async function registerMetaMask(data: { walletAddress: string; name: string; phone: string; role: UserRole }) {
     const { user, token } = await authApi.register({ ...data, email: '' })
     setToken(token)
     applyAuth(user)
   }
 
-  function updateProfile(data: Partial<typeof userProfile.value>) {
-    userProfile.value = { ...userProfile.value, ...data }
+  async function updateProfile(data: Partial<UserProfile>) {
+    const { user } = await authApi.updateMe(data)
+    applyAuth(user)
   }
 
   function disconnect() {
@@ -85,9 +88,7 @@ export const useWalletStore = defineStore('wallet', () => {
       if (parts.length < 2) { clearToken(); return }
       const payload = JSON.parse(atob(parts[1]!))
       if (payload.exp * 1000 < Date.now()) { clearToken(); return }
-      if (!payload.walletAddress) { clearToken(); return }
-      const { user } = await authApi.login({ walletAddress: payload.walletAddress as string })
-      setToken(token)
+      const { user } = await authApi.me()
       applyAuth(user)
       await fetchBalance()
     } catch {
