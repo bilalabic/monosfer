@@ -21,8 +21,8 @@ const saveError = ref('')
 const savingProfile = ref(false)
 
 watch(
-  () => [wallet.userProfile.name, wallet.userProfile.phone],
-  ([name, phone]) => {
+  () => ({ name: wallet.userProfile.name, phone: wallet.userProfile.phone }),
+  ({ name, phone }) => {
     editName.value = name
     editPhone.value = phone
   },
