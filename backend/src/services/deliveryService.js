@@ -1,0 +1,229 @@
+import Delivery from '../models/Delivery.js'
+import Bid from '../models/Bid.js'
+import User from '../models/User.js'
+
+const STATUS_TO_FRONTEND = {
+  OpenForBids: 'open',
+  Accepted: 'in_progress',
+  InTransit: 'in_progress',
+  Delivered: 'completed',
+  Cancelled: 'disputed',
+}
+
+const STATUS_TO_BACKEND = {
+  open: 'OpenForBids',
+  in_progress: 'Accepted',
+  completed: 'Delivered',
+  disputed: 'Cancelled',
+}
+
+function formatTime(date) {
+  if (!date) return undefined
+  return new Date(date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+}
+
+async function populateBids(bids, selectedBidId) {
+  if (!bids || bids.length === 0) return []
+  const wallets = [...new Set(bids.map(b => b.courier))]
+  const users = await User.find({ walletAddress: { $in: wallets } }).lean()
+  const userMap = Object.fromEntries(users.map(u => [u.walletAddress, u]))
+
+  return bids.map(bid => {
+    const user = userMap[bid.courier] || {}
+    const name = user.name || bid.courier.slice(0, 6) + '...' + bid.courier.slice(-4)
+    const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+    return {
+      id: bid._id.toString(),
+      courierId: bid.courier,
+      courierName: name,
+      courierAvatar: initials,
+      courierRating: 4.5,
+      courierDeliveries: 100,
+      tokenAmount: parseFloat(bid.amount) || 0,
+      estimatedTime: `${bid.estimatedMinutes} dk`,
+      createdAt: bid.createdAt.toISOString(),
+    }
+  })
+}
+
+function buildTimeline(delivery) {
+  return delivery.timeline.map(s => ({
+    step: s.step,
+    label: s.label,
+    completed: s.completed,
+    time: s.timestamp ? formatTime(s.timestamp) : undefined,
+    txHash: s.txHash,
+  }))
+}
+
+export async function toFrontend(delivery) {
+  const bids = await Bid.find({ deliveryId: delivery._id }).lean()
+  const populatedBids = await populateBids(bids, delivery.selectedBidId)
+
+  return {
+    id: delivery._id.toString(),
+    title: delivery.title || 'Teslimat',
+    pickupAddress: delivery.pickup.address,
+    dropoffAddress: delivery.dropoff.address,
+    distance: delivery.distanceKm ? `${Number(delivery.distanceKm).toFixed(1)} km` : '—',
+    weight: delivery.weight || '—',
+    description: delivery.notes || '',
+    maxBudget: parseFloat(delivery.maxBudget) || 0,
+    escrowAmount: parseFloat(delivery.escrowBalance || delivery.maxBudget) || 0,
+    status: STATUS_TO_FRONTEND[delivery.status] || 'open',
+    bids: populatedBids,
+    selectedBidId: delivery.selectedBidId?.toString(),
+    createdAt: delivery.createdAt.toISOString(),
+    deadline: delivery.deadline?.toISOString() || new Date().toISOString(),
+    rating: delivery.rating,
+    timeline: buildTimeline(delivery),
+  }
+}
+
+export async function listDeliveries({ status, search } = {}) {
+  const query = {}
+  if (status && status !== 'all') {
+    const backendStatus = STATUS_TO_BACKEND[status]
+    if (backendStatus === 'in_progress') {
+      query.status = { $in: ['Accepted', 'InTransit'] }
+    } else if (backendStatus) {
+      query.status = backendStatus
+    }
+  }
+  if (search) {
+    const q = search.toLowerCase()
+    query.$or = [
+      { title: { $regex: q, $options: 'i' } },
+      { 'pickup.address': { $regex: q, $options: 'i' } },
+      { 'dropoff.address': { $regex: q, $options: 'i' } },
+    ]
+  }
+  const deliveries = await Delivery.find(query).sort({ createdAt: -1 }).lean()
+  return Promise.all(deliveries.map(toFrontend))
+}
+
+export async function getDelivery(id) {
+  const delivery = await Delivery.findById(id).lean()
+  if (!delivery) return null
+  return toFrontend(delivery)
+}
+
+export async function createDelivery(data, walletAddress) {
+  const deadline = new Date(`${data.date}T${data.deadline}`)
+  const delivery = await Delivery.create({
+    title: data.title,
+    customer: walletAddress.toLowerCase(),
+    pickup: {
+      address: data.pickupAddress,
+      lat: data.pickupLat || 41.0082,
+      lng: data.pickupLng || 28.9784,
+    },
+    dropoff: {
+      address: data.dropoffAddress,
+      lat: data.dropoffLat || 41.0082,
+      lng: data.dropoffLng || 28.9784,
+    },
+    packageType: data.packageType || 'medium',
+    urgency: data.urgency || 'standard',
+    weight: data.weight ? `${data.weight} kg` : undefined,
+    notes: data.description,
+    maxBudget: String(data.maxBudget),
+    escrowBalance: '0',
+    deadline,
+    status: 'OpenForBids',
+    timeline: [
+      { step: 'created', label: 'Talep Oluşturuldu', completed: true, timestamp: new Date() },
+      { step: 'accepted', label: 'Kurye Seçildi', completed: false },
+      { step: 'pickup', label: 'Ürün Alındı', completed: false },
+      { step: 'transit', label: 'Yolda', completed: false },
+      { step: 'delivered', label: 'Teslim Edildi', completed: false },
+    ],
+  })
+  return toFrontend(delivery)
+}
+
+export async function addBid(deliveryId, bidData, walletAddress) {
+  const delivery = await Delivery.findById(deliveryId)
+  if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
+  if (delivery.status !== 'OpenForBids') throw Object.assign(new Error('Teslimat teklife kapalı'), { statusCode: 400 })
+
+  const bid = await Bid.create({
+    deliveryId,
+    courier: walletAddress.toLowerCase(),
+    amount: String(bidData.tokenAmount),
+    estimatedMinutes: bidData.estimatedMinutes || 45,
+    network: 'monad-testnet',
+  })
+
+  const bids = await Bid.find({ deliveryId }).lean()
+  const populated = await populateBids(bids, null)
+  return populated.find(b => b.id === bid._id.toString())
+}
+
+export async function selectBid(deliveryId, bidId) {
+  const delivery = await Delivery.findById(deliveryId)
+  if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
+
+  const bid = await Bid.findById(bidId)
+  if (!bid) throw Object.assign(new Error('Teklif bulunamadı'), { statusCode: 404 })
+
+  await Bid.updateMany({ deliveryId }, { isSelected: false })
+  bid.isSelected = true
+  await bid.save()
+
+  delivery.selectedBidId = bid._id
+  delivery.status = 'Accepted'
+  delivery.acceptedAt = new Date()
+  delivery.acceptedAmount = bid.amount
+  const acceptedStep = delivery.timeline.find(s => s.step === 'accepted')
+  if (acceptedStep) { acceptedStep.completed = true; acceptedStep.timestamp = new Date() }
+  await delivery.save()
+
+  return toFrontend(delivery.toObject())
+}
+
+export async function lockEscrow(deliveryId) {
+  const delivery = await Delivery.findById(deliveryId)
+  if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
+
+  delivery.escrowBalance = delivery.maxBudget
+  let escrowStep = delivery.timeline.find(s => s.step === 'escrow')
+  if (!escrowStep) {
+    delivery.timeline.splice(1, 0, { step: 'escrow', label: "Ödeme Escrow'a Kilitlendi", completed: true, timestamp: new Date() })
+  } else {
+    escrowStep.completed = true
+    escrowStep.timestamp = new Date()
+  }
+  await delivery.save()
+  return toFrontend(delivery.toObject())
+}
+
+export async function confirmPickup(deliveryId) {
+  const delivery = await Delivery.findById(deliveryId)
+  if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
+
+  delivery.status = 'InTransit'
+  delivery.pickedUpAt = new Date()
+  for (const s of delivery.timeline) {
+    if (s.step === 'pickup' || s.step === 'transit') {
+      s.completed = true
+      s.timestamp = s.timestamp || new Date()
+    }
+  }
+  await delivery.save()
+  return toFrontend(delivery.toObject())
+}
+
+export async function completeDelivery(deliveryId) {
+  const delivery = await Delivery.findById(deliveryId)
+  if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
+
+  delivery.status = 'Delivered'
+  delivery.deliveredAt = new Date()
+  delivery.escrowBalance = '0'
+  for (const s of delivery.timeline) {
+    if (!s.completed) { s.completed = true; s.timestamp = new Date() }
+  }
+  await delivery.save()
+  return toFrontend(delivery.toObject())
+}

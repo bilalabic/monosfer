@@ -4,7 +4,7 @@ const timelineStepSchema = new mongoose.Schema(
   {
     step: {
       type: String,
-      enum: ['created', 'accepted', 'pickup', 'transit', 'delivered', 'cancelled'],
+      enum: ['created', 'escrow', 'accepted', 'pickup', 'transit', 'notification', 'delivered', 'cancelled'],
     },
     label: { type: String },
     completed: { type: Boolean, default: false },
@@ -24,6 +24,9 @@ const deliverySchema = new mongoose.Schema(
       enum: ['monad-testnet', 'monad-mainnet', 'localhost'],
       default: 'monad-testnet',
     },
+
+    // Başlık (UI display)
+    title: { type: String },
 
     // Taraflar (wallet address)
     customer: { type: String, required: true, lowercase: true, index: true },

@@ -1,0 +1,39 @@
+import { api } from './client'
+import type { Delivery, Bid } from '@/stores/useDeliveryStore'
+
+export const deliveriesApi = {
+  list: (params?: { status?: string; search?: string }) => {
+    const qs = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : ''
+    return api.get<Delivery[]>(`/deliveries${qs}`)
+  },
+
+  get: (id: string) => api.get<Delivery>(`/deliveries/${id}`),
+
+  create: (data: {
+    title: string
+    pickupAddress: string
+    dropoffAddress: string
+    weight?: string
+    description?: string
+    maxBudget: number
+    date: string
+    deadline: string
+    packageType?: string
+    urgency?: string
+  }) => api.post<Delivery>('/deliveries', data),
+
+  addBid: (deliveryId: string, data: { tokenAmount: number; estimatedMinutes?: number }) =>
+    api.post<Bid>(`/deliveries/${deliveryId}/bids`, data),
+
+  selectBid: (deliveryId: string, bidId: string) =>
+    api.patch<Delivery>(`/deliveries/${deliveryId}/select-bid`, { bidId }),
+
+  lockEscrow: (deliveryId: string) =>
+    api.patch<Delivery>(`/deliveries/${deliveryId}/escrow`),
+
+  confirmPickup: (deliveryId: string) =>
+    api.patch<Delivery>(`/deliveries/${deliveryId}/pickup`),
+
+  completeDelivery: (deliveryId: string) =>
+    api.patch<Delivery>(`/deliveries/${deliveryId}/complete`),
+}

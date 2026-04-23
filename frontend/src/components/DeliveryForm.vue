@@ -23,7 +23,20 @@ const canNext = computed(() => {
 
 async function submit() {
   submitting.value = true
-  await new Promise(r => setTimeout(r, 1200))
+  try {
+    await store.createDelivery({
+      title: form.value.title,
+      pickupAddress: form.value.pickupAddress,
+      dropoffAddress: form.value.dropoffAddress,
+      weight: form.value.weight,
+      description: form.value.description,
+      maxBudget: parseFloat(form.value.maxBudget),
+      date: form.value.date,
+      deadline: form.value.deadline,
+    })
+  } catch {
+    // silently continue — store fallback handles it
+  }
   submitting.value = false
   done.value = true
   setTimeout(() => router.push('/deliveries'), 1800)
