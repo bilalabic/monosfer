@@ -84,7 +84,8 @@ const liveScenarios = computed<LiveScenario[]>(() => {
 
 function goToScenario(path: string) {
   if (!wallet.connected) {
-    wallet.connect()
+    router.push('/login')
+    return
   }
   router.push(path)
 }

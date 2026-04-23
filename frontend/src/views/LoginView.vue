@@ -6,6 +6,7 @@ import { useMetaMask } from '@/composables/useMetaMask'
 
 const router = useRouter()
 const mm = useMetaMask()
+const wallet = useWalletStore()
 
 async function handleMetaMask() {
   const result = await mm.connect()
