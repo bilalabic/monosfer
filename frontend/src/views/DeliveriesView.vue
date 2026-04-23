@@ -37,7 +37,11 @@ onMounted(() => store.loadDeliveries())
 
 const liveScenarios = computed<LiveScenario[]>(() => {
   const addr = wallet.address.toLowerCase()
-  const senderDelivery = store.deliveries.find(d => d.status === 'open' && d.senderId === addr)
+  const senderDelivery = store.deliveries.find(d =>
+    d.status === 'open' &&
+    d.senderId?.toLowerCase() === addr &&
+    d.escrowAmount <= 0,
+  )
   const courierDelivery = store.deliveries.find(d => d.status === 'in_progress' && d.selectedBidId && d.assignedCourierId === addr)
   const scenarios: LiveScenario[] = []
 

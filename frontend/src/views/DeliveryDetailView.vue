@@ -24,6 +24,7 @@ const isOwner = computed(() => !!wallet.address && wallet.address.toLowerCase() 
 const isAssignedCourier = computed(() => !!wallet.address && wallet.address.toLowerCase() === delivery.value?.assignedCourierId)
 const selectedBid = computed(() => delivery.value?.bids.find(bid => bid.id === delivery.value?.selectedBidId))
 const canRate = computed(() => delivery.value?.status === 'completed' && isOwner.value && !delivery.value?.isRated && !!selectedBid.value)
+const isEscrowLocked = computed(() => (delivery.value?.escrowAmount || 0) > 0)
 
 function formatDate(s: string) {
   return new Date(s).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -200,13 +201,20 @@ async function submitRating() {
         <!-- Action buttons -->
         <template v-if="wallet.connected">
           <button
-            v-if="delivery.status === 'open' && isOwner"
+            v-if="delivery.status === 'open' && isOwner && !isEscrowLocked"
             class="btn-primary w-full justify-center"
             @click="router.push(`/payment/${delivery.id}`)"
           >
             <PhLockKey class="size-4" weight="bold" />
             Ödemeyi Kilitle (Escrow)
           </button>
+          <div
+            v-else-if="delivery.status === 'open' && isOwner && isEscrowLocked"
+            class="flex w-full items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700"
+          >
+            <PhLockKey class="size-4" weight="bold" />
+            Ödeme Escrow'da Kilitli
+          </div>
           <button
             v-if="delivery.status === 'in_progress' && delivery.selectedBidId && isAssignedCourier"
             class="w-full justify-center rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 flex items-center gap-2 text-sm font-semibold text-orange-700 hover:bg-orange-100 transition"

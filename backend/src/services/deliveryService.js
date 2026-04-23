@@ -200,6 +200,9 @@ export async function lockEscrow(deliveryId, walletAddress, txHash) {
   const delivery = await Delivery.findById(deliveryId)
   if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
   if (delivery.customer !== walletAddress.toLowerCase()) throw Object.assign(new Error('Sadece gönderici escrow kilitleyebilir'), { statusCode: 403 })
+  if (Number(delivery.escrowBalance || 0) > 0) {
+    throw Object.assign(new Error("Ödeme zaten escrow'a kilitlenmiş"), { statusCode: 400 })
+  }
 
   delivery.escrowBalance = delivery.maxBudget
   let escrowStep = delivery.timeline.find(s => s.step === 'escrow')

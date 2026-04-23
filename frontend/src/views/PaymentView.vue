@@ -15,6 +15,7 @@ const dStore = useDeliveryStore()
 const wallet = useWalletStore()
 
 const delivery = computed(() => dStore.getDelivery(route.params.id as string))
+const isEscrowLocked = computed(() => (delivery.value?.escrowAmount || 0) > 0)
 
 const isOwner = computed(() =>
   !!wallet.address && !!delivery.value?.senderId &&
@@ -35,7 +36,10 @@ const blockNum = ref(0)
 const confirmations = ref(0)
 const copied = ref(false)
 
-const escrowTokenAmount = computed(() => delivery.value?.escrowAmount ?? 0)
+const escrowTokenAmount = computed(() => {
+  if (!delivery.value) return 0
+  return isEscrowLocked.value ? delivery.value.escrowAmount : delivery.value.maxBudget
+})
 const sufficient = computed(() => wallet.balance >= GAS)
 const txExplorerUrl = computed(() =>
   txHash.value ? `https://testnet.monadexplorer.com/tx/${txHash.value}` : '',
@@ -79,7 +83,7 @@ async function sendAnchorTx(): Promise<{ hash: string; blockNumber: number }> {
 }
 
 async function pay() {
-  if (!delivery.value || !sufficient.value) return
+  if (!delivery.value || !sufficient.value || isEscrowLocked.value) return
   step.value = 'signing'
   await wait(600)
 
@@ -125,9 +129,9 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
       <div v-if="step === 'review'" class="space-y-5">
         <div>
           <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-orange-500">Escrow Ödemesi</p>
-          <h1 class="text-2xl font-bold text-stone-900">Ödemeyi Kilitle</h1>
+          <h1 class="text-2xl font-bold text-stone-900">{{ isEscrowLocked ? 'Ödeme Kilitli' : 'Ödemeyi Kilitle' }}</h1>
           <p class="mt-1 text-sm text-stone-500">
-            Ödemeniz Monad akıllı sözleşmesinde kilitlenecek, teslimat tamamlandığında kurye alacak.
+            {{ isEscrowLocked ? 'Bu teslimat için ödeme zaten escrow hesabında bekliyor.' : 'Ödemeniz Monad akıllı sözleşmesinde kilitlenecek, teslimat tamamlandığında kurye alacak.' }}
           </p>
         </div>
 
@@ -196,12 +200,12 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
         </div>
 
         <button
-          :disabled="!sufficient"
+          :disabled="!sufficient || isEscrowLocked"
           class="btn-primary w-full justify-center disabled:opacity-50"
           @click="pay"
         >
           <PhLockKey class="size-4" weight="bold" />
-          {{ sufficient ? `${escrowTokenAmount} DLV Escrow Kaydet` : 'Gas icin MON yetersiz' }}
+          {{ isEscrowLocked ? 'Zaten Kilitli' : sufficient ? `${escrowTokenAmount} DLV Escrow Kaydet` : 'Gas icin MON yetersiz' }}
         </button>
       </div>
 

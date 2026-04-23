@@ -94,3 +94,47 @@ test('rateDelivery lets the paying customer rate the selected courier', async ()
     CourierStats.create = originals.statsCreate
   }
 })
+
+test('lockEscrow rejects deliveries that already have locked funds', async () => {
+  const originals = {
+    deliveryFindById: Delivery.findById,
+    bidFind: Bid.find,
+    userFind: User.find,
+    statsFind: CourierStats.find,
+  }
+  const delivery = {
+    _id: { toString: () => 'delivery-id' },
+    customer: '0xcustomer',
+    escrowBalance: '12',
+    maxBudget: '12',
+    pickup: { address: 'A noktasi' },
+    dropoff: { address: 'B noktasi' },
+    status: 'OpenForBids',
+    createdAt: new Date('2026-02-01T00:00:00.000Z'),
+    deadline: new Date('2026-02-02T00:00:00.000Z'),
+    timeline: [],
+    async save() {
+      return this
+    },
+    toObject() {
+      return this
+    },
+  }
+
+  Delivery.findById = async () => delivery
+  Bid.find = () => ({ lean: async () => [] })
+  User.find = () => ({ lean: async () => [] })
+  CourierStats.find = () => ({ lean: async () => [] })
+
+  try {
+    await assert.rejects(
+      () => deliveryService.lockEscrow('delivery-id', '0xcustomer', '0xtx'),
+      /Ödeme zaten escrow'a kilitlenmiş/,
+    )
+  } finally {
+    Delivery.findById = originals.deliveryFindById
+    Bid.find = originals.bidFind
+    User.find = originals.userFind
+    CourierStats.find = originals.statsFind
+  }
+})
