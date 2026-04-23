@@ -19,10 +19,18 @@ const isOwner = computed(() =>
   !!delivery.value?.senderId &&
   wallet.address.toLowerCase() === delivery.value.senderId.toLowerCase()
 )
+const isAssignedCourier = computed(() =>
+  !!wallet.address &&
+  !!delivery.value?.assignedCourierId &&
+  wallet.address.toLowerCase() === delivery.value.assignedCourierId.toLowerCase()
+)
+const canConfirmPickup = computed(() => isOwner.value || isAssignedCourier.value)
+const isRecipientFlow = computed(() => mode.value === 'delivery' && !isOwner.value)
 const canRate = computed(() => delivery.value?.status === 'completed' && isOwner.value && !delivery.value?.isRated)
 
 const processing = ref(false)
 const errorMsg = ref('')
+const deliveryCode = ref('')
 const ratingValue = ref(5)
 const ratingComment = ref('')
 const ratingSaving = ref(false)
@@ -33,7 +41,7 @@ onMounted(() => {
 })
 
 watchEffect(() => {
-  if (delivery.value && !isOwner.value) router.replace('/deliveries')
+  if (delivery.value && mode.value === 'pickup' && !canConfirmPickup.value) router.replace('/deliveries')
 })
 
 async function confirm() {
@@ -43,6 +51,8 @@ async function confirm() {
   try {
     if (mode.value === 'pickup') {
       await deliveryStore.confirmPickup(delivery.value.id)
+    } else if (isRecipientFlow.value) {
+      await deliveryStore.completeDeliveryWithRecipientCode(delivery.value.id, deliveryCode.value)
     } else {
       await deliveryStore.completeDelivery(delivery.value.id)
     }
@@ -86,7 +96,9 @@ async function submitRating() {
           {{ mode === 'pickup' ? 'Paket Teslim Onayı' : 'Teslimat ve Ödeme Onayı' }}
         </h1>
         <p class="mt-1 text-sm text-stone-500">
-          {{ mode === 'pickup' ? 'Paketi kuryeye teslim ettiyseniz bu adımı onaylayın.' : 'Paket size ulaştıysa teslimatı tamamlayıp escrow ödemesini serbest bırakın.' }}
+          {{ mode === 'pickup'
+            ? isAssignedCourier ? 'Göndericideki QR kodu okuttuysanız paketi teslim aldığınızı onaylayın.' : 'Paketi kuryeye teslim ettiyseniz bu adımı onaylayın.'
+            : isRecipientFlow ? 'Paket elinizdeyse göndericinin size verdiği teslim kodunu girin. Kod doğruysa ödeme kuryeye serbest bırakılır.' : 'Paket ulaştıysa teslimatı tamamlayıp escrow ödemesini serbest bırakın.' }}
         </p>
       </div>
 
@@ -96,6 +108,10 @@ async function submitRating() {
         <div class="mt-4 flex items-center justify-between rounded-lg border border-stone-100 bg-stone-50 p-3">
           <span class="text-sm text-stone-500">Kurye</span>
           <span class="text-sm font-semibold text-stone-900">{{ selectedBid.courierName }}</span>
+        </div>
+        <div v-if="delivery.recipientName" class="mt-2 flex items-center justify-between rounded-lg border border-stone-100 bg-stone-50 p-3">
+          <span class="text-sm text-stone-500">Alıcı</span>
+          <span class="text-sm font-semibold text-stone-900">{{ delivery.recipientName }}</span>
         </div>
         <div class="mt-2 flex items-center justify-between rounded-lg border border-orange-100 bg-orange-50 p-3">
           <span class="text-sm text-stone-500">Ödeme</span>
@@ -110,16 +126,29 @@ async function submitRating() {
         </div>
       </div>
 
+      <div v-if="mode === 'delivery' && isRecipientFlow && delivery.status !== 'completed'" class="card rounded-xl bg-white p-5">
+        <label class="mb-2 block text-sm font-semibold text-stone-900">Teslim Kodu</label>
+        <input
+          v-model.trim="deliveryCode"
+          class="input text-center font-mono uppercase tracking-widest"
+          maxlength="12"
+          placeholder="Kodu girin"
+        />
+        <p class="mt-2 text-xs leading-relaxed text-stone-500">
+          Bu kod QR içinde yazmaz; güvenlik için gönderici tarafından alıcıya ayrıca verilmelidir.
+        </p>
+      </div>
+
       <button
-        v-else
+        v-if="delivery.status !== 'completed'"
         class="btn-primary w-full justify-center"
-        :disabled="processing"
+        :disabled="processing || (isRecipientFlow && !deliveryCode.trim())"
         @click="confirm"
       >
         <PhCircleNotch v-if="processing" class="size-4 animate-spin" weight="bold" />
         <PhPackage v-else-if="mode === 'pickup'" class="size-4" weight="bold" />
         <PhSealCheck v-else class="size-4" weight="bold" />
-        {{ processing ? 'Kaydediliyor...' : mode === 'pickup' ? 'Paketi Teslim Ettim' : 'Teslimatı Onayla ve Ödemeyi Tamamla' }}
+        {{ processing ? 'Kaydediliyor...' : mode === 'pickup' ? isAssignedCourier ? 'Paketi Teslim Aldım' : 'Paketi Teslim Ettim' : isRecipientFlow ? 'Teslim Aldım, Ödemeyi Serbest Bırak' : 'Teslimatı Onayla ve Ödemeyi Tamamla' }}
       </button>
 
       <div v-if="canRate" class="card rounded-xl bg-white p-5">

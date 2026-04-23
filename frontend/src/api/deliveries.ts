@@ -13,6 +13,10 @@ export const deliveriesApi = {
     title: string
     pickupAddress: string
     dropoffAddress: string
+    recipientName?: string
+    recipientPhone?: string
+    recipientWallet?: string
+    deliveryCode?: string
     weight?: string
     description?: string
     maxBudget: number
@@ -36,6 +40,9 @@ export const deliveriesApi = {
 
   completeDelivery: (deliveryId: string, txHash?: string) =>
     api.patch<Delivery>(`/deliveries/${deliveryId}/complete`, txHash ? { txHash } : {}),
+
+  completeDeliveryWithRecipientCode: (deliveryId: string, deliveryCode: string, txHash?: string) =>
+    api.patch<Delivery>(`/deliveries/${deliveryId}/recipient-complete`, txHash ? { deliveryCode, txHash } : { deliveryCode }),
 
   rateDelivery: (deliveryId: string, data: { rating: number; comment?: string }) =>
     api.patch<Delivery>(`/deliveries/${deliveryId}/rating`, data),

@@ -44,8 +44,15 @@ const deliverySchema = new mongoose.Schema(
       address: { type: String, required: true },
       lat: { type: Number, required: true },
       lng: { type: Number, required: true },
+      recipientName: { type: String },
       recipientPhone: { type: String },
       recipientWallet: { type: String, lowercase: true },
+      deliveryCode: { type: String },
+      deliveryConfirmedBy: {
+        type: String,
+        enum: ['sender_wallet', 'recipient_code'],
+      },
+      deliveryConfirmedAt: { type: Date },
     },
 
     // Kargo detayları

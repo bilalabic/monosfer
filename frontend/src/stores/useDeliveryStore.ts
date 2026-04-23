@@ -29,6 +29,9 @@ export interface Delivery {
   title: string
   pickupAddress: string
   dropoffAddress: string
+  recipientName?: string
+  requiresRecipientCode?: boolean
+  deliveryConfirmedBy?: 'sender_wallet' | 'recipient_code'
   distance: string
   weight: string
   description: string
@@ -73,6 +76,7 @@ export const useDeliveryStore = defineStore('delivery', () => {
 
   async function createDelivery(formData: {
     title: string; pickupAddress: string; dropoffAddress: string
+    recipientName?: string; recipientPhone?: string; recipientWallet?: string; deliveryCode?: string
     weight?: string; description?: string; maxBudget: number; date: string; deadline: string
   }) {
     const newDelivery = await deliveriesApi.create(formData)
@@ -114,6 +118,13 @@ export const useDeliveryStore = defineStore('delivery', () => {
     if (idx !== -1) deliveries.value[idx] = updated
   }
 
+  async function completeDeliveryWithRecipientCode(deliveryId: string, deliveryCode: string, txHash?: string) {
+    const updated = await deliveriesApi.completeDeliveryWithRecipientCode(deliveryId, deliveryCode, txHash)
+    const idx = deliveries.value.findIndex(d => d.id === deliveryId)
+    if (idx !== -1) deliveries.value[idx] = updated
+    return updated
+  }
+
   async function rateDelivery(deliveryId: string, rating: number, comment?: string) {
     const updated = await deliveriesApi.rateDelivery(deliveryId, { rating, comment })
     const idx = deliveries.value.findIndex(d => d.id === deliveryId)
@@ -124,6 +135,6 @@ export const useDeliveryStore = defineStore('delivery', () => {
   return {
     deliveries, loading, filteredDeliveries, selectedFilter,
     getDelivery, loadDeliveries, createDelivery,
-    addBid, selectBid, lockEscrow, confirmPickup, completeDelivery, rateDelivery,
+    addBid, selectBid, lockEscrow, confirmPickup, completeDelivery, completeDeliveryWithRecipientCode, rateDelivery,
   }
 })

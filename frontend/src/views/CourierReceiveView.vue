@@ -24,7 +24,7 @@ const assignedBid = computed(() =>
 
 const isAssignedCourier = computed(() =>
   !!wallet.address && !!delivery.value?.assignedCourierId &&
-  wallet.address.toLowerCase() === delivery.value.assignedCourierId
+  wallet.address.toLowerCase() === delivery.value.assignedCourierId.toLowerCase()
 )
 
 onMounted(() => {
@@ -156,7 +156,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
           <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-orange-500">Kurye Paneli</p>
           <h1 class="text-2xl font-bold text-stone-900">Paket Teslim Alma</h1>
           <p class="mt-1 text-sm text-stone-500">
-            Gönderici bu QR kodu tarayarak paketi teslim ettiğini onaylar.
+            Göndericideki QR kodu okutarak paketi teslim aldığını onayla.
           </p>
         </div>
 
@@ -176,19 +176,19 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
           </div>
         </div>
 
-        <!-- QR Code -->
-        <div class="flex flex-col items-center gap-4 rounded-xl border-2 border-dashed border-orange-200 bg-orange-50 p-6">
+        <!-- Pickup instruction -->
+        <div class="flex flex-col items-center gap-4 rounded-xl border-2 border-dashed border-orange-200 bg-orange-50 p-6 text-center">
           <div class="flex items-center gap-2 text-sm font-semibold text-orange-700">
             <PhQrCode class="size-4" weight="bold" />
-            Gönderici İçin — Paket Alış QR
-          </div>
-          <div class="rounded-2xl bg-white p-3 shadow-md">
-            <QrCode :value="pickupConfirmUrl" :size="200" />
+            Göndericideki QR'ı Okut
           </div>
           <div class="rounded-lg bg-white px-4 py-2 shadow-sm">
             <p class="text-center font-mono text-sm font-bold tracking-widest text-stone-900">{{ verifyCode }}</p>
             <p class="mt-0.5 text-center text-[10px] text-stone-400">Doğrulama Kodu</p>
           </div>
+          <p class="max-w-xs text-xs leading-relaxed text-stone-600">
+            Paketi teslim alırken ilan sahibinin teslimat detayındaki QR kodunu telefonunuzla okutun. Açılan sayfada onay verdiğinizde teslimat yola çıkar.
+          </p>
         </div>
 
         <!-- Earnings preview -->
@@ -202,7 +202,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
 
         <a class="btn-primary w-full justify-center" :href="pickupConfirmUrl" target="_blank" rel="noopener">
           <PhPackage class="size-4" weight="bold" />
-          Gönderici Onay Sayfasını Aç
+          QR Onay Sayfasını Aç
         </a>
         <button class="w-full rounded-lg border border-stone-200 py-2.5 text-sm text-stone-600 transition hover:bg-stone-50" @click="refreshDelivery">
           Durumu Yenile
@@ -232,7 +232,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
           <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-green-600">Paket Yolda</p>
           <h1 class="text-2xl font-bold text-stone-900">Teslimat QR</h1>
           <p class="mt-1 text-sm text-stone-500">
-            Alıcı bu QR kodu tarayarak teslim aldığını onaylar, ödeme serbest kalır.
+            Alıcı bu QR kodu tarar, göndericinin verdiği teslim kodunu girer ve ödeme serbest kalır.
           </p>
         </div>
 
@@ -253,7 +253,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
           </div>
           <div class="rounded-lg bg-white px-4 py-2 shadow-sm">
             <p class="text-center font-mono text-sm font-bold tracking-widest text-stone-900">{{ verifyCode }}-DEL</p>
-            <p class="mt-0.5 text-center text-[10px] text-stone-400">Teslim Kodu</p>
+            <p class="mt-0.5 text-center text-[10px] text-stone-400">QR Referansı</p>
           </div>
         </div>
 

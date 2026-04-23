@@ -8,6 +8,7 @@ import StatusBadge from '@/components/StatusBadge.vue'
 import TokenAmount from '@/components/TokenAmount.vue'
 import CourierBidCard from '@/components/CourierBidCard.vue'
 import DeliveryTimeline from '@/components/DeliveryTimeline.vue'
+import QrCode from '@/components/QrCode.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,11 +21,31 @@ const ratingSaving = ref(false)
 const ratingError = ref('')
 const ratingMessage = ref('')
 
-const isOwner = computed(() => !!wallet.address && wallet.address.toLowerCase() === delivery.value?.senderId)
-const isAssignedCourier = computed(() => !!wallet.address && wallet.address.toLowerCase() === delivery.value?.assignedCourierId)
+const isOwner = computed(() =>
+  !!wallet.address &&
+  !!delivery.value?.senderId &&
+  wallet.address.toLowerCase() === delivery.value.senderId.toLowerCase()
+)
+const isAssignedCourier = computed(() =>
+  !!wallet.address &&
+  !!delivery.value?.assignedCourierId &&
+  wallet.address.toLowerCase() === delivery.value.assignedCourierId.toLowerCase()
+)
 const selectedBid = computed(() => delivery.value?.bids.find(bid => bid.id === delivery.value?.selectedBidId))
 const canRate = computed(() => delivery.value?.status === 'completed' && isOwner.value && !delivery.value?.isRated && !!selectedBid.value)
 const isEscrowLocked = computed(() => (delivery.value?.escrowAmount || 0) > 0)
+const pickupConfirmed = computed(() =>
+  delivery.value?.timeline.some(step => step.step === 'pickup' && step.completed),
+)
+const verifyCode = computed(() => {
+  const id = delivery.value?.id ?? 'x'
+  const sum = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  return `MON-${id.toUpperCase()}-${sum.toString(16).toUpperCase().padStart(4, '0')}`
+})
+const pickupConfirmUrl = computed(() => {
+  if (typeof window === 'undefined' || !delivery.value) return ''
+  return `${window.location.origin}/delivery/${delivery.value.id}/confirm?step=pickup&code=${encodeURIComponent(verifyCode.value)}`
+})
 
 function formatDate(s: string) {
   return new Date(s).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -144,6 +165,18 @@ async function submitRating() {
         <div class="card rounded-xl bg-white p-5">
           <p class="mb-5 text-xs font-semibold uppercase tracking-wide text-stone-400">Teslimat Süreci</p>
           <DeliveryTimeline :timeline="delivery.timeline" />
+        </div>
+
+        <div v-if="isOwner && delivery.status === 'in_progress' && selectedBid && !pickupConfirmed" class="card rounded-xl bg-white p-5">
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">Kurye Teslim Alma QR</p>
+          <p class="text-sm font-semibold text-stone-900">{{ selectedBid.courierName }} paketi alırken bu QR'ı okutsun</p>
+          <div class="mt-4 flex justify-center rounded-xl border-2 border-dashed border-orange-200 bg-orange-50 p-4">
+            <div class="rounded-2xl bg-white p-3 shadow-sm">
+              <QrCode :value="pickupConfirmUrl" :size="180" />
+            </div>
+          </div>
+          <p class="mt-3 text-center font-mono text-xs font-bold tracking-widest text-stone-900">{{ verifyCode }}</p>
+          <p class="mt-1 text-center text-xs text-stone-500">Kurye bu kodu okutup paketi teslim aldığını onaylar.</p>
         </div>
 
         <div v-if="canRate || delivery.isRated" class="card rounded-xl bg-white p-5">

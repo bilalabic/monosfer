@@ -10,12 +10,25 @@ const currentStep = ref(0)
 const submitting = ref(false)
 const done = ref(false)
 
-const form = ref({ title: '', pickupAddress: '', dropoffAddress: '', weight: '', description: '', maxBudget: '', deadline: '', date: '' })
+const form = ref({
+  title: '',
+  pickupAddress: '',
+  dropoffAddress: '',
+  recipientName: '',
+  recipientPhone: '',
+  recipientWallet: '',
+  deliveryCode: '',
+  weight: '',
+  description: '',
+  maxBudget: '',
+  deadline: '',
+  date: '',
+})
 
 const steps = ['Adres Bilgileri', 'Paket Detayları', 'Bütçe & Süre', 'Önizleme']
 
 const canNext = computed(() => {
-  if (currentStep.value === 0) return form.value.pickupAddress && form.value.dropoffAddress && form.value.title
+  if (currentStep.value === 0) return form.value.pickupAddress && form.value.dropoffAddress && form.value.title && form.value.recipientName && form.value.deliveryCode
   if (currentStep.value === 1) return form.value.weight
   if (currentStep.value === 2) return form.value.maxBudget && form.value.deadline && form.value.date
   return true
@@ -28,6 +41,10 @@ async function submit() {
       title: form.value.title,
       pickupAddress: form.value.pickupAddress,
       dropoffAddress: form.value.dropoffAddress,
+      recipientName: form.value.recipientName,
+      recipientPhone: form.value.recipientPhone,
+      recipientWallet: form.value.recipientWallet,
+      deliveryCode: form.value.deliveryCode,
       weight: form.value.weight,
       description: form.value.description,
       maxBudget: parseFloat(form.value.maxBudget),
@@ -72,7 +89,7 @@ async function submit() {
     <div v-if="done" class="rounded-xl border border-green-200 bg-green-50 p-10 text-center">
       <PhConfetti class="mx-auto mb-3 size-12 text-green-500" weight="duotone" />
       <h2 class="text-xl font-bold text-green-700">Teslimat Oluşturuldu!</h2>
-      <p class="mt-2 text-stone-500">Ödemeniz kilitlendi. Yönlendiriliyorsunuz...</p>
+      <p class="mt-2 text-stone-500">İlan yayınlandı. Teklif seçince ödemeyi escrow'a kilitleyebilirsiniz.</p>
     </div>
 
     <!-- Form card -->
@@ -94,6 +111,34 @@ async function submit() {
           <label class="mb-1.5 block text-sm font-medium text-stone-700">Nereye (Teslim)</label>
           <input v-model="form.dropoffAddress" class="input" placeholder="Örn: Beşiktaş, İstanbul" />
         </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Alıcı Adı</label>
+            <input v-model="form.recipientName" class="input" placeholder="Örn: Ayşe Yılmaz" />
+          </div>
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Teslim Kodu</label>
+            <input
+              v-model.trim="form.deliveryCode"
+              class="input uppercase tracking-widest"
+              maxlength="12"
+              placeholder="Örn: A12345"
+            />
+          </div>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Alıcı Telefonu</label>
+            <input v-model="form.recipientPhone" class="input" placeholder="Opsiyonel" />
+          </div>
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Alıcı Cüzdanı</label>
+            <input v-model="form.recipientWallet" class="input" placeholder="Opsiyonel" />
+          </div>
+        </div>
+        <p class="text-xs leading-relaxed text-stone-500">
+          Bu kodu sadece gerçek alıcıyla paylaşın. Kurye teslimat QR'ını gösterdiğinde alıcı bu kodla ödemeyi serbest bırakır.
+        </p>
       </div>
 
       <!-- Step 1 -->
@@ -145,6 +190,8 @@ async function submit() {
           <div class="flex justify-between"><span class="text-stone-500">Başlık</span><span class="font-medium text-stone-900">{{ form.title }}</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Nereden</span><span class="font-medium text-stone-900">{{ form.pickupAddress }}</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Nereye</span><span class="font-medium text-stone-900">{{ form.dropoffAddress }}</span></div>
+          <div class="flex justify-between gap-4"><span class="text-stone-500">Alıcı</span><span class="text-right font-medium text-stone-900">{{ form.recipientName }}</span></div>
+          <div class="flex justify-between gap-4"><span class="text-stone-500">Teslim Kodu</span><span class="font-mono font-semibold uppercase tracking-widest text-stone-900">{{ form.deliveryCode }}</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Ağırlık</span><span class="font-medium text-stone-900">{{ form.weight }} kg</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Bütçe</span><span class="font-semibold text-orange-600">{{ form.maxBudget }} MON</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Son Teslim</span><span class="font-medium text-stone-900">{{ form.date }} - {{ form.deadline }}</span></div>

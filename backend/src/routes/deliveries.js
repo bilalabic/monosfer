@@ -3,7 +3,7 @@ import { authenticate } from '../middlewares/authenticate.js'
 import {
   list, getOne, create,
   addBid, selectBid,
-  lockEscrow, confirmPickup, complete, rate,
+  lockEscrow, confirmPickup, complete, completeWithRecipientCode, rate,
 } from '../controllers/deliveryController.js'
 
 const deliveriesRouter = Router()
@@ -16,6 +16,7 @@ deliveriesRouter.patch('/:id/select-bid', authenticate, selectBid)
 deliveriesRouter.patch('/:id/escrow', authenticate, lockEscrow)
 deliveriesRouter.patch('/:id/pickup', authenticate, confirmPickup)
 deliveriesRouter.patch('/:id/complete', authenticate, complete)
+deliveriesRouter.patch('/:id/recipient-complete', completeWithRecipientCode)
 deliveriesRouter.patch('/:id/rating', authenticate, rate)
 
 export default deliveriesRouter

@@ -60,6 +60,74 @@ function buildTimeline(delivery) {
   }))
 }
 
+function addAmount(current, amount) {
+  const total = Number(current || 0) + amount
+  return String(Math.round(total * 100) / 100)
+}
+
+function normalizeDeliveryCode(code) {
+  return String(code || '').replace(/\s+/g, '').toUpperCase()
+}
+
+function generateDeliveryCode() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase()
+}
+
+function recalculateLeaderboardScore(stats) {
+  stats.leaderboardScore = Math.round(
+    (Number(stats.totalDeliveries || 0) * 10) +
+    (Number(stats.onTimeRate || 0) * 0.5) +
+    (Number(stats.avgRating || 0) * 20),
+  )
+}
+
+async function updateCourierCompletionStats(courier, amount, deliveredAt, deadline) {
+  let stats = await CourierStats.findOne({ walletAddress: courier })
+  if (!stats) {
+    stats = await CourierStats.create({ walletAddress: courier })
+  }
+
+  const deliveryAmount = Number(amount || 0)
+  const wasOnTime = deadline ? deliveredAt <= new Date(deadline) : true
+
+  stats.totalDeliveries = Number(stats.totalDeliveries || 0) + 1
+  stats.weeklyDeliveries = Number(stats.weeklyDeliveries || 0) + 1
+  stats.monthlyDeliveries = Number(stats.monthlyDeliveries || 0) + 1
+  stats.successRate = 100
+  if (wasOnTime) {
+    stats.onTimeCount = Number(stats.onTimeCount || 0) + 1
+  } else {
+    stats.lateCount = Number(stats.lateCount || 0) + 1
+  }
+  stats.onTimeRate = Math.round((Number(stats.onTimeCount || 0) / stats.totalDeliveries) * 100)
+  stats.weeklyEarnings = addAmount(stats.weeklyEarnings, deliveryAmount)
+  stats.monthlyEarnings = addAmount(stats.monthlyEarnings, deliveryAmount)
+  stats.totalEarnings = addAmount(stats.totalEarnings, deliveryAmount)
+  stats.lastActiveDate = deliveredAt
+  recalculateLeaderboardScore(stats)
+
+  await stats.save?.()
+  return stats
+}
+
+async function finalizeDelivery(delivery, assignedBid, txHash, confirmedBy) {
+  delivery.status = 'Delivered'
+  delivery.deliveredAt = new Date()
+  delivery.escrowBalance = '0'
+  delivery.dropoff.deliveryConfirmedBy = confirmedBy
+  delivery.dropoff.deliveryConfirmedAt = delivery.deliveredAt
+  for (const s of delivery.timeline) {
+    if (!s.completed) {
+      s.completed = true
+      s.timestamp = new Date()
+      if (s.step === 'delivered') s.txHash = txHash || s.txHash
+    }
+  }
+  await updateCourierCompletionStats(assignedBid.courier, assignedBid.amount, delivery.deliveredAt, delivery.deadline)
+  await delivery.save()
+  return toFrontend(delivery.toObject())
+}
+
 export async function toFrontend(delivery) {
   const bids = await Bid.find({ deliveryId: delivery._id }).lean()
   const populatedBids = await populateBids(bids, delivery.selectedBidId)
@@ -71,6 +139,9 @@ export async function toFrontend(delivery) {
     title: delivery.title || 'Teslimat',
     pickupAddress: delivery.pickup.address,
     dropoffAddress: delivery.dropoff.address,
+    recipientName: delivery.dropoff.recipientName || '',
+    requiresRecipientCode: Boolean(delivery.dropoff.deliveryCode),
+    deliveryConfirmedBy: delivery.dropoff.deliveryConfirmedBy,
     distance: delivery.distanceKm ? `${Number(delivery.distanceKm).toFixed(1)} km` : '—',
     weight: delivery.weight || '—',
     description: delivery.notes || '',
@@ -132,6 +203,10 @@ export async function createDelivery(data, walletAddress) {
       address: data.dropoffAddress,
       lat: data.dropoffLat || 41.0082,
       lng: data.dropoffLng || 28.9784,
+      recipientName: data.recipientName,
+      recipientPhone: data.recipientPhone,
+      recipientWallet: data.recipientWallet ? data.recipientWallet.toLowerCase() : undefined,
+      deliveryCode: normalizeDeliveryCode(data.deliveryCode) || generateDeliveryCode(),
     },
     packageType: data.packageType || 'medium',
     urgency: data.urgency || 'standard',
@@ -249,21 +324,28 @@ export async function completeDelivery(deliveryId, walletAddress, txHash) {
   if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
   const assignedBid = delivery.selectedBidId ? await Bid.findById(delivery.selectedBidId) : null
   const addr = walletAddress.toLowerCase()
-  const canConfirm = assignedBid && (assignedBid.courier === addr || delivery.customer === addr)
-  if (!canConfirm) throw Object.assign(new Error('Sadece gönderici veya atanan kurye teslimatı tamamlayabilir'), { statusCode: 403 })
+  const canConfirm = assignedBid && delivery.customer === addr
+  if (!canConfirm) throw Object.assign(new Error('Sadece gönderici teslimatı tamamlayabilir'), { statusCode: 403 })
 
-  delivery.status = 'Delivered'
-  delivery.deliveredAt = new Date()
-  delivery.escrowBalance = '0'
-  for (const s of delivery.timeline) {
-    if (!s.completed) {
-      s.completed = true
-      s.timestamp = new Date()
-      if (s.step === 'delivered') s.txHash = txHash || s.txHash
-    }
+  return finalizeDelivery(delivery, assignedBid, txHash, 'sender_wallet')
+}
+
+export async function completeDeliveryWithRecipientCode(deliveryId, deliveryCode, txHash) {
+  const delivery = await Delivery.findById(deliveryId)
+  if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
+  const assignedBid = delivery.selectedBidId ? await Bid.findById(delivery.selectedBidId) : null
+  if (!assignedBid) throw Object.assign(new Error('Atanan kurye bulunamadı'), { statusCode: 400 })
+  if (delivery.status !== 'InTransit') {
+    throw Object.assign(new Error('Teslim kodu sadece paket yoldayken kullanılabilir'), { statusCode: 400 })
   }
-  await delivery.save()
-  return toFrontend(delivery.toObject())
+
+  const expectedCode = normalizeDeliveryCode(delivery.dropoff.deliveryCode)
+  if (!expectedCode) throw Object.assign(new Error('Bu teslimat için alıcı teslim kodu yok'), { statusCode: 400 })
+  if (normalizeDeliveryCode(deliveryCode) !== expectedCode) {
+    throw Object.assign(new Error('Teslim kodu hatalı'), { statusCode: 403 })
+  }
+
+  return finalizeDelivery(delivery, assignedBid, txHash, 'recipient_code')
 }
 
 export async function rateDelivery(deliveryId, walletAddress, data) {
@@ -300,11 +382,7 @@ export async function rateDelivery(deliveryId, walletAddress, data) {
   stats.totalRatings = Number(stats.totalRatings || 0) + 1
   stats.totalRatingSum = Number(stats.totalRatingSum || 0) + rating
   stats.avgRating = Math.round((stats.totalRatingSum / stats.totalRatings) * 10) / 10
-  stats.leaderboardScore = Math.round(
-    (Number(stats.totalDeliveries || 0) * 10) +
-    (Number(stats.onTimeRate || 0) * 0.5) +
-    (stats.avgRating * 20),
-  )
+  recalculateLeaderboardScore(stats)
 
   await stats.save?.()
   await delivery.save()

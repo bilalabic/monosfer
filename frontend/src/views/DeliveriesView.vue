@@ -95,7 +95,7 @@ function goToScenario(path: string) {
 }
 
 const filters: { key: Filter; label: string }[] = [
-  { key: 'all', label: 'Tümü' },
+  { key: 'all', label: 'Aktif' },
   { key: 'open', label: 'Açık' },
   { key: 'in_progress', label: 'Devam Eden' },
   { key: 'completed', label: 'Tamamlanan' },
@@ -103,7 +103,11 @@ const filters: { key: Filter; label: string }[] = [
 
 const filtered = computed(() => {
   let list = store.deliveries
-  if (filter.value !== 'all') list = list.filter(d => d.status === filter.value)
+  if (filter.value === 'all') {
+    list = list.filter(d => d.status !== 'completed')
+  } else {
+    list = list.filter(d => d.status === filter.value)
+  }
   if (search.value.trim()) {
     const q = search.value.toLowerCase()
     list = list.filter(d =>

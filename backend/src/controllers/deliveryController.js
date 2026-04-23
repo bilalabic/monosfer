@@ -44,6 +44,11 @@ export async function complete(req, res) {
   res.json(delivery)
 }
 
+export async function completeWithRecipientCode(req, res) {
+  const delivery = await deliveryService.completeDeliveryWithRecipientCode(req.params.id, req.body?.deliveryCode, req.body?.txHash)
+  res.json(delivery)
+}
+
 export async function rate(req, res) {
   const delivery = await deliveryService.rateDelivery(req.params.id, req.user.walletAddress, req.body)
   res.json(delivery)
