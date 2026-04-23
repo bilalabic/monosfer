@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useWalletStore } from '@/stores/useWalletStore'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import {
@@ -11,8 +12,9 @@ import DeliveryCard from '@/components/DeliveryCard.vue'
 
 const wallet = useWalletStore()
 const deliveryStore = useDeliveryStore()
+const router = useRouter()
 
-const activeTab = ref<'tracking' | 'past' | 'ratings' | 'settings'>('tracking')
+const activeTab = ref<'tracking' | 'bids' | 'past' | 'ratings' | 'settings'>('tracking')
 
 const editPhone = ref(wallet.userProfile.phone)
 const editName = ref(wallet.userProfile.name)
@@ -46,6 +48,20 @@ async function saveSettings() {
 
 const activeDelivery = computed(() => deliveryStore.deliveries.find(d => d.status === 'in_progress'))
 const pastDeliveries = computed(() => deliveryStore.deliveries.filter(d => d.status === 'completed'))
+const myBidRows = computed(() => {
+  const address = wallet.address.toLowerCase()
+  if (!address) return []
+
+  return deliveryStore.deliveries.flatMap(delivery =>
+    delivery.bids
+      .filter(bid => bid.courierId.toLowerCase() === address)
+      .map(bid => ({
+        bid,
+        delivery,
+        isSelected: delivery.selectedBidId === bid.id,
+      })),
+  )
+})
 
 const roleConfig: Record<string, { label: string; color: string; icon: any }> = {
   sender:    { label: 'Gönderici', color: 'bg-blue-100 text-blue-700', icon: PhUser },
@@ -58,6 +74,23 @@ const profileRoleLabel = computed(() => {
   if (wallet.userProfile.role === 'courier') return 'Kurye'
   if (wallet.userProfile.role === 'both') return 'Müşteri + Kurye'
   return 'Müşteri'
+})
+
+const statusLabel: Record<string, string> = {
+  open: 'Teklif bekliyor',
+  in_progress: 'Devam ediyor',
+  completed: 'Tamamlandı',
+  disputed: 'İtirazda',
+}
+
+function formatDateTime(date: string) {
+  return new Date(date).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+onMounted(() => {
+  if (deliveryStore.deliveries.length === 0) {
+    deliveryStore.loadDeliveries()
+  }
 })
 
 </script>
@@ -82,6 +115,14 @@ const profileRoleLabel = computed(() => {
           >
             <PhMapPin class="size-5 shrink-0" :weight="activeTab === 'tracking' ? 'duotone' : 'regular'" />
             Kargom Nerede
+          </button>
+          <button
+            :class="['flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition whitespace-nowrap', activeTab === 'bids' ? 'bg-white text-orange-600 shadow-sm border border-stone-200' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900']"
+            @click="activeTab = 'bids'"
+          >
+            <PhHandshake class="size-5 shrink-0" :weight="activeTab === 'bids' ? 'duotone' : 'regular'" />
+            Tekliflerim
+            <span v-if="myBidRows.length" class="ml-auto rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">{{ myBidRows.length }}</span>
           </button>
           <button
             :class="['flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition whitespace-nowrap', activeTab === 'past' ? 'bg-white text-orange-600 shadow-sm border border-stone-200' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900']"
@@ -115,6 +156,10 @@ const profileRoleLabel = computed(() => {
           <div class="flex items-center justify-between text-sm">
             <span class="text-stone-500">Tamamlanan</span>
             <span class="font-semibold text-green-600">{{ pastDeliveries.length }}</span>
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-stone-500">Tekliflerim</span>
+            <span class="font-semibold text-orange-600">{{ myBidRows.length }}</span>
           </div>
           <div class="flex items-center justify-between text-sm">
             <span class="text-stone-500">Puanım</span>
@@ -208,6 +253,78 @@ const profileRoleLabel = computed(() => {
               <PhPackage class="mx-auto mb-3 size-12 text-stone-300" weight="duotone" />
               <p class="text-stone-500 font-medium">Şu an aktif bir teslimatınız bulunmuyor.</p>
               <p class="mt-2 text-sm text-stone-400">Yeni teslimat başlatmak için üst menüdeki butonu kullanın.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── Tekliflerim ─── -->
+        <div v-else-if="activeTab === 'bids'" class="space-y-6">
+          <div class="card rounded-2xl bg-white p-6">
+            <div class="mb-5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 class="text-lg font-bold text-stone-900">Tekliflerim</h2>
+                <p class="mt-1 text-sm text-stone-500">Kurye olarak verdiğin teklifler ve seçilme durumları</p>
+              </div>
+              <span class="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+                {{ myBidRows.length }} teklif
+              </span>
+            </div>
+
+            <div v-if="myBidRows.length > 0" class="space-y-3">
+              <div
+                v-for="{ bid, delivery, isSelected } in myBidRows"
+                :key="bid.id"
+                class="rounded-xl border border-stone-200 bg-stone-50 p-4 transition hover:border-orange-200 hover:bg-white hover:shadow-sm"
+              >
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div class="min-w-0">
+                    <div class="mb-2 flex flex-wrap items-center gap-2">
+                      <span
+                        :class="[
+                          'rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                          isSelected ? 'bg-green-100 text-green-700' : 'bg-stone-200 text-stone-600',
+                        ]"
+                      >
+                        {{ isSelected ? 'Seçildi' : 'Beklemede' }}
+                      </span>
+                      <span class="text-xs text-stone-400">{{ statusLabel[delivery.status] }}</span>
+                    </div>
+                    <h3 class="font-semibold text-stone-900">{{ delivery.title }}</h3>
+                    <p class="mt-1 line-clamp-1 text-xs text-stone-500">
+                      {{ delivery.pickupAddress }} → {{ delivery.dropoffAddress }}
+                    </p>
+                    <p class="mt-2 text-xs text-stone-400">
+                      {{ formatDateTime(bid.createdAt) }} · Tahmini süre: {{ bid.estimatedTime }}
+                    </p>
+                  </div>
+
+                  <div class="flex shrink-0 flex-col gap-2 sm:items-end">
+                    <p class="text-lg font-bold text-stone-900">{{ bid.tokenAmount }} MON</p>
+                    <div class="flex gap-2">
+                      <button
+                        class="rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-600 transition hover:bg-stone-100"
+                        @click="router.push(`/delivery/${delivery.id}`)"
+                      >
+                        Detay
+                      </button>
+                      <button
+                        v-if="isSelected && delivery.status === 'in_progress'"
+                        class="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-medium text-green-700 transition hover:bg-green-100"
+                        @click="router.push(`/courier/receive/${delivery.id}`)"
+                      >
+                        QR Ekranı
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="py-12 text-center">
+              <PhHandshake class="mx-auto mb-3 size-12 text-stone-300" weight="duotone" />
+              <p class="font-semibold text-stone-900">Henüz teklif vermedin</p>
+              <p class="mt-1 text-sm text-stone-500">Açık teslimatlardan birine teklif verdiğinde burada görünecek.</p>
+              <button class="btn-primary mt-4 justify-center" @click="router.push('/deliveries')">Teslimatlara Git</button>
             </div>
           </div>
         </div>
@@ -320,6 +437,14 @@ const profileRoleLabel = computed(() => {
               <PhClockCounterClockwise class="size-6 text-stone-400 mb-2" weight="duotone" />
               <p class="text-sm font-semibold text-stone-900">Geçmiş Teslimatlar</p>
               <p class="text-xs text-stone-500 mt-0.5">{{ pastDeliveries.length }} teslimat</p>
+            </button>
+            <button
+              class="card bg-white rounded-xl p-4 text-left hover:border-orange-200 transition cursor-pointer border border-stone-100"
+              @click="activeTab = 'bids'"
+            >
+              <PhHandshake class="size-6 text-orange-400 mb-2" weight="duotone" />
+              <p class="text-sm font-semibold text-stone-900">Tekliflerim</p>
+              <p class="text-xs text-stone-500 mt-0.5">{{ myBidRows.length }} teklif</p>
             </button>
             <button
               class="card bg-white rounded-xl p-4 text-left hover:border-orange-200 transition cursor-pointer border border-stone-100"
