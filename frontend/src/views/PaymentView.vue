@@ -158,7 +158,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
           <div class="space-y-3 text-sm">
             <div class="flex items-center justify-between">
               <span class="text-stone-600">Teslimat Ucreti (Escrow)</span>
-              <span class="font-semibold text-stone-900">{{ escrowTokenAmount }} DLV</span>
+              <span class="font-semibold text-stone-900">{{ escrowTokenAmount }} MON</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-stone-400">Gas Ücreti (tahmini)</span>
@@ -166,7 +166,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
             </div>
             <div class="flex items-center justify-between border-t border-stone-100 pt-3">
               <span class="font-semibold text-stone-900">Escrow Token</span>
-              <span class="font-semibold text-stone-900">{{ escrowTokenAmount }} DLV</span>
+              <span class="font-semibold text-stone-900">{{ escrowTokenAmount }} MON</span>
             </div>
           </div>
         </div>
@@ -205,7 +205,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
           @click="pay"
         >
           <PhLockKey class="size-4" weight="bold" />
-          {{ isEscrowLocked ? 'Zaten Kilitli' : sufficient ? `${escrowTokenAmount} DLV Escrow Kaydet` : 'Gas icin MON yetersiz' }}
+          {{ isEscrowLocked ? 'Zaten Kilitli' : sufficient ? `${escrowTokenAmount} MON Escrow Kaydet` : 'Gas icin MON yetersiz' }}
         </button>
       </div>
 
@@ -233,7 +233,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
           </div>
           <div class="flex justify-between text-xs">
             <span class="text-stone-400">Miktar</span>
-            <span class="font-semibold text-stone-900">{{ escrowTokenAmount }} DLV</span>
+            <span class="font-semibold text-stone-900">{{ escrowTokenAmount }} MON</span>
           </div>
           <div class="flex justify-between text-xs">
             <span class="text-stone-400">Gas</span>
@@ -287,7 +287,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
         <div>
           <h2 class="text-2xl font-bold text-stone-900">Ödeme Kilitlendi!</h2>
           <p class="mt-1 text-sm text-stone-500">
-            {{ escrowTokenAmount }} DLV escrow kaydi backend'e islendi ve tx testnete yazildi
+            {{ escrowTokenAmount }} MON escrow kaydi backend'e islendi ve tx testnete yazildi
           </p>
         </div>
 

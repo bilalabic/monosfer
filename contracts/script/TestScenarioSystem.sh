@@ -34,28 +34,28 @@ if [[ "$CHAIN_ID" != "$EXPECTED_CHAIN_ID" ]]; then
 fi
 
 echo
-echo "[1/10] Kurye stake icin approve (10 DLV)"
+echo "[1/10] Kurye stake icin approve (10 MON)"
 cast send "$TOKEN_ADDRESS" "approve(address,uint256)" \
   "$ESCROW_ADDRESS" 10000000000000000000 \
   --rpc-url "$RPC_URL" \
   --private-key "$COURIER_PRIVATE_KEY"
 
 echo
-echo "[2/10] Kurye stake yatirma (10 DLV)"
+echo "[2/10] Kurye stake yatirma (10 MON)"
 cast send "$ESCROW_ADDRESS" "depositStake(uint256)" \
   10000000000000000000 \
   --rpc-url "$RPC_URL" \
   --private-key "$COURIER_PRIVATE_KEY"
 
 echo
-echo "[3/10] Musteri budget icin approve (50 DLV)"
+echo "[3/10] Musteri budget icin approve (50 MON)"
 cast send "$TOKEN_ADDRESS" "approve(address,uint256)" \
   "$ESCROW_ADDRESS" 50000000000000000000 \
   --rpc-url "$RPC_URL" \
   --private-key "$CUSTOMER_PRIVATE_KEY"
 
 echo
-echo "[4/10] Talep olusturma (Express, 50 DLV)"
+echo "[4/10] Talep olusturma (Express, 50 MON)"
 cast send "$ESCROW_ADDRESS" "createDeliveryRequest(bytes32,bytes32,uint8,uint256)" \
   "$PICKUP_HASH" "$DELIVERY_HASH" 1 50000000000000000000 \
   --rpc-url "$RPC_URL" \
@@ -66,7 +66,7 @@ REQUEST_ID=$((REQUEST_ID - 1))
 echo "Aktif requestId: $REQUEST_ID"
 
 echo
-echo "[5/10] Teklif verme (requestId=0, 40 DLV, 25 dakika)"
+echo "[5/10] Teklif verme (requestId=0, 40 MON, 25 dakika)"
 cast send "$ESCROW_ADDRESS" "submitBid(uint256,uint256,uint16)" \
   "$REQUEST_ID" 40000000000000000000 25 \
   --rpc-url "$RPC_URL" \

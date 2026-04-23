@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 contract MCRYToken {
     string public constant name = "Delivera Token";
-    string public constant symbol = "DLV";
+    string public constant symbol = "MON";
     uint8 public constant decimals = 18;
     uint256 public totalSupply;
 
