@@ -55,3 +55,9 @@ Sen, gerçek dünya projelerinde çalışan deneyimli bir Full Stack Geliştiric
 * Express middleware dosyaları niyetini açıkça belirtmelidir (örn: `errorHandler.js`, `authMiddleware.js`).
 * Utility fonksiyonları fiil odaklı ve açık isimlendirilmelidir.
 * Controller, service ve validator isimleri yaptıkları işi doğrudan anlatmalıdır.
+
+## 11. Çalışma Devamlılığı ve Görev Önerileri
+* **Kaldığın Yeri Kaydet:** Yarım kalan, sonraki oturumda devam edilmesi gereken veya bilinçli olarak ertelenen işleri ilgili dosyaya not olarak ekle. Uygun yer yoksa proje kökündeki `README.md`, backend `README.md` veya ilgili modül dokümantasyonu altında kısa ve açık bir "Devam Notu" bölümü oluştur.
+* **Dosya Odaklı Not Tut:** Notlar uygulanabilir olmalıdır; hangi endpoint, servis, middleware, test veya konfigürasyon üzerinde devam edileceği net yazılmalıdır. Belirsiz "sonra bakılacak" ifadelerinden kaçın.
+* **Görev Bitişi:** Bir task tamamlandığında son yanıtta veya ilgili dokümanda mutlaka 2 yeni yapılacak görev öner. Öneriler mevcut işin doğal devamı olmalı ve projeye gerçek değer katmalıdır.
+* **Önceliklendirme:** Önerilen 2 görevi kısa gerekçeleriyle yaz. Biri teknik kalite veya güvenlik/doğrulama, diğeri ürün/API geliştirme odaklı olabilir.

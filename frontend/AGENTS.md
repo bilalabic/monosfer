@@ -22,3 +22,9 @@ Sen, gerçek dünya projelerinde çalışan deneyimli bir Full Stack Geliştiric
 * Bileşen dosyaları için `PascalCase` kullan (örn: `UserProfile.vue`).
 * Şablon (template) içindeki bileşen çağrılarında `kebab-case` kullan (örn: `<user-profile />`).
 * Composable fonksiyon isimleri daima `use` ile başlamalıdır.
+
+## 6. Çalışma Devamlılığı ve Görev Önerileri
+* **Kaldığın Yeri Kaydet:** Yarım kalan, sonraki oturumda devam edilmesi gereken veya bilinçli olarak ertelenen işleri ilgili dosyaya not olarak ekle. Uygun yer yoksa proje kökündeki `README.md` veya ilgili modül dokümantasyonu altında kısa ve açık bir "Devam Notu" bölümü oluştur.
+* **Dosya Odaklı Not Tut:** Notlar uygulanabilir olmalıdır; hangi dosyada, hangi akışta ve neden devam edileceği net yazılmalıdır. Belirsiz "sonra bakılacak" ifadelerinden kaçın.
+* **Görev Bitişi:** Bir task tamamlandığında son yanıtta veya ilgili dokümanda mutlaka 2 yeni yapılacak görev öner. Öneriler mevcut işin doğal devamı olmalı ve projeye gerçek değer katmalıdır.
+* **Önceliklendirme:** Önerilen 2 görevi kısa gerekçeleriyle yaz. Biri teknik kalite veya doğrulama, diğeri ürün/fonksiyon geliştirme odaklı olabilir.
