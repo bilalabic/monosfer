@@ -227,7 +227,9 @@ export async function confirmPickup(deliveryId, walletAddress, txHash) {
   const delivery = await Delivery.findById(deliveryId)
   if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
   const assignedBid = delivery.selectedBidId ? await Bid.findById(delivery.selectedBidId) : null
-  if (!assignedBid || assignedBid.courier !== walletAddress.toLowerCase()) throw Object.assign(new Error('Sadece atanan kurye teslim alımı onaylayabilir'), { statusCode: 403 })
+  const addr = walletAddress.toLowerCase()
+  const canConfirm = assignedBid && (assignedBid.courier === addr || delivery.customer === addr)
+  if (!canConfirm) throw Object.assign(new Error('Sadece gönderici veya atanan kurye teslim alımı onaylayabilir'), { statusCode: 403 })
 
   delivery.status = 'InTransit'
   delivery.pickedUpAt = new Date()
@@ -246,7 +248,9 @@ export async function completeDelivery(deliveryId, walletAddress, txHash) {
   const delivery = await Delivery.findById(deliveryId)
   if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
   const assignedBid = delivery.selectedBidId ? await Bid.findById(delivery.selectedBidId) : null
-  if (!assignedBid || assignedBid.courier !== walletAddress.toLowerCase()) throw Object.assign(new Error('Sadece atanan kurye teslimatı tamamlayabilir'), { statusCode: 403 })
+  const addr = walletAddress.toLowerCase()
+  const canConfirm = assignedBid && (assignedBid.courier === addr || delivery.customer === addr)
+  if (!canConfirm) throw Object.assign(new Error('Sadece gönderici veya atanan kurye teslimatı tamamlayabilir'), { statusCode: 403 })
 
   delivery.status = 'Delivered'
   delivery.deliveredAt = new Date()
