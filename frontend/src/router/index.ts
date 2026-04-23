@@ -48,6 +48,18 @@ const router = createRouter({
       component: () => import('../views/DashboardView.vue'),
       meta: { requiresAuth: true }
     },
+    {
+      path: '/payment/:id',
+      name: 'payment',
+      component: () => import('../views/PaymentView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/courier/receive/:id',
+      name: 'courier-receive',
+      component: () => import('../views/CourierReceiveView.vue'),
+      meta: { requiresAuth: true }
+    },
   ],
 })
 

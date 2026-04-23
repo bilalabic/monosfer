@@ -255,5 +255,45 @@ export const useDeliveryStore = defineStore('delivery', () => {
     }
   }
 
-  return { deliveries, filteredDeliveries, selectedFilter, getDelivery, addBid, selectBid }
+  function lockEscrow(deliveryId: string) {
+    const d = deliveries.value.find(d => d.id === deliveryId)
+    if (!d) return
+    const now = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+    const escrowStep = d.timeline.find(s => s.step === 'escrow')
+    if (escrowStep) {
+      escrowStep.completed = true
+      escrowStep.time = now
+    }
+  }
+
+  function confirmPickup(deliveryId: string) {
+    const d = deliveries.value.find(d => d.id === deliveryId)
+    if (!d) return
+    const now = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+    const pickupStep = d.timeline.find(s => s.step === 'pickup')
+    if (pickupStep && !pickupStep.completed) {
+      pickupStep.completed = true
+      pickupStep.time = now
+    }
+    const transitStep = d.timeline.find(s => s.step === 'transit')
+    if (transitStep && !transitStep.completed) {
+      transitStep.completed = true
+      transitStep.time = now
+    }
+  }
+
+  function completeDelivery(deliveryId: string) {
+    const d = deliveries.value.find(d => d.id === deliveryId)
+    if (!d) return
+    d.status = 'completed'
+    const now = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+    for (const s of d.timeline) {
+      if (!s.completed) {
+        s.completed = true
+        s.time = now
+      }
+    }
+  }
+
+  return { deliveries, filteredDeliveries, selectedFilter, getDelivery, addBid, selectBid, lockEscrow, confirmPickup, completeDelivery }
 })

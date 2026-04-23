@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router'
-import { PhMapPin as MapPin, PhClock as Clock, PhBarbell as Weight, PhPackage as Package, PhCaretRight as ChevronRight } from '@phosphor-icons/vue'
+import { RouterLink, useRouter } from 'vue-router'
+import { PhMapPin as MapPin, PhClock as Clock, PhBarbell as Weight, PhPackage as Package, PhCaretRight as ChevronRight, PhLockKey, PhQrCode } from '@phosphor-icons/vue'
 import type { Delivery } from '@/stores/useDeliveryStore'
+import { useWalletStore } from '@/stores/useWalletStore'
 import StatusBadge from '@/components/StatusBadge.vue'
 import TokenAmount from '@/components/TokenAmount.vue'
 
 const props = defineProps<{ delivery: Delivery }>()
 const emit = defineEmits<{ bid: [deliveryId: string] }>()
+
+const router = useRouter()
+const wallet = useWalletStore()
 
 function formatTime(dateStr: string) {
   return new Date(dateStr).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
@@ -62,6 +66,20 @@ function formatTime(dateStr: string) {
           @click="emit('bid', delivery.id)"
         >
           Teklif Ver
+        </button>
+        <button
+          v-if="delivery.status === 'open' && wallet.connected"
+          class="flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-700 transition hover:bg-orange-100"
+          @click="router.push(`/payment/${delivery.id}`)"
+        >
+          <PhLockKey class="size-3.5" weight="bold" /> Öde
+        </button>
+        <button
+          v-if="delivery.status === 'in_progress' && delivery.selectedBidId && wallet.connected"
+          class="flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 transition hover:bg-green-100"
+          @click="router.push(`/courier/receive/${delivery.id}`)"
+        >
+          <PhQrCode class="size-3.5" weight="bold" /> QR
         </button>
         <RouterLink
           :to="`/delivery/${delivery.id}`"

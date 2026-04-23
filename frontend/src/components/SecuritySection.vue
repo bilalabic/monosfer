@@ -1,22 +1,32 @@
 <script setup lang="ts">
+import { PhLockKey, PhSealCheck, PhShieldChevron, PhGavel } from '@phosphor-icons/vue'
+
 const layers = [
   {
-    num: '1', title: 'Escrow Ödeme', icon: '🔐',
+    num: '1', title: 'Escrow Ödeme',
+    icon: PhLockKey,
+    iconClass: 'text-orange-500 bg-orange-100',
     desc: 'Müşterinin parası teslimat tamamlanana kadar kilitlenir. Hiçbir taraf tek başına dokunabilir.',
     bg: 'bg-orange-50 border-orange-200',
   },
   {
-    num: '2', title: 'İki Aşamalı Onay', icon: '✅',
+    num: '2', title: 'İki Aşamalı Onay',
+    icon: PhSealCheck,
+    iconClass: 'text-blue-500 bg-blue-100',
     desc: 'Kurye ürünü alırken müşteri, teslim ederken alıcı onaylar. İkisi olmadan ödeme serbest kalmaz.',
     bg: 'bg-blue-50 border-blue-200',
   },
   {
-    num: '3', title: 'Teminat Mekanizması', icon: '🛡️',
+    num: '3', title: 'Teminat Mekanizması',
+    icon: PhShieldChevron,
+    iconClass: 'text-violet-500 bg-violet-100',
     desc: 'Kurye teklif verirken teminat yatırır. İşi bırakırsa teminat müşteriye gider.',
     bg: 'bg-violet-50 border-violet-200',
   },
   {
-    num: '4', title: 'Jüri Sistemi', icon: '⚖️',
+    num: '4', title: 'Jüri Sistemi',
+    icon: PhGavel,
+    iconClass: 'text-green-600 bg-green-100',
     desc: 'Uyuşmazlıkta rastgele token sahipleri delilleri inceler. Karar blockchain\'e yazılır.',
     bg: 'bg-green-50 border-green-200',
   },
@@ -53,7 +63,9 @@ const layers = [
             :key="layer.num"
             :class="['flex items-start gap-4 rounded-xl border p-4', layer.bg]"
           >
-            <span class="text-xl leading-none">{{ layer.icon }}</span>
+            <div :class="['flex size-9 shrink-0 items-center justify-center rounded-xl', layer.iconClass]">
+              <component :is="layer.icon" class="size-5" weight="duotone" />
+            </div>
             <div>
               <div class="mb-0.5 flex items-center gap-2">
                 <span class="text-xs font-bold text-stone-400">Katman {{ layer.num }}</span>

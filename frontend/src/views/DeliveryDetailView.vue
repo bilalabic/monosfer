@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { PhArrowLeft as ArrowLeft, PhMapPin as MapPin, PhClock as Clock, PhBarbell as Weight, PhPackage as Package, PhShieldCheck as Shield, PhUsers as Users, PhMagnifyingGlass } from '@phosphor-icons/vue'
+import { PhArrowLeft as ArrowLeft, PhMapPin as MapPin, PhClock as Clock, PhBarbell as Weight, PhPackage as Package, PhShieldCheck as Shield, PhUsers as Users, PhMagnifyingGlass, PhLockKey, PhQrCode } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
+import { useWalletStore } from '@/stores/useWalletStore'
 import StatusBadge from '@/components/StatusBadge.vue'
 import TokenAmount from '@/components/TokenAmount.vue'
 import CourierBidCard from '@/components/CourierBidCard.vue'
@@ -11,6 +12,7 @@ import DeliveryTimeline from '@/components/DeliveryTimeline.vue'
 const route = useRoute()
 const router = useRouter()
 const store = useDeliveryStore()
+const wallet = useWalletStore()
 const delivery = computed(() => store.getDelivery(route.params.id as string))
 
 function formatDate(s: string) {
@@ -132,6 +134,26 @@ function formatDate(s: string) {
             <p class="mt-0.5 text-xs text-stone-400">Kilitli</p>
           </div>
         </div>
+
+        <!-- Action buttons -->
+        <template v-if="wallet.connected">
+          <button
+            v-if="delivery.status === 'open'"
+            class="btn-primary w-full justify-center"
+            @click="router.push(`/payment/${delivery.id}`)"
+          >
+            <PhLockKey class="size-4" weight="bold" />
+            Ödemeyi Kilitle (Escrow)
+          </button>
+          <button
+            v-if="delivery.status === 'in_progress' && delivery.selectedBidId"
+            class="w-full justify-center rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 flex items-center gap-2 text-sm font-semibold text-orange-700 hover:bg-orange-100 transition"
+            @click="router.push(`/courier/receive/${delivery.id}`)"
+          >
+            <PhQrCode class="size-4" weight="bold" />
+            Kurye QR & Ödeme Ekranı
+          </button>
+        </template>
       </div>
     </div>
   </div>

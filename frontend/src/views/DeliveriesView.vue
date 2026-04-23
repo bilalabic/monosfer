@@ -1,15 +1,27 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { PhMagnifyingGlass as Search, PhPackage } from '@phosphor-icons/vue'
+import { useRouter } from 'vue-router'
+import { PhMagnifyingGlass as Search, PhPackage, PhLockKey, PhQrCode, PhArrowRight } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
+import { useWalletStore } from '@/stores/useWalletStore'
 import DeliveryCard from '@/components/DeliveryCard.vue'
 import BidModal from '@/components/BidModal.vue'
 
 const store = useDeliveryStore()
+const wallet = useWalletStore()
+const router = useRouter()
+
 type Filter = 'all' | 'open' | 'in_progress' | 'completed'
 const filter = ref<Filter>('all')
 const search = ref('')
 const bidTarget = ref<string | null>(null)
+
+function goToScenario(path: string) {
+  if (!wallet.connected) {
+    wallet.connect()
+  }
+  router.push(path)
+}
 
 const filters: { key: Filter; label: string }[] = [
   { key: 'all', label: 'Tümü' },
@@ -40,6 +52,64 @@ const filtered = computed(() => {
       <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-orange-500">Blockchain Güvenceli</p>
       <h1 class="text-2xl font-bold text-stone-900 sm:text-3xl">Aktif Teslimatlar</h1>
       <p class="mt-1 text-stone-500">Kuryeler için açık ilanlar — teklif ver, seçil, kazan</p>
+    </div>
+
+    <!-- Demo Scenarios -->
+    <div class="mb-8 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-orange-50 p-5">
+      <div class="mb-4 flex items-center gap-2">
+        <span class="rounded-full bg-purple-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-purple-700">Demo Senaryosu</span>
+        <p class="text-xs text-stone-500">Ödeme akışlarını dene — gerçek Monad TX simülasyonu</p>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2">
+        <!-- Sender scenario -->
+        <button
+          class="group flex flex-col gap-3 rounded-xl border border-orange-200 bg-white p-4 text-left transition hover:border-orange-400 hover:shadow-md"
+          @click="goToScenario('/payment/d1')"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex size-9 items-center justify-center rounded-xl bg-orange-100">
+              <PhLockKey class="size-5 text-orange-500" weight="duotone" />
+            </div>
+            <PhArrowRight class="size-4 text-stone-300 transition group-hover:translate-x-0.5 group-hover:text-orange-400" weight="bold" />
+          </div>
+          <div>
+            <p class="text-xs font-bold uppercase tracking-wide text-orange-500">Senaryo 1 — Gönderici</p>
+            <p class="mt-0.5 text-sm font-semibold text-stone-900">Escrow Ödeme Yap</p>
+            <p class="mt-1 text-xs leading-relaxed text-stone-500">
+              Elektronik Ürün Teslimatı · 25 MON · Kadıköy → Beşiktaş
+            </p>
+          </div>
+          <div class="flex items-center gap-2 rounded-lg border border-orange-100 bg-orange-50 px-3 py-1.5">
+            <span class="size-1.5 rounded-full bg-orange-400" />
+            <span class="text-xs text-orange-700">Ödeme → İmzala → Blok Onayı → Kilitlendi</span>
+          </div>
+        </button>
+
+        <!-- Courier scenario -->
+        <button
+          class="group flex flex-col gap-3 rounded-xl border border-green-200 bg-white p-4 text-left transition hover:border-green-400 hover:shadow-md"
+          @click="goToScenario('/courier/receive/d3')"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex size-9 items-center justify-center rounded-xl bg-green-100">
+              <PhQrCode class="size-5 text-green-600" weight="duotone" />
+            </div>
+            <PhArrowRight class="size-4 text-stone-300 transition group-hover:translate-x-0.5 group-hover:text-green-500" weight="bold" />
+          </div>
+          <div>
+            <p class="text-xs font-bold uppercase tracking-wide text-green-600">Senaryo 2 — Kurye</p>
+            <p class="mt-0.5 text-sm font-semibold text-stone-900">QR ile Ödeme Al</p>
+            <p class="mt-1 text-xs leading-relaxed text-stone-500">
+              Gıda & Market · 12 MON · Bakırköy → Zeytinburnu
+            </p>
+          </div>
+          <div class="flex items-center gap-2 rounded-lg border border-green-100 bg-green-50 px-3 py-1.5">
+            <span class="size-1.5 rounded-full bg-green-500" />
+            <span class="text-xs text-green-700">QR Göster → Onayla → Escrow Serbest → MON Al</span>
+          </div>
+        </button>
+      </div>
     </div>
 
     <!-- Search + Filters -->
