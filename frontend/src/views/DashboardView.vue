@@ -14,13 +14,16 @@ const wallet = useWalletStore()
 const deliveryStore = useDeliveryStore()
 const router = useRouter()
 
-const activeTab = ref<'tracking' | 'bids' | 'past' | 'ratings' | 'settings'>('tracking')
+const activeTab = ref<'tracking' | 'incoming' | 'bids' | 'past' | 'ratings' | 'settings'>('tracking')
 
 const editPhone = ref(wallet.userProfile.phone)
 const editName = ref(wallet.userProfile.name)
 const savedMsg = ref('')
 const saveError = ref('')
 const savingProfile = ref(false)
+const approvingBidId = ref('')
+const incomingActionError = ref('')
+const incomingActionSuccess = ref('')
 
 watch(
   () => ({ name: wallet.userProfile.name, phone: wallet.userProfile.phone }),
@@ -63,6 +66,20 @@ const myBidRows = computed(() => {
   )
 })
 
+const incomingOfferRows = computed(() => {
+  const address = wallet.address.toLowerCase()
+  if (!address) return []
+
+  return deliveryStore.deliveries
+    .filter(delivery => delivery.senderId?.toLowerCase() === address && delivery.status === 'open')
+    .flatMap(delivery =>
+      delivery.bids.map(bid => ({
+        delivery,
+        bid,
+      })),
+    )
+})
+
 const roleConfig: Record<string, { label: string; color: string; icon: any }> = {
   sender:    { label: 'Gönderici', color: 'bg-blue-100 text-blue-700', icon: PhUser },
   courier:   { label: 'Kurye',     color: 'bg-orange-100 text-orange-700', icon: PhTruck },
@@ -85,6 +102,21 @@ const statusLabel: Record<string, string> = {
 
 function formatDateTime(date: string) {
   return new Date(date).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+async function approveIncomingBid(deliveryId: string, bidId: string) {
+  incomingActionError.value = ''
+  incomingActionSuccess.value = ''
+  approvingBidId.value = bidId
+
+  try {
+    await deliveryStore.selectBid(deliveryId, bidId)
+    incomingActionSuccess.value = 'Teklif onaylandı. Şimdi ödeme kilitleme adımına geçebilirsin.'
+  } catch (error) {
+    incomingActionError.value = error instanceof Error ? error.message : 'Teklif onaylanamadı'
+  } finally {
+    approvingBidId.value = ''
+  }
 }
 
 onMounted(() => {
@@ -115,6 +147,14 @@ onMounted(() => {
           >
             <PhMapPin class="size-5 shrink-0" :weight="activeTab === 'tracking' ? 'duotone' : 'regular'" />
             Kargom Nerede
+          </button>
+          <button
+            :class="['flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition whitespace-nowrap', activeTab === 'incoming' ? 'bg-white text-orange-600 shadow-sm border border-stone-200' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900']"
+            @click="activeTab = 'incoming'"
+          >
+            <PhBell class="size-5 shrink-0" :weight="activeTab === 'incoming' ? 'duotone' : 'regular'" />
+            Gelen Teklifler
+            <span v-if="incomingOfferRows.length" class="ml-auto rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">{{ incomingOfferRows.length }}</span>
           </button>
           <button
             :class="['flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition whitespace-nowrap', activeTab === 'bids' ? 'bg-white text-orange-600 shadow-sm border border-stone-200' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900']"
@@ -156,6 +196,10 @@ onMounted(() => {
           <div class="flex items-center justify-between text-sm">
             <span class="text-stone-500">Tamamlanan</span>
             <span class="font-semibold text-green-600">{{ pastDeliveries.length }}</span>
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-stone-500">Gelen Teklifler</span>
+            <span class="font-semibold text-orange-600">{{ incomingOfferRows.length }}</span>
           </div>
           <div class="flex items-center justify-between text-sm">
             <span class="text-stone-500">Tekliflerim</span>
@@ -253,6 +297,80 @@ onMounted(() => {
               <PhPackage class="mx-auto mb-3 size-12 text-stone-300" weight="duotone" />
               <p class="text-stone-500 font-medium">Şu an aktif bir teslimatınız bulunmuyor.</p>
               <p class="mt-2 text-sm text-stone-400">Yeni teslimat başlatmak için üst menüdeki butonu kullanın.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── Gelen Teklifler ─── -->
+        <div v-else-if="activeTab === 'incoming'" class="space-y-6">
+          <div class="card rounded-2xl bg-white p-6">
+            <div class="mb-5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 class="text-lg font-bold text-stone-900">Gelen Teklifler</h2>
+                <p class="mt-1 text-sm text-stone-500">Sana ait açık teslimatlara gelen kurye tekliflerini onaylayabilirsin</p>
+              </div>
+              <span class="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+                {{ incomingOfferRows.length }} teklif
+              </span>
+            </div>
+
+            <p v-if="incomingActionSuccess" class="mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm font-medium text-green-700">
+              {{ incomingActionSuccess }}
+            </p>
+            <p v-if="incomingActionError" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+              {{ incomingActionError }}
+            </p>
+
+            <div v-if="incomingOfferRows.length > 0" class="space-y-3">
+              <div
+                v-for="{ delivery, bid } in incomingOfferRows"
+                :key="`${delivery.id}-${bid.id}`"
+                class="rounded-xl border border-stone-200 bg-stone-50 p-4 transition hover:border-orange-200 hover:bg-white hover:shadow-sm"
+              >
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div class="min-w-0">
+                    <div class="mb-2 flex flex-wrap items-center gap-2">
+                      <span class="rounded-full bg-stone-200 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-stone-600">
+                        Onay Bekliyor
+                      </span>
+                      <span class="text-xs text-stone-400">{{ statusLabel[delivery.status] }}</span>
+                    </div>
+                    <h3 class="font-semibold text-stone-900">{{ delivery.title }}</h3>
+                    <p class="mt-1 line-clamp-1 text-xs text-stone-500">
+                      {{ delivery.pickupAddress }} → {{ delivery.dropoffAddress }}
+                    </p>
+                    <p class="mt-2 text-xs text-stone-400">
+                      Kurye: {{ bid.courierName }} · {{ formatDateTime(bid.createdAt) }} · Tahmini süre: {{ bid.estimatedTime }}
+                    </p>
+                  </div>
+
+                  <div class="flex shrink-0 flex-col gap-2 sm:items-end">
+                    <p class="text-lg font-bold text-stone-900">{{ bid.tokenAmount }} MON</p>
+                    <div class="flex gap-2">
+                      <button
+                        class="rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-600 transition hover:bg-stone-100"
+                        @click="router.push(`/delivery/${delivery.id}`)"
+                      >
+                        Detay
+                      </button>
+                      <button
+                        class="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-medium text-orange-700 transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        :disabled="approvingBidId === bid.id"
+                        @click="approveIncomingBid(delivery.id, bid.id)"
+                      >
+                        {{ approvingBidId === bid.id ? 'Onaylanıyor...' : 'Onayla' }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="py-12 text-center">
+              <PhBell class="mx-auto mb-3 size-12 text-stone-300" weight="duotone" />
+              <p class="font-semibold text-stone-900">Onay bekleyen teklif yok</p>
+              <p class="mt-1 text-sm text-stone-500">Sana ait açık teslimatlara teklif geldiğinde burada listelenecek.</p>
+              <button class="btn-primary mt-4 justify-center" @click="router.push('/deliveries')">Teslimatlara Git</button>
             </div>
           </div>
         </div>
@@ -437,6 +555,14 @@ onMounted(() => {
               <PhClockCounterClockwise class="size-6 text-stone-400 mb-2" weight="duotone" />
               <p class="text-sm font-semibold text-stone-900">Geçmiş Teslimatlar</p>
               <p class="text-xs text-stone-500 mt-0.5">{{ pastDeliveries.length }} teslimat</p>
+            </button>
+            <button
+              class="card bg-white rounded-xl p-4 text-left hover:border-orange-200 transition cursor-pointer border border-stone-100"
+              @click="activeTab = 'incoming'"
+            >
+              <PhBell class="size-6 text-orange-400 mb-2" weight="duotone" />
+              <p class="text-sm font-semibold text-stone-900">Gelen Teklifler</p>
+              <p class="text-xs text-stone-500 mt-0.5">{{ incomingOfferRows.length }} teklif</p>
             </button>
             <button
               class="card bg-white rounded-xl p-4 text-left hover:border-orange-200 transition cursor-pointer border border-stone-100"
