@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   PhLockKey, PhCheckCircle, PhArrowLeft, PhShieldCheck,
@@ -15,6 +15,17 @@ const dStore = useDeliveryStore()
 const wallet = useWalletStore()
 
 const delivery = computed(() => dStore.getDelivery(route.params.id as string))
+
+const isOwner = computed(() =>
+  !!wallet.address && !!delivery.value?.senderId &&
+  wallet.address.toLowerCase() === delivery.value.senderId
+)
+
+watchEffect(() => {
+  if (delivery.value && !isOwner.value) {
+    router.replace('/deliveries')
+  }
+})
 
 const GAS = 0.00023
 type Step = 'review' | 'signing' | 'confirming' | 'success'

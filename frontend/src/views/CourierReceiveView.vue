@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   PhArrowLeft, PhCheckCircle, PhPackage, PhCoins,
@@ -21,6 +21,17 @@ const delivery = computed(() => dStore.getDelivery(route.params.id as string))
 const assignedBid = computed(() =>
   delivery.value?.bids.find(b => b.id === delivery.value?.selectedBidId)
 )
+
+const isAssignedCourier = computed(() =>
+  !!wallet.address && !!delivery.value?.assignedCourierId &&
+  wallet.address.toLowerCase() === delivery.value.assignedCourierId
+)
+
+watchEffect(() => {
+  if (delivery.value && !isAssignedCourier.value) {
+    router.replace('/deliveries')
+  }
+})
 
 const verifyCode = computed(() => {
   const id = delivery.value?.id ?? 'x'
