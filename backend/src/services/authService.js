@@ -18,7 +18,7 @@ function formatUser(user) {
     phone: user.phone || '',
     role: user.role || 'customer',
     rating: user.courierProfile?.isRegistered ? 4.5 : 0,
-    balance: 248.5,
+    balance: 0,
   }
 }
 

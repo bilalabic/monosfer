@@ -18,8 +18,8 @@ const bidTarget = ref<string | null>(null)
 
 onMounted(() => store.loadDeliveries())
 
-const demoSenderId = computed(() => store.deliveries.find(d => d.status === 'open')?.id ?? 'd1')
-const demoCourierId = computed(() => store.deliveries.find(d => d.status === 'in_progress' && d.selectedBidId)?.id ?? 'd3')
+const demoSenderId = computed(() => store.deliveries.find(d => d.status === 'open')?.id)
+const demoCourierId = computed(() => store.deliveries.find(d => d.status === 'in_progress' && d.selectedBidId)?.id)
 
 function goToScenario(path: string) {
   if (!wallet.connected) {
@@ -69,8 +69,9 @@ const filtered = computed(() => {
       <div class="grid gap-3 sm:grid-cols-2">
         <!-- Sender scenario -->
         <button
-          class="group flex flex-col gap-3 rounded-xl border border-orange-200 bg-white p-4 text-left transition hover:border-orange-400 hover:shadow-md"
-          @click="goToScenario(`/payment/${demoSenderId}`)"
+          class="group flex flex-col gap-3 rounded-xl border border-orange-200 bg-white p-4 text-left transition hover:border-orange-400 hover:shadow-md disabled:opacity-40"
+          :disabled="!demoSenderId"
+          @click="demoSenderId && goToScenario(`/payment/${demoSenderId}`)"
         >
           <div class="flex items-center justify-between">
             <div class="flex size-9 items-center justify-center rounded-xl bg-orange-100">
@@ -93,8 +94,9 @@ const filtered = computed(() => {
 
         <!-- Courier scenario -->
         <button
-          class="group flex flex-col gap-3 rounded-xl border border-green-200 bg-white p-4 text-left transition hover:border-green-400 hover:shadow-md"
-          @click="goToScenario(`/courier/receive/${demoCourierId}`)"
+          class="group flex flex-col gap-3 rounded-xl border border-green-200 bg-white p-4 text-left transition hover:border-green-400 hover:shadow-md disabled:opacity-40"
+          :disabled="!demoCourierId"
+          @click="demoCourierId && goToScenario(`/courier/receive/${demoCourierId}`)"
         >
           <div class="flex items-center justify-between">
             <div class="flex size-9 items-center justify-center rounded-xl bg-green-100">

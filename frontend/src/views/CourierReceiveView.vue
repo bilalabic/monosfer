@@ -46,7 +46,7 @@ async function completeDelivery() {
   phase.value = 'payment_confirming'
   txHash.value = `0x${hex(64)}`
   await wait(2800)
-  wallet.balance = parseFloat((wallet.balance + earnedAmount.value).toFixed(4))
+  await wallet.fetchBalance()
   dStore.completeDelivery(delivery.value!.id)
   phase.value = 'success'
 }

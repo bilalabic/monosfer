@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useCourierStore } from '@/stores/useCourierStore'
 import TopCourierCard from '@/components/TopCourierCard.vue'
 import LeaderboardTable from '@/components/LeaderboardTable.vue'
@@ -7,13 +7,11 @@ import { PhTrophy, PhMedal, PhChartBar } from '@phosphor-icons/vue'
 
 const store = useCourierStore()
 
+onMounted(() => store.loadCouriers())
+
 const podium = computed(() => {
   const [first, second, third] = store.topThree
-
-  if (!first || !second || !third) {
-    return null
-  }
-
+  if (!first || !second || !third) return null
   return { first, second, third }
 })
 </script>
@@ -59,16 +57,34 @@ const podium = computed(() => {
       </div>
     </div>
 
-    <!-- Podium -->
-    <div v-if="podium" class="mb-8 grid items-end gap-4 sm:grid-cols-3">
-      <TopCourierCard :courier="podium.second" :rank="2" />
-      <TopCourierCard :courier="podium.first" :rank="1" />
-      <TopCourierCard :courier="podium.third" :rank="3" />
+    <!-- Loading -->
+    <div v-if="store.loading" class="mb-8 flex items-center justify-center py-16">
+      <svg class="size-6 animate-spin text-orange-500" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+      </svg>
     </div>
 
-    <!-- Full Table -->
-    <h2 class="mb-4 font-semibold text-stone-900">Tüm Kuryeler</h2>
-    <LeaderboardTable :couriers="store.leaderboard" />
+    <template v-else-if="store.couriers.length === 0">
+      <div class="mb-8 rounded-2xl border border-stone-200 bg-white py-20 text-center">
+        <PhTrophy class="mx-auto mb-3 size-12 text-stone-300" weight="duotone" />
+        <p class="font-semibold text-stone-900">Henüz kurye yok</p>
+        <p class="mt-1 text-sm text-stone-400">Kayıt olan kuryeler burada görünecek</p>
+      </div>
+    </template>
+
+    <template v-else>
+      <!-- Podium -->
+      <div v-if="podium" class="mb-8 grid items-end gap-4 sm:grid-cols-3">
+        <TopCourierCard :courier="podium.second" :rank="2" />
+        <TopCourierCard :courier="podium.first" :rank="1" />
+        <TopCourierCard :courier="podium.third" :rank="3" />
+      </div>
+
+      <!-- Full Table -->
+      <h2 class="mb-4 font-semibold text-stone-900">Tüm Kuryeler</h2>
+      <LeaderboardTable :couriers="store.leaderboard" />
+    </template>
 
     <div class="mt-6 flex items-start gap-2.5 rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm text-stone-500">
       <PhChartBar class="mt-0.5 size-5 shrink-0 text-stone-400" weight="duotone" />

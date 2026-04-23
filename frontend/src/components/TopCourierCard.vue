@@ -53,7 +53,7 @@ const c = config[props.rank]
 
 <template>
   <div :class="['flex flex-col', c.wrapClass, rank === 1 ? 'sm:-mt-4' : 'sm:mt-4']">
-    <div :class="['card rounded-xl bg-white border overflow-hidden transition-transform hover:-translate-y-0.5', c.cardClass]">
+    <div :class="['card rounded-xl bg-white border overflow-hidden transition-all duration-200 ease-out will-change-transform hover:-translate-y-1 hover:shadow-xl', c.cardClass]">
       <!-- Gradient header -->
       <div :class="['relative flex flex-col items-center py-5 bg-gradient-to-br', c.headerGrad]">
         <!-- Crown for rank 1 -->

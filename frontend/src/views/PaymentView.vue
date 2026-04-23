@@ -42,7 +42,7 @@ async function pay() {
     blockNum.value = 4582100 + i + Math.floor(Math.random() * 5)
   }
 
-  wallet.balance = parseFloat((wallet.balance - total.value).toFixed(4))
+  await wallet.fetchBalance()
   dStore.lockEscrow(delivery.value.id)
   step.value = 'success'
 }

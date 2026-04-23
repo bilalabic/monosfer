@@ -34,15 +34,6 @@ const roleConfig: Record<string, { label: string; color: string; icon: any }> = 
   system:    { label: 'Sistem',    color: 'bg-stone-100 text-stone-600', icon: PhShieldCheck },
 }
 
-const mockRatings = [
-  { id: 1, from: 'Ahmet Yılmaz', role: 'Kurye', score: 5, comment: 'Paket mükemmel hazırlanmıştı, iletişim çok iyiydi.', date: '22 Nis 2026' },
-  { id: 2, from: 'Fatma Kaya',   role: 'Kurye', score: 5, comment: 'Adres bilgileri eksiksizdi, sorunsuz teslimat.', date: '18 Nis 2026' },
-  { id: 3, from: 'Mehmet Demir', role: 'Kurye', score: 4, comment: 'İyi paketlenmiş, öneri olarak daha detaylı açıklama yazılabilir.', date: '10 Nis 2026' },
-]
-
-const avgRating = computed(() =>
-  mockRatings.reduce((s, r) => s + r.score, 0) / mockRatings.length
-)
 </script>
 
 <template>
@@ -215,69 +206,12 @@ const avgRating = computed(() =>
 
         <!-- ─── Puanlamalar ─── -->
         <div v-else-if="activeTab === 'ratings'" class="space-y-6">
-          <!-- Rating summary -->
           <div class="card bg-white p-6 rounded-2xl">
             <h2 class="mb-5 text-lg font-bold text-stone-900">Puanlamalarım</h2>
-            <div class="flex flex-col sm:flex-row items-center gap-8">
-              <!-- Big score -->
-              <div class="text-center shrink-0">
-                <div class="text-5xl font-bold text-stone-900">{{ avgRating.toFixed(1) }}</div>
-                <div class="mt-2 flex items-center gap-0.5 justify-center">
-                  <PhStar
-                    v-for="i in 5"
-                    :key="i"
-                    class="size-5"
-                    :class="i <= Math.round(avgRating) ? 'text-amber-400' : 'text-stone-200'"
-                    weight="fill"
-                  />
-                </div>
-                <p class="mt-1.5 text-xs text-stone-500">{{ mockRatings.length }} değerlendirme</p>
-              </div>
-              <!-- Bar breakdown -->
-              <div class="flex-1 w-full space-y-2">
-                <div v-for="star in [5, 4, 3, 2, 1]" :key="star" class="flex items-center gap-2">
-                  <span class="w-4 text-xs text-stone-500 shrink-0">{{ star }}</span>
-                  <PhStar class="size-3 text-amber-400 shrink-0" weight="fill" />
-                  <div class="flex-1 h-2 rounded-full bg-stone-100 overflow-hidden">
-                    <div
-                      class="h-full rounded-full bg-amber-400 transition-all"
-                      :style="{ width: `${(mockRatings.filter(r => r.score === star).length / mockRatings.length) * 100}%` }"
-                    />
-                  </div>
-                  <span class="w-4 text-xs text-stone-400 shrink-0 text-right">
-                    {{ mockRatings.filter(r => r.score === star).length }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Reviews list -->
-          <div class="space-y-3">
-            <div v-for="r in mockRatings" :key="r.id" class="card bg-white p-4 rounded-xl">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <div class="flex items-center gap-2">
-                    <div class="flex size-8 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-600">
-                      {{ r.from.split(' ').map(w => w[0]).join('') }}
-                    </div>
-                    <div>
-                      <p class="text-sm font-semibold text-stone-900">{{ r.from }}</p>
-                      <p class="text-xs text-stone-400">{{ r.role }} · {{ r.date }}</p>
-                    </div>
-                  </div>
-                  <p class="mt-3 text-sm text-stone-600">{{ r.comment }}</p>
-                </div>
-                <div class="flex items-center gap-0.5 shrink-0">
-                  <PhStar
-                    v-for="i in 5"
-                    :key="i"
-                    class="size-4"
-                    :class="i <= r.score ? 'text-amber-400' : 'text-stone-200'"
-                    weight="fill"
-                  />
-                </div>
-              </div>
+            <div class="py-10 text-center">
+              <PhStar class="mx-auto mb-3 size-12 text-stone-200" weight="duotone" />
+              <p class="font-semibold text-stone-900">Henüz değerlendirme yok</p>
+              <p class="mt-1 text-sm text-stone-400">Teslimatlar tamamlandıkça puanlamalar burada görünecek</p>
             </div>
           </div>
         </div>
@@ -364,7 +298,7 @@ const avgRating = computed(() =>
             >
               <PhStar class="size-6 text-amber-400 mb-2" weight="duotone" />
               <p class="text-sm font-semibold text-stone-900">Puanlamalar</p>
-              <p class="text-xs text-stone-500 mt-0.5">{{ mockRatings.length }} yorum</p>
+              <p class="text-xs text-stone-500 mt-0.5">Değerlendirmeler</p>
             </button>
           </div>
         </div>

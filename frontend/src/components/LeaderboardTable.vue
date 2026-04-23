@@ -22,11 +22,11 @@ const medalColors: Record<number, string> = { 0: 'text-amber-500', 1: 'text-ston
     </div>
 
     <!-- Rows -->
-    <div v-auto-animate class="divide-y divide-stone-50">
+    <div class="divide-y divide-stone-50">
       <div
         v-for="(courier, index) in couriers"
         :key="courier.id"
-        class="grid grid-cols-12 items-center gap-4 px-5 py-3.5 transition hover:bg-stone-50"
+        class="group relative grid grid-cols-12 items-center gap-4 px-5 py-3.5 transition-all duration-200 ease-out will-change-transform hover:z-10 hover:-translate-y-0.5 hover:bg-stone-50 hover:shadow-sm"
       >
         <div class="col-span-1 flex items-center justify-center sm:justify-start">
           <PhMedal v-if="index < 3" :class="['size-5', medalColors[index]]" weight="fill" />
@@ -34,7 +34,7 @@ const medalColors: Record<number, string> = { 0: 'text-amber-500', 1: 'text-ston
         </div>
 
         <div class="col-span-4 flex items-center gap-2.5">
-          <div class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-600">
+          <div class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-600 transition-transform duration-200 ease-out group-hover:scale-105">
             <PhUser class="size-4" weight="duotone" />
           </div>
           <div class="min-w-0">
