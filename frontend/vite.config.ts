@@ -12,6 +12,9 @@ export default defineConfig({
     tailwindcss(),
     vueDevTools(),
   ],
+  preview: {
+    allowedHosts: ['monad.arslanyusuf.com'],
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

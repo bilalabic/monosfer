@@ -2,10 +2,11 @@ import { createApp } from "./app.js";
 import { connectDB } from "./db.js";
 
 const port = Number(process.env.PORT) || 3001;
+const host = process.env.HOST || "127.0.0.1";
 const app = createApp();
 
-app.listen(port, () => {
-  console.log(`Backend listening on port ${port}`);
+app.listen(port, host, () => {
+  console.log(`Backend listening on ${host}:${port}`);
 });
 
 // DB'yi sunucu başladıktan sonra asenkron olarak bağla
