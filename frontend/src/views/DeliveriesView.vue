@@ -49,7 +49,7 @@ const filtered = computed(() => {
         <input
           v-model="search"
           placeholder="Adres veya başlık ara..."
-          class="input pl-9"
+          class="input pl-10"
         />
       </div>
       <div class="flex items-center gap-1 rounded-xl border border-stone-200 bg-stone-50 p-1">

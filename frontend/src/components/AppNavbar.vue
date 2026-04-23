@@ -56,14 +56,14 @@ function handleCreate() {
           Teslimat Oluştur
         </button>
 
-        <button
-          v-if="!wallet.connected"
-          class="flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3.5 py-2 text-sm font-medium text-stone-700 shadow-sm transition hover:bg-stone-50"
-          @click="wallet.connect()"
-        >
-          <Wallet class="size-4" />
-          <span class="hidden sm:inline">Cüzdan Bağla</span>
-        </button>
+        <div v-if="!wallet.connected" class="hidden sm:flex items-center gap-2">
+          <RouterLink to="/login" class="text-sm font-medium text-stone-600 hover:text-stone-900 px-2 py-2 transition">
+            Giriş Yap
+          </RouterLink>
+          <RouterLink to="/register" class="rounded-lg border border-orange-200 bg-orange-50 px-3.5 py-2 text-sm font-medium text-orange-700 shadow-sm transition hover:bg-orange-100 hover:border-orange-300">
+            Kayıt Ol
+          </RouterLink>
+        </div>
 
         <div v-else class="flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-1.5 shadow-sm">
           <span class="size-2 rounded-full bg-green-500 animate-pulse-dot" />
@@ -106,7 +106,15 @@ function handleCreate() {
             <component :is="link.icon" class="size-4" />
             {{ link.label }}
           </RouterLink>
-          <button class="mt-1 btn-primary w-full justify-center" @click="handleCreate">
+          <div v-if="!wallet.connected" class="mt-2 grid grid-cols-2 gap-2">
+            <RouterLink to="/login" class="flex justify-center rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50" @click="mobileOpen = false">
+              Giriş Yap
+            </RouterLink>
+            <RouterLink to="/register" class="flex justify-center rounded-lg border border-orange-200 bg-orange-50 px-3 py-2.5 text-sm font-medium text-orange-700 transition hover:bg-orange-100" @click="mobileOpen = false">
+              Kayıt Ol
+            </RouterLink>
+          </div>
+          <button class="mt-2 btn-primary w-full justify-center" @click="handleCreate">
             <Plus class="size-4" />
             Teslimat Oluştur
           </button>
