@@ -6,6 +6,64 @@ import User from '../src/models/User.js'
 import CourierStats from '../src/models/CourierStats.js'
 import * as deliveryService from '../src/services/deliveryService.js'
 
+test('createDelivery stores third-party recipient type details for business deliveries', async () => {
+  const originals = {
+    deliveryCreate: Delivery.create,
+    bidFind: Bid.find,
+    userFind: User.find,
+    statsFind: CourierStats.find,
+  }
+  let createdPayload
+
+  Delivery.create = async payload => {
+    createdPayload = payload
+    return {
+      _id: { toString: () => 'delivery-id' },
+      ...payload,
+      createdAt: new Date('2026-02-01T00:00:00.000Z'),
+      toObject() {
+        return this
+      },
+    }
+  }
+  Bid.find = () => ({ lean: async () => [] })
+  User.find = () => ({ lean: async () => [] })
+  CourierStats.find = () => ({ lean: async () => [] })
+
+  try {
+    const result = await deliveryService.createDelivery({
+      title: 'Restoran siparisi',
+      pickupAddress: 'Kadikoy Restoran',
+      dropoffAddress: 'Moda',
+      recipientType: 'business',
+      businessName: 'Lezzet Lokantasi',
+      contactPerson: 'Murat Usta',
+      recipientPhone: '5551112233',
+      orderRef: 'SIP-42',
+      deliveryCode: 'ab 123',
+      weight: '2',
+      maxBudget: 8,
+      date: '2026-02-01',
+      deadline: '18:30',
+    }, '0xCustomer')
+
+    assert.equal(createdPayload.dropoff.recipientType, 'business')
+    assert.equal(createdPayload.dropoff.businessName, 'Lezzet Lokantasi')
+    assert.equal(createdPayload.dropoff.contactPerson, 'Murat Usta')
+    assert.equal(createdPayload.dropoff.orderRef, 'SIP-42')
+    assert.equal(createdPayload.dropoff.deliveryCode, 'AB123')
+    assert.equal(result.recipientType, 'business')
+    assert.equal(result.recipientName, 'Lezzet Lokantasi')
+    assert.equal(result.contactPerson, 'Murat Usta')
+    assert.equal(result.orderRef, 'SIP-42')
+  } finally {
+    Delivery.create = originals.deliveryCreate
+    Bid.find = originals.bidFind
+    User.find = originals.userFind
+    CourierStats.find = originals.statsFind
+  }
+})
+
 test('rateDelivery lets the paying customer rate the selected courier', async () => {
   assert.equal(typeof deliveryService.rateDelivery, 'function')
 

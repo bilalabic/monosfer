@@ -13,7 +13,13 @@ export const deliveriesApi = {
     title: string
     pickupAddress: string
     dropoffAddress: string
+    recipientType?: 'person' | 'business' | 'office' | 'other'
     recipientName?: string
+    businessName?: string
+    contactPerson?: string
+    orderRef?: string
+    department?: string
+    recipientNote?: string
     recipientPhone?: string
     recipientWallet?: string
     deliveryCode?: string

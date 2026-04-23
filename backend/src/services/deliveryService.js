@@ -73,6 +73,20 @@ function generateDeliveryCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase()
 }
 
+function normalizeRecipientType(type) {
+  return ['person', 'business', 'office', 'other'].includes(type) ? type : 'person'
+}
+
+function recipientDisplayName(dropoff) {
+  if (dropoff.recipientType === 'business' || dropoff.recipientType === 'office') {
+    return dropoff.businessName || dropoff.contactPerson || ''
+  }
+  if (dropoff.recipientType === 'other') {
+    return dropoff.recipientName || dropoff.recipientNote || ''
+  }
+  return dropoff.recipientName || ''
+}
+
 function recalculateLeaderboardScore(stats) {
   stats.leaderboardScore = Math.round(
     (Number(stats.totalDeliveries || 0) * 10) +
@@ -139,7 +153,14 @@ export async function toFrontend(delivery) {
     title: delivery.title || 'Teslimat',
     pickupAddress: delivery.pickup.address,
     dropoffAddress: delivery.dropoff.address,
-    recipientName: delivery.dropoff.recipientName || '',
+    recipientType: delivery.dropoff.recipientType || 'person',
+    recipientName: recipientDisplayName(delivery.dropoff),
+    businessName: delivery.dropoff.businessName || '',
+    contactPerson: delivery.dropoff.contactPerson || '',
+    orderRef: delivery.dropoff.orderRef || '',
+    department: delivery.dropoff.department || '',
+    recipientPhone: delivery.dropoff.recipientPhone || '',
+    recipientNote: delivery.dropoff.recipientNote || '',
     requiresRecipientCode: Boolean(delivery.dropoff.deliveryCode),
     deliveryConfirmedBy: delivery.dropoff.deliveryConfirmedBy,
     distance: delivery.distanceKm ? `${Number(delivery.distanceKm).toFixed(1)} km` : '—',
@@ -203,7 +224,13 @@ export async function createDelivery(data, walletAddress) {
       address: data.dropoffAddress,
       lat: data.dropoffLat || 41.0082,
       lng: data.dropoffLng || 28.9784,
+      recipientType: normalizeRecipientType(data.recipientType),
       recipientName: data.recipientName,
+      businessName: data.businessName,
+      contactPerson: data.contactPerson,
+      orderRef: data.orderRef,
+      department: data.department,
+      recipientNote: data.recipientNote,
       recipientPhone: data.recipientPhone,
       recipientWallet: data.recipientWallet ? data.recipientWallet.toLowerCase() : undefined,
       deliveryCode: normalizeDeliveryCode(data.deliveryCode) || generateDeliveryCode(),

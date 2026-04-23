@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { PhCaretRight as ChevronRight, PhCaretLeft as ChevronLeft, PhCheck as Check, PhConfetti, PhMapPin, PhPackage, PhCurrencyDollar, PhEye, PhCheckCircle } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
+import type { RecipientType } from '@/stores/useDeliveryStore'
 
 const router = useRouter()
 const store = useDeliveryStore()
@@ -14,7 +15,13 @@ const form = ref({
   title: '',
   pickupAddress: '',
   dropoffAddress: '',
+  recipientType: 'person' as RecipientType,
   recipientName: '',
+  businessName: '',
+  contactPerson: '',
+  orderRef: '',
+  department: '',
+  recipientNote: '',
   recipientPhone: '',
   recipientWallet: '',
   deliveryCode: '',
@@ -26,9 +33,28 @@ const form = ref({
 })
 
 const steps = ['Adres Bilgileri', 'Paket Detayları', 'Bütçe & Süre', 'Önizleme']
+const defaultRecipientType = { value: 'person' as RecipientType, label: 'Kişi', hint: 'Bireysel alıcı' }
+const recipientTypes: { value: RecipientType; label: string; hint: string }[] = [
+  defaultRecipientType,
+  { value: 'business', label: 'Restoran / Mağaza', hint: 'Sipariş veya işletme' },
+  { value: 'office', label: 'Ofis / Firma', hint: 'Resepsiyon, depo, kat' },
+  { value: 'other', label: 'Diğer', hint: 'Serbest alıcı tanımı' },
+]
+const selectedRecipientType = computed(() => recipientTypes.find(t => t.value === form.value.recipientType) ?? defaultRecipientType)
+const recipientReady = computed(() => {
+  if (form.value.recipientType === 'business') return form.value.businessName && form.value.contactPerson
+  if (form.value.recipientType === 'office') return form.value.businessName && form.value.contactPerson
+  if (form.value.recipientType === 'other') return form.value.recipientNote
+  return form.value.recipientName
+})
+const recipientPreviewName = computed(() => {
+  if (form.value.recipientType === 'business' || form.value.recipientType === 'office') return form.value.businessName
+  if (form.value.recipientType === 'other') return form.value.recipientNote
+  return form.value.recipientName
+})
 
 const canNext = computed(() => {
-  if (currentStep.value === 0) return form.value.pickupAddress && form.value.dropoffAddress && form.value.title && form.value.recipientName && form.value.deliveryCode
+  if (currentStep.value === 0) return form.value.pickupAddress && form.value.dropoffAddress && form.value.title && recipientReady.value && form.value.deliveryCode
   if (currentStep.value === 1) return form.value.weight
   if (currentStep.value === 2) return form.value.maxBudget && form.value.deadline && form.value.date
   return true
@@ -41,7 +67,13 @@ async function submit() {
       title: form.value.title,
       pickupAddress: form.value.pickupAddress,
       dropoffAddress: form.value.dropoffAddress,
+      recipientType: form.value.recipientType,
       recipientName: form.value.recipientName,
+      businessName: form.value.businessName,
+      contactPerson: form.value.contactPerson,
+      orderRef: form.value.orderRef,
+      department: form.value.department,
+      recipientNote: form.value.recipientNote,
       recipientPhone: form.value.recipientPhone,
       recipientWallet: form.value.recipientWallet,
       deliveryCode: form.value.deliveryCode,
@@ -111,11 +143,89 @@ async function submit() {
           <label class="mb-1.5 block text-sm font-medium text-stone-700">Nereye (Teslim)</label>
           <input v-model="form.dropoffAddress" class="input" placeholder="Örn: Beşiktaş, İstanbul" />
         </div>
-        <div class="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label class="mb-1.5 block text-sm font-medium text-stone-700">Alıcı Adı</label>
-            <input v-model="form.recipientName" class="input" placeholder="Örn: Ayşe Yılmaz" />
+
+        <div>
+          <label class="mb-2 block text-sm font-medium text-stone-700">Alıcı Tipi</label>
+          <div class="grid gap-2 sm:grid-cols-2">
+            <button
+              v-for="type in recipientTypes"
+              :key="type.value"
+              type="button"
+              :class="[
+                'rounded-lg border px-3 py-2 text-left transition',
+                form.recipientType === type.value ? 'border-orange-400 bg-orange-50 text-orange-700' : 'border-stone-200 bg-white text-stone-600 hover:bg-stone-50',
+              ]"
+              @click="form.recipientType = type.value"
+            >
+              <span class="block text-sm font-semibold">{{ type.label }}</span>
+              <span class="block text-xs text-stone-400">{{ type.hint }}</span>
+            </button>
           </div>
+        </div>
+
+        <template v-if="form.recipientType === 'person'">
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-stone-700">Alıcı Adı</label>
+              <input v-model="form.recipientName" class="input" placeholder="Örn: Ayşe Yılmaz" />
+            </div>
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-stone-700">Alıcı Telefonu</label>
+              <input v-model="form.recipientPhone" class="input" placeholder="Opsiyonel" />
+            </div>
+          </div>
+        </template>
+
+        <template v-else-if="form.recipientType === 'business'">
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">İşletme Adı</label>
+            <input v-model="form.businessName" class="input" placeholder="Örn: Lezzet Lokantası" />
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-stone-700">Yetkili Kişi</label>
+              <input v-model="form.contactPerson" class="input" placeholder="Örn: Murat Usta" />
+            </div>
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-stone-700">Sipariş No</label>
+              <input v-model="form.orderRef" class="input" placeholder="Opsiyonel" />
+            </div>
+          </div>
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">İşletme Telefonu</label>
+            <input v-model="form.recipientPhone" class="input" placeholder="Opsiyonel" />
+          </div>
+        </template>
+
+        <template v-else-if="form.recipientType === 'office'">
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Firma / Ofis Adı</label>
+            <input v-model="form.businessName" class="input" placeholder="Örn: Monad Labs Türkiye" />
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-stone-700">Yetkili Kişi</label>
+              <input v-model="form.contactPerson" class="input" placeholder="Örn: Resepsiyon" />
+            </div>
+            <div>
+              <label class="mb-1.5 block text-sm font-medium text-stone-700">Departman / Kat</label>
+              <input v-model="form.department" class="input" placeholder="Opsiyonel" />
+            </div>
+          </div>
+        </template>
+
+        <template v-else>
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Alıcı Açıklaması</label>
+            <input v-model="form.recipientNote" class="input" placeholder="Örn: Güvenlik kulübesi, danışma, etkinlik alanı" />
+          </div>
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">İletişim Telefonu</label>
+            <input v-model="form.recipientPhone" class="input" placeholder="Opsiyonel" />
+          </div>
+        </template>
+
+        <div class="grid gap-4 sm:grid-cols-2">
           <div>
             <label class="mb-1.5 block text-sm font-medium text-stone-700">Teslim Kodu</label>
             <input
@@ -127,10 +237,6 @@ async function submit() {
           </div>
         </div>
         <div class="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label class="mb-1.5 block text-sm font-medium text-stone-700">Alıcı Telefonu</label>
-            <input v-model="form.recipientPhone" class="input" placeholder="Opsiyonel" />
-          </div>
           <div>
             <label class="mb-1.5 block text-sm font-medium text-stone-700">Alıcı Cüzdanı</label>
             <input v-model="form.recipientWallet" class="input" placeholder="Opsiyonel" />
@@ -190,7 +296,11 @@ async function submit() {
           <div class="flex justify-between"><span class="text-stone-500">Başlık</span><span class="font-medium text-stone-900">{{ form.title }}</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Nereden</span><span class="font-medium text-stone-900">{{ form.pickupAddress }}</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Nereye</span><span class="font-medium text-stone-900">{{ form.dropoffAddress }}</span></div>
-          <div class="flex justify-between gap-4"><span class="text-stone-500">Alıcı</span><span class="text-right font-medium text-stone-900">{{ form.recipientName }}</span></div>
+          <div class="flex justify-between gap-4"><span class="text-stone-500">Alıcı Tipi</span><span class="text-right font-medium text-stone-900">{{ selectedRecipientType.label }}</span></div>
+          <div class="flex justify-between gap-4"><span class="text-stone-500">Alıcı</span><span class="text-right font-medium text-stone-900">{{ recipientPreviewName }}</span></div>
+          <div v-if="form.contactPerson" class="flex justify-between gap-4"><span class="text-stone-500">Yetkili</span><span class="text-right font-medium text-stone-900">{{ form.contactPerson }}</span></div>
+          <div v-if="form.orderRef" class="flex justify-between gap-4"><span class="text-stone-500">Sipariş No</span><span class="text-right font-medium text-stone-900">{{ form.orderRef }}</span></div>
+          <div v-if="form.department" class="flex justify-between gap-4"><span class="text-stone-500">Departman / Kat</span><span class="text-right font-medium text-stone-900">{{ form.department }}</span></div>
           <div class="flex justify-between gap-4"><span class="text-stone-500">Teslim Kodu</span><span class="font-mono font-semibold uppercase tracking-widest text-stone-900">{{ form.deliveryCode }}</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Ağırlık</span><span class="font-medium text-stone-900">{{ form.weight }} kg</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Bütçe</span><span class="font-semibold text-orange-600">{{ form.maxBudget }} MON</span></div>

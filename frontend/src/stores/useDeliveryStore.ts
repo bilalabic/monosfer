@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { deliveriesApi } from '@/api/deliveries'
 
 export type DeliveryStatus = 'open' | 'in_progress' | 'completed' | 'disputed'
+export type RecipientType = 'person' | 'business' | 'office' | 'other'
 
 export interface Bid {
   id: string
@@ -29,7 +30,14 @@ export interface Delivery {
   title: string
   pickupAddress: string
   dropoffAddress: string
+  recipientType?: RecipientType
   recipientName?: string
+  businessName?: string
+  contactPerson?: string
+  orderRef?: string
+  department?: string
+  recipientPhone?: string
+  recipientNote?: string
   requiresRecipientCode?: boolean
   deliveryConfirmedBy?: 'sender_wallet' | 'recipient_code'
   distance: string
@@ -76,7 +84,8 @@ export const useDeliveryStore = defineStore('delivery', () => {
 
   async function createDelivery(formData: {
     title: string; pickupAddress: string; dropoffAddress: string
-    recipientName?: string; recipientPhone?: string; recipientWallet?: string; deliveryCode?: string
+    recipientType?: RecipientType; recipientName?: string; businessName?: string; contactPerson?: string
+    orderRef?: string; department?: string; recipientPhone?: string; recipientWallet?: string; recipientNote?: string; deliveryCode?: string
     weight?: string; description?: string; maxBudget: number; date: string; deadline: string
   }) {
     const newDelivery = await deliveriesApi.create(formData)
