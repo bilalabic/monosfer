@@ -4,10 +4,21 @@ set -euo pipefail
 PROJECT_DIR="/home/yusuf/projects/monad"
 BRANCH="main"
 SKIP_PULL="false"
+NVM_DIR="${NVM_DIR:-/home/yusuf/.nvm}"
 
 if [[ "${1:-}" == "--skip-pull" ]]; then
   SKIP_PULL="true"
 fi
+
+if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+  # GitHub Actions SSH commands do not load the user's interactive shell profile.
+  # Source nvm explicitly so npm/pm2 are available in non-interactive deploys.
+  # shellcheck source=/dev/null
+  source "$NVM_DIR/nvm.sh"
+  nvm use 24 >/dev/null
+fi
+
+export PATH="/home/yusuf/.nvm/versions/node/v24.11.1/bin:$PATH"
 
 cd "$PROJECT_DIR"
 
