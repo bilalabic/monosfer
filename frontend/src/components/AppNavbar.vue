@@ -28,11 +28,11 @@ function handleCreate() {
     <div class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5 sm:px-8">
       <!-- Logo -->
       <RouterLink to="/" class="flex items-center gap-2.5 group" @click="mobileOpen = false">
-        <div class="flex size-8 items-center justify-center rounded-xl bg-orange-500 shadow-sm transition-transform group-hover:scale-105">
-          <svg class="size-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/>
-          </svg>
-        </div>
+        <img
+          src="/gemini-svg-_1_.png"
+          alt="Delivera"
+          class="size-8 rounded-xl object-cover shadow-sm transition-transform group-hover:scale-105"
+        >
         <span class="text-lg font-bold tracking-tight text-stone-900">Delivera</span>
       </RouterLink>
 

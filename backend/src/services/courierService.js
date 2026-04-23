@@ -2,7 +2,7 @@ import User from '../models/User.js'
 import CourierStats from '../models/CourierStats.js'
 
 export async function listCouriers() {
-  const users = await User.find({ role: { $in: ['courier', 'both'] } })
+  const users = await User.find({})
     .select('walletAddress name role courierProfile createdAt')
     .lean()
 

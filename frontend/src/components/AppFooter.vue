@@ -8,11 +8,7 @@ import { RouterLink } from 'vue-router'
       <div class="grid gap-8 sm:grid-cols-3">
         <div>
           <div class="mb-3 flex items-center gap-2">
-            <div class="flex size-7 items-center justify-center rounded-lg bg-orange-500">
-              <svg class="size-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/>
-              </svg>
-            </div>
+            <img src="/gemini-svg-_1_.png" alt="Delivera" class="size-7 rounded-lg object-cover">
             <span class="font-bold text-stone-900">Delivera</span>
           </div>
           <p class="text-sm leading-relaxed text-stone-500">
