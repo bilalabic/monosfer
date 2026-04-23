@@ -1,8 +1,9 @@
 import { Router } from 'express'
-import { list } from '../controllers/courierController.js'
+import { list, locations } from '../controllers/courierController.js'
 
 const router = Router()
 
 router.get('/', list)
+router.get('/locations', locations)
 
 export default router

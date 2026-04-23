@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { PhPackage as Package, PhTrophy as Trophy, PhPlus as Plus, PhWallet as Wallet, PhSignOut as LogOut, PhList as Menu, PhX as X, PhUser as User } from '@phosphor-icons/vue'
+import { PhPackage as Package, PhTrophy as Trophy, PhPlus as Plus, PhWallet as Wallet, PhSignOut as LogOut, PhList as Menu, PhX as X, PhUser as User, PhMapPin as MapPin, PhNavigationArrow as Navigation } from '@phosphor-icons/vue'
 import { useWalletStore } from '@/stores/useWalletStore'
 
 const wallet = useWalletStore()
@@ -11,9 +11,11 @@ const mobileOpen = ref(false)
 const navLinks = [
   { to: '/deliveries', label: 'Teslimatlar', icon: Package },
   { to: '/couriers', label: 'Kuryeler', icon: Trophy },
+  { to: '/map', label: 'Harita', icon: MapPin },
 ]
 
 const authLinks = [
+  { to: '/kuryem-nerede', label: 'Kuryem Nerede', icon: Navigation },
   { to: '/dashboard', label: 'Panel', icon: User },
 ]
 

@@ -117,3 +117,42 @@ export async function listCouriers() {
     }
   })
 }
+
+// Kayseri merkez bölgelerine yakın demo koordinatlar
+const KAYSERI_DEMO_LOCATIONS = [
+  { lat: 38.7205, lng: 35.4826 }, // Cumhuriyet Meydanı
+  { lat: 38.7075, lng: 35.5200 }, // Erciyes Üniversitesi
+  { lat: 38.7250, lng: 35.4600 }, // Eskişehir Bağları
+  { lat: 38.7400, lng: 35.4850 }, // Kocasinan
+  { lat: 38.7150, lng: 35.5050 }, // Kayseri Park / İpeksaray
+  { lat: 38.7320, lng: 35.4750 }, // Mimarsinan
+  { lat: 38.6900, lng: 35.4950 }, // Talas
+  { lat: 38.7500, lng: 35.4650 }, // Belsin
+]
+
+export async function getCourierLocations() {
+  const users = await User.find({ 'courierProfile.isRegistered': true })
+    .select('walletAddress name courierProfile')
+    .lean()
+
+  return users.map((u, index) => {
+    const cp = u.courierProfile || {}
+    // Gerçek konum varsa kullan, yoksa demo konum ata
+    const demoLoc = KAYSERI_DEMO_LOCATIONS[index % KAYSERI_DEMO_LOCATIONS.length]
+    const lat = cp.location?.lat ?? (demoLoc.lat + (Math.random() - 0.5) * 0.01)
+    const lng = cp.location?.lng ?? (demoLoc.lng + (Math.random() - 0.5) * 0.01)
+
+    return {
+      id: u._id.toString(),
+      walletAddress: u.walletAddress,
+      name: u.name || `Kurye ${u.walletAddress.slice(0, 6)}`,
+      avatar: (u.name || '').split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)
+        || u.walletAddress.slice(2, 4).toUpperCase(),
+      isOnline: cp.isOnline ?? true,
+      vehicleType: cp.vehicleType || 'motorcycle',
+      lat,
+      lng,
+      locationUpdatedAt: cp.location?.updatedAt || null,
+    }
+  })
+}

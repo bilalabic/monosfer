@@ -1,6 +1,20 @@
 import { api } from './client'
 import type { Delivery, Bid } from '@/stores/useDeliveryStore'
 
+export interface DeliveryCourierLocation {
+  courierId: string
+  courierName: string
+  courierWallet: string
+  isOnline: boolean
+  vehicleType: string
+  lat: number
+  lng: number
+  locationUpdatedAt: string | null
+  deliveryStatus: string
+  pickup: { lat: number; lng: number; address: string }
+  dropoff: { lat: number; lng: number; address: string }
+}
+
 export const deliveriesApi = {
   list: (params?: { status?: string; search?: string }) => {
     const qs = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : ''
@@ -8,6 +22,8 @@ export const deliveriesApi = {
   },
 
   get: (id: string) => api.get<Delivery>(`/deliveries/${id}`),
+
+  courierLocation: (id: string) => api.get<DeliveryCourierLocation>(`/deliveries/${id}/courier-location`),
 
   create: (data: {
     title: string

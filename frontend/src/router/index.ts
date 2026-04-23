@@ -28,6 +28,17 @@ const router = createRouter({
       component: () => import('../views/CouriersView.vue'),
     },
     {
+      path: '/map',
+      name: 'courier-map',
+      component: () => import('../views/CourierMapView.vue'),
+    },
+    {
+      path: '/kuryem-nerede',
+      name: 'where-is-my-courier',
+      component: () => import('../views/WhereIsMyCourierView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/create',
       name: 'create-delivery',
       component: () => import('../views/CreateDeliveryView.vue'),

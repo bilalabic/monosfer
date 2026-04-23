@@ -3,13 +3,19 @@ import { authenticate } from '../middlewares/authenticate.js'
 import {
   list, getOne, create,
   addBid, selectBid,
+<<<<<<< Updated upstream
   lockEscrow, confirmPickup, complete, completeWithRecipientCode, rate,
+=======
+  lockEscrow, confirmPickup, complete, rate,
+  courierLocation,
+>>>>>>> Stashed changes
 } from '../controllers/deliveryController.js'
 
 const deliveriesRouter = Router()
 
 deliveriesRouter.get('/', list)
 deliveriesRouter.get('/:id', getOne)
+deliveriesRouter.get('/:id/courier-location', authenticate, courierLocation)
 deliveriesRouter.post('/', authenticate, create)
 deliveriesRouter.post('/:id/bids', authenticate, addBid)
 deliveriesRouter.patch('/:id/select-bid', authenticate, selectBid)

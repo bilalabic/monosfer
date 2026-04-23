@@ -34,6 +34,11 @@ const userSchema = new mongoose.Schema(
       regions: [{ type: String }], // hizmet verdiği mahalleler
       isOnline: { type: Boolean, default: false },
       lastSeenAt: { type: Date },
+      location: {
+        lat: { type: Number },
+        lng: { type: Number },
+        updatedAt: { type: Date },
+      },
     },
 
     // Bildirim tercihleri

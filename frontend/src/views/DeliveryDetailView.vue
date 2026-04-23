@@ -8,7 +8,11 @@ import StatusBadge from '@/components/StatusBadge.vue'
 import TokenAmount from '@/components/TokenAmount.vue'
 import CourierBidCard from '@/components/CourierBidCard.vue'
 import DeliveryTimeline from '@/components/DeliveryTimeline.vue'
+<<<<<<< Updated upstream
 import QrCode from '@/components/QrCode.vue'
+=======
+import DeliveryTrackingMap from '@/components/DeliveryTrackingMap.vue'
+>>>>>>> Stashed changes
 
 const route = useRoute()
 const router = useRouter()
@@ -33,6 +37,7 @@ const isAssignedCourier = computed(() =>
 )
 const selectedBid = computed(() => delivery.value?.bids.find(bid => bid.id === delivery.value?.selectedBidId))
 const canRate = computed(() => delivery.value?.status === 'completed' && isOwner.value && !delivery.value?.isRated && !!selectedBid.value)
+<<<<<<< Updated upstream
 const isEscrowLocked = computed(() => (delivery.value?.escrowAmount || 0) > 0)
 const pickupConfirmed = computed(() =>
   delivery.value?.timeline.some(step => step.step === 'pickup' && step.completed),
@@ -46,6 +51,12 @@ const pickupConfirmUrl = computed(() => {
   if (typeof window === 'undefined' || !delivery.value) return ''
   return `${window.location.origin}/delivery/${delivery.value.id}/confirm?step=pickup&code=${encodeURIComponent(verifyCode.value)}`
 })
+=======
+const showTrackingMap = computed(() =>
+  isOwner.value &&
+  (delivery.value?.status === 'in_progress' || delivery.value?.status === 'completed')
+)
+>>>>>>> Stashed changes
 
 function formatDate(s: string) {
   return new Date(s).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -136,6 +147,12 @@ async function submitRating() {
           <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">Açıklama</p>
           <p class="text-sm leading-relaxed text-stone-600">{{ delivery.description }}</p>
         </div>
+
+        <!-- Kurye Takip Haritası: Sadece gönderen + kurye kargoyu aldıktan sonra -->
+        <DeliveryTrackingMap
+          v-if="showTrackingMap"
+          :delivery-id="delivery.id"
+        />
 
         <!-- Bids -->
         <div class="card rounded-xl bg-white p-5">
