@@ -29,6 +29,59 @@ Hackathon demosunda hiz gerekiyorsa `Delivera.sol`, urune yaklasan mimari gereki
 
 `foundry.toml` icinde `monad_testnet` alias tanimlidir.
 
+## 2.1) MetaMask Kurulumu ve Kontrol Listesi
+
+MetaMask tarafi calismiyorsa genelde 3 sebep var: yanlis ag, yanlis adres, yetersiz bakiye.
+
+### A) Monad Testnet agini manuel ekle
+
+MetaMask -> `Settings` -> `Networks` -> `Add network manually`:
+
+- Network Name: `Monad Testnet`
+- RPC URL: `https://testnet-rpc.monad.xyz`
+- Chain ID: `10143`
+- Currency Symbol: `MON`
+- Block Explorer URL: `https://testnet.monadexplorer.com`
+
+Alternatif: [chainlist.org](https://chainlist.org) uzerinden Monad Testnet eklenebilir.
+
+### B) Deployer adresi ve `.env` adresini eslestir
+
+Terminalde:
+
+```bash
+source .env
+cast wallet address --private-key $PRIVATE_KEY
+cast balance $(cast wallet address --private-key $PRIVATE_KEY) --rpc-url monad_testnet
+cast chain-id --rpc-url monad_testnet
+```
+
+Beklenen sonuc:
+
+- `cast chain-id` -> `10143`
+- `cast wallet address` ile MetaMask aktif adresi ayni
+- bakiye > `1 MON` (guvenli deploy icin)
+
+### C) "Signer had insufficient balance" hatasi icin net kontrol
+
+Bu hata bakiye varken bile gorunebilir, eger MetaMask'te gordugun adres ile script'in imzaladigi adres farkliysa.
+
+Mutlaka su ikisini karsilastir:
+
+1. MetaMask aktif hesap adresi
+2. `cast wallet address --private-key $PRIVATE_KEY` ciktisi
+
+Farkliysa `.env` icindeki key yanlis hesaba ait demektir.
+
+### D) Frontend tarafinda zorunlu network kontrolu
+
+Frontend baglandiginda:
+
+- Chain ID `10143` degilse kullaniciya network switch istegi gonder.
+- Yanlis chain'de write islemlerini blokla.
+- Tx olustuktan sonra explorer linkini goster:
+  - `https://testnet.monadexplorer.com/tx/<TX_HASH>`
+
 ## 3) Kurulum ve Komutlar
 
 ```bash
@@ -48,6 +101,7 @@ source .env
 Deploy secenekleri:
 
 - Tek kontrat MVP:
+
 ```bash
 forge script script/Deploy.s.sol \
   --rpc-url monad_testnet \
@@ -56,6 +110,7 @@ forge script script/Deploy.s.sol \
 ```
 
 - Moduler sistem:
+
 ```bash
 forge script script/DeploySystem.s.sol \
   --rpc-url monad_testnet \
@@ -181,7 +236,8 @@ Not: Her iki modelde de toplam platform komisyonu `%1` olarak ayarlidir.
 ### 8.2 Gerekli Read Fonksiyonlari
 
 - `DeliveryEscrow.requests(requestId)`
-- `DeliveryEscrow.bidderList(requestId, i)` veya toplu getter (MVP: `Delivera.getBidders`)
+- `DeliveryEscrow.getBidderCount(requestId)`
+- `DeliveryEscrow.getBidders(requestId)`
 - `DeliveryEscrow.courierStake(courier)`
 - `Leaderboard.courierStats(courier)`
 - `Leaderboard.getTopCouriers(candidates, topN)`
@@ -214,11 +270,11 @@ export const MONAD_TESTNET = {
   rpcUrl: "https://testnet-rpc.monad.xyz",
   explorer: "https://testnet.monadexplorer.com",
   contracts: {
-    token: "0x...",
-    escrow: "0x...",
-    leaderboard: "0x...",
-    distributor: "0x...",
-    badge: "0x..."
+    token: "0xda4f523b0d55fb6ce61515c4d003a70ca55948cd",
+    escrow: "0x91023fb41c5a308c12ab68c037207f832426d067",
+    leaderboard: "0x5a887f8c32e3299309212686acaad9b108aa883c",
+    distributor: "0x6e7ed62ab956f79e16d870d0b3796dffca6903f2",
+    badge: "0x8b44b40e24c16174eb0df623212f341e230ae83c"
   }
 };
 ```
@@ -235,6 +291,15 @@ export const MONAD_TESTNET = {
 - `out/MCRYToken.sol/MCRYToken.json`
 
 Frontend sadece `abi` alanini import ederek kullanabilir.
+
+### 10.1 Testnet Deploy Kaydi
+
+Gercek deploy kaydi:
+
+- `broadcast/DeploySystem.s.sol/10143/run-latest.json`
+
+Bu dosyada `transactions[].hash` ve `receipts[]` dolu oldugu icin deploy on-chain basarili tamamlanmistir.
+Backend ve frontend adresleri bu dosyadan alinmistir; mock adres kullanilmamistir.
 
 ## 11) Test Kapsami
 
@@ -282,10 +347,12 @@ contracts/
 ├── script/
 │   ├── Deploy.s.sol
 │   ├── DeploySystem.s.sol
-│   └── TestScenario.sh
+│   ├── TestScenario.sh
+│   └── TestScenarioSystem.sh
 ├── test/
 │   ├── Delivera.t.sol
 │   └── DeliveryEscrow.t.sol
 ├── foundry.toml
 └── .env.example
 ```
+

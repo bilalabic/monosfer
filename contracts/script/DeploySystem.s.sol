@@ -24,7 +24,8 @@ contract DeploySystemScript is Script {
 
         badge.setMinter(address(leaderboard));
         leaderboard.setEscrowContract(address(escrow));
-        token.transfer(address(distributor), 1_000_000 ether);
+        bool transferred = token.transfer(address(distributor), 1_000_000 ether);
+        require(transferred, "Initial reward transfer failed");
 
         console2.log("MCRYToken:", address(token));
         console2.log("ReputationBadge:", address(badge));

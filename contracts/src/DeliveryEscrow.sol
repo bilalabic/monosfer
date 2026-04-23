@@ -64,6 +64,8 @@ contract DeliveryEscrow {
     mapping(uint256 => address[]) public bidderList;
     mapping(address => bool) public isRegisteredCourier;
     mapping(address => uint256) public courierStake;
+    mapping(address => bool) public isKnownCourier;
+    address[] public allCouriers;
 
     event CourierRegistered(address indexed courier, uint256 stakeAmount);
     event StakeDeposited(address indexed courier, uint256 amount);
@@ -93,6 +95,11 @@ contract DeliveryEscrow {
     function depositStake(uint256 amount) external {
         require(amount > 0, "Amount zero");
         _safeTransferFrom(msg.sender, address(this), amount);
+
+        if (!isKnownCourier[msg.sender]) {
+            isKnownCourier[msg.sender] = true;
+            allCouriers.push(msg.sender);
+        }
 
         courierStake[msg.sender] += amount;
         if (!isRegisteredCourier[msg.sender] && courierStake[msg.sender] >= MIN_COURIER_STAKE) {
@@ -144,8 +151,10 @@ contract DeliveryEscrow {
     function submitBid(uint256 requestId, uint256 bidAmount, uint16 estimatedMinutes) external {
         require(isRegisteredCourier[msg.sender], "Not courier");
         require(courierStake[msg.sender] >= BID_DEPOSIT, "Stake low");
+        require(estimatedMinutes > 0, "Eta zero");
 
         DeliveryRequest storage req = requests[requestId];
+        require(req.customer != address(0), "Request not found");
         require(req.status == Status.OpenForBids, "Not open");
         require(bidAmount > 0 && bidAmount <= req.maxBudget, "Invalid bid");
         require(bids[requestId][msg.sender].amount == 0, "Already bid");
@@ -162,6 +171,7 @@ contract DeliveryEscrow {
 
     function acceptBid(uint256 requestId, address selectedCourier) external {
         DeliveryRequest storage req = requests[requestId];
+        require(req.customer != address(0), "Request not found");
         require(msg.sender == req.customer, "Not customer");
         require(req.status == Status.OpenForBids, "Wrong status");
 
@@ -184,6 +194,7 @@ contract DeliveryEscrow {
 
     function confirmPickup(uint256 requestId) external {
         DeliveryRequest storage req = requests[requestId];
+        require(req.customer != address(0), "Request not found");
         require(req.status == Status.Accepted, "Wrong status");
         require(msg.sender == req.acceptedCourier, "Not courier");
 
@@ -195,6 +206,7 @@ contract DeliveryEscrow {
 
     function confirmDelivery(uint256 requestId) external {
         DeliveryRequest storage req = requests[requestId];
+        require(req.customer != address(0), "Request not found");
         require(req.status == Status.InTransit, "Wrong status");
         require(msg.sender == req.customer, "Not customer");
 
@@ -207,6 +219,7 @@ contract DeliveryEscrow {
 
     function submitRating(uint256 requestId, uint8 stars) external {
         DeliveryRequest storage req = requests[requestId];
+        require(req.customer != address(0), "Request not found");
         require(msg.sender == req.customer, "Not customer");
         require(req.status == Status.Delivered, "Not delivered");
         require(!req.rated, "Already rated");
@@ -272,5 +285,17 @@ contract DeliveryEscrow {
         (bool ok, bytes memory data) =
             address(token).call(abi.encodeWithSignature("transferFrom(address,address,uint256)", from, to, amount));
         require(ok && (data.length == 0 || abi.decode(data, (bool))), "TransferFrom failed");
+    }
+
+    function getBidderCount(uint256 requestId) external view returns (uint256) {
+        return bidderList[requestId].length;
+    }
+
+    function getBidders(uint256 requestId) external view returns (address[] memory) {
+        return bidderList[requestId];
+    }
+
+    function getAllCouriers() external view returns (address[] memory) {
+        return allCouriers;
     }
 }
