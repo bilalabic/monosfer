@@ -3,12 +3,8 @@ import { authenticate } from '../middlewares/authenticate.js'
 import {
   list, getOne, create,
   addBid, selectBid,
-<<<<<<< Updated upstream
-  lockEscrow, confirmPickup, complete, completeWithRecipientCode, rate,
-=======
   lockEscrow, confirmPickup, complete, rate,
-  courierLocation,
->>>>>>> Stashed changes
+  completeWithRecipientCode, courierLocation,
 } from '../controllers/deliveryController.js'
 
 const deliveriesRouter = Router()

@@ -288,6 +288,7 @@ export async function selectBid(deliveryId, bidId, walletAddress) {
   await bid.save()
 
   delivery.selectedBidId = bid._id
+  delivery.acceptedCourier = bid.courier
   delivery.status = 'Accepted'
   delivery.acceptedAt = new Date()
   delivery.acceptedAmount = bid.amount

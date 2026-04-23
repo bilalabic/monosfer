@@ -197,6 +197,66 @@ test('lockEscrow rejects deliveries that already have locked funds', async () =>
   }
 })
 
+test('selectBid stores accepted courier for live location tracking', async () => {
+  const originals = {
+    deliveryFindById: Delivery.findById,
+    bidFindById: Bid.findById,
+    bidUpdateMany: Bid.updateMany,
+    bidFind: Bid.find,
+    userFind: User.find,
+    statsFind: CourierStats.find,
+  }
+  const delivery = {
+    _id: { toString: () => 'delivery-id' },
+    customer: '0xcustomer',
+    pickup: { address: 'A noktasi' },
+    dropoff: { address: 'B noktasi' },
+    maxBudget: '12',
+    escrowBalance: '0',
+    status: 'OpenForBids',
+    createdAt: new Date('2026-02-01T00:00:00.000Z'),
+    deadline: new Date('2026-02-02T00:00:00.000Z'),
+    timeline: [{ step: 'accepted', completed: false }],
+    async save() {
+      return this
+    },
+    toObject() {
+      return this
+    },
+  }
+  const bid = {
+    _id: { toString: () => 'bid-id' },
+    courier: '0xcourier',
+    amount: '10',
+    estimatedMinutes: 30,
+    createdAt: new Date('2026-02-01T01:00:00.000Z'),
+    async save() {
+      return this
+    },
+  }
+
+  Delivery.findById = async () => delivery
+  Bid.findById = async () => bid
+  Bid.updateMany = async () => ({ modifiedCount: 1 })
+  Bid.find = () => ({ lean: async () => [bid] })
+  User.find = () => ({ lean: async () => [{ walletAddress: '0xcourier', name: 'Kurye Kullanici' }] })
+  CourierStats.find = () => ({ lean: async () => [] })
+
+  try {
+    await deliveryService.selectBid('delivery-id', 'bid-id', '0xcustomer')
+
+    assert.equal(delivery.selectedBidId, bid._id)
+    assert.equal(delivery.acceptedCourier, '0xcourier')
+  } finally {
+    Delivery.findById = originals.deliveryFindById
+    Bid.findById = originals.bidFindById
+    Bid.updateMany = originals.bidUpdateMany
+    Bid.find = originals.bidFind
+    User.find = originals.userFind
+    CourierStats.find = originals.statsFind
+  }
+})
+
 test('confirmPickup lets the paying customer confirm the courier pickup QR', async () => {
   const originals = {
     deliveryFindById: Delivery.findById,

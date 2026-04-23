@@ -63,7 +63,7 @@ export async function courierLocation(req, res) {
   if (!delivery) return res.status(404).json({ error: { message: 'Teslimat bulunamadı' } })
 
   // Sadece teslimat sahibi görebilir
-  if (delivery.customer !== req.user.walletAddress) {
+  if (delivery.customer !== req.user.walletAddress.toLowerCase()) {
     return res.status(403).json({ error: { message: 'Erişim izni yok' } })
   }
 
