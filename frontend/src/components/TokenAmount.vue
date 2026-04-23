@@ -1,5 +1,7 @@
 <script setup lang="ts">
-defineProps<{ amount: number; size?: 'sm' | 'md' | 'lg' }>()
+withDefaults(defineProps<{ amount: number; size?: 'sm' | 'md' | 'lg'; symbol?: string }>(), {
+  symbol: 'DLV',
+})
 </script>
 
 <template>
@@ -18,6 +20,6 @@ defineProps<{ amount: number; size?: 'sm' | 'md' | 'lg' }>()
       M
     </span>
     <span class="text-stone-900">{{ amount }}</span>
-    <span class="font-normal text-stone-400" :class="size === 'sm' ? 'text-[10px]' : 'text-xs'">MON</span>
+    <span class="font-normal text-stone-400" :class="size === 'sm' ? 'text-[10px]' : 'text-xs'">{{ symbol }}</span>
   </span>
 </template>

@@ -28,12 +28,12 @@ export const deliveriesApi = {
   selectBid: (deliveryId: string, bidId: string) =>
     api.patch<Delivery>(`/deliveries/${deliveryId}/select-bid`, { bidId }),
 
-  lockEscrow: (deliveryId: string) =>
-    api.patch<Delivery>(`/deliveries/${deliveryId}/escrow`),
+  lockEscrow: (deliveryId: string, txHash?: string) =>
+    api.patch<Delivery>(`/deliveries/${deliveryId}/escrow`, txHash ? { txHash } : {}),
 
-  confirmPickup: (deliveryId: string) =>
-    api.patch<Delivery>(`/deliveries/${deliveryId}/pickup`),
+  confirmPickup: (deliveryId: string, txHash?: string) =>
+    api.patch<Delivery>(`/deliveries/${deliveryId}/pickup`, txHash ? { txHash } : {}),
 
-  completeDelivery: (deliveryId: string) =>
-    api.patch<Delivery>(`/deliveries/${deliveryId}/complete`),
+  completeDelivery: (deliveryId: string, txHash?: string) =>
+    api.patch<Delivery>(`/deliveries/${deliveryId}/complete`, txHash ? { txHash } : {}),
 }

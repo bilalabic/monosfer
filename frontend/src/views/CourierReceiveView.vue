@@ -34,20 +34,54 @@ const phase = ref<Phase>('pickup_qr')
 const txHash = ref('')
 const copied = ref(false)
 const earnedAmount = computed(() => assignedBid.value?.tokenAmount ?? 0)
+const txExplorerUrl = computed(() =>
+  txHash.value ? `https://testnet.monadexplorer.com/tx/${txHash.value}` : '',
+)
+
+async function ensureMonadTestnet() {
+  const ethereum = (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum
+  if (!ethereum) throw new Error('MetaMask bulunamadi')
+  const currentChain = await ethereum.request({ method: 'eth_chainId' }) as string
+  if (currentChain === '0x279f') return
+  await ethereum.request({
+    method: 'wallet_switchEthereumChain',
+    params: [{ chainId: '0x279f' }],
+  })
+}
+
+async function sendAnchorTx(): Promise<string> {
+  const ethereum = (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum
+  if (!ethereum || !wallet.address) throw new Error('Cuzdan bagli degil')
+  await ensureMonadTestnet()
+  const hash = await ethereum.request({
+    method: 'eth_sendTransaction',
+    params: [{ from: wallet.address, to: wallet.address, value: '0x0' }],
+  }) as string
+
+  while (true) {
+    const receipt = await ethereum.request({
+      method: 'eth_getTransactionReceipt',
+      params: [hash],
+    }) as { status?: string } | null
+    if (receipt?.status === '0x1') return hash
+    await wait(1200)
+  }
+}
 
 async function confirmPickup() {
   phase.value = 'pickup_confirming'
-  await wait(2000)
-  dStore.confirmPickup(delivery.value!.id)
+  const hash = await sendAnchorTx()
+  txHash.value = hash
+  await dStore.confirmPickup(delivery.value!.id, hash)
   phase.value = 'delivery_qr'
 }
 
 async function completeDelivery() {
   phase.value = 'payment_confirming'
-  txHash.value = `0x${hex(64)}`
-  await wait(2800)
+  const hash = await sendAnchorTx()
+  txHash.value = hash
   await wallet.fetchBalance()
-  dStore.completeDelivery(delivery.value!.id)
+  await dStore.completeDelivery(delivery.value!.id, hash)
   phase.value = 'success'
 }
 
@@ -58,7 +92,6 @@ function copyHash() {
 }
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
-const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('')
 </script>
 
 <template>
@@ -216,6 +249,14 @@ const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.rando
         <div v-if="txHash" class="w-full max-w-xs rounded-xl border border-stone-200 bg-stone-50 p-4 text-left">
           <p class="mb-2 text-xs font-semibold text-stone-500">TX Hash</p>
           <p class="break-all font-mono text-[10px] text-stone-600">{{ txHash }}</p>
+          <a
+            :href="txExplorerUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mt-2 inline-block text-[11px] font-semibold text-purple-600 hover:text-purple-500"
+          >
+            Explorer'da Gor
+          </a>
         </div>
       </div>
 
@@ -226,7 +267,7 @@ const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.rando
         </div>
         <div>
           <p class="text-xs font-semibold uppercase tracking-widest text-green-600">Ödeme Alındı</p>
-          <h2 class="mt-1 text-3xl font-extrabold text-stone-900">{{ earnedAmount }} MON</h2>
+          <h2 class="mt-1 text-3xl font-extrabold text-stone-900">{{ earnedAmount }} DLV</h2>
           <p class="mt-1 text-sm text-stone-500">Cüzdanınıza başarıyla aktarıldı</p>
         </div>
 
@@ -243,6 +284,14 @@ const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.rando
               </button>
             </div>
             <p class="break-all font-mono text-[10px] text-stone-600">{{ txHash }}</p>
+            <a
+              :href="txExplorerUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="mt-2 inline-block text-[11px] font-semibold text-purple-600 hover:text-purple-500"
+            >
+              Explorer'da Gor
+            </a>
           </div>
           <div class="flex justify-between rounded-xl border border-green-200 bg-green-50 p-3 text-sm">
             <span class="text-stone-500">Yeni Bakiye</span>
@@ -250,7 +299,7 @@ const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.rando
           </div>
           <div class="flex justify-between rounded-xl border border-purple-200 bg-purple-50 p-3 text-sm">
             <span class="text-stone-500">Ağ</span>
-            <span class="font-semibold text-purple-700">Monad Mainnet</span>
+            <span class="font-semibold text-purple-700">Monad Testnet</span>
           </div>
         </div>
 

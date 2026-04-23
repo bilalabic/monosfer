@@ -190,7 +190,7 @@ export async function selectBid(deliveryId, bidId, walletAddress) {
   return toFrontend(delivery.toObject())
 }
 
-export async function lockEscrow(deliveryId, walletAddress) {
+export async function lockEscrow(deliveryId, walletAddress, txHash) {
   const delivery = await Delivery.findById(deliveryId)
   if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
   if (delivery.customer !== walletAddress.toLowerCase()) throw Object.assign(new Error('Sadece gönderici escrow kilitleyebilir'), { statusCode: 403 })
@@ -198,16 +198,23 @@ export async function lockEscrow(deliveryId, walletAddress) {
   delivery.escrowBalance = delivery.maxBudget
   let escrowStep = delivery.timeline.find(s => s.step === 'escrow')
   if (!escrowStep) {
-    delivery.timeline.splice(1, 0, { step: 'escrow', label: "Ödeme Escrow'a Kilitlendi", completed: true, timestamp: new Date() })
+    delivery.timeline.splice(1, 0, {
+      step: 'escrow',
+      label: "Ödeme Escrow'a Kilitlendi",
+      completed: true,
+      timestamp: new Date(),
+      txHash: txHash || undefined,
+    })
   } else {
     escrowStep.completed = true
     escrowStep.timestamp = new Date()
+    escrowStep.txHash = txHash || escrowStep.txHash
   }
   await delivery.save()
   return toFrontend(delivery.toObject())
 }
 
-export async function confirmPickup(deliveryId, walletAddress) {
+export async function confirmPickup(deliveryId, walletAddress, txHash) {
   const delivery = await Delivery.findById(deliveryId)
   if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
   const assignedBid = delivery.selectedBidId ? await Bid.findById(delivery.selectedBidId) : null
@@ -219,13 +226,14 @@ export async function confirmPickup(deliveryId, walletAddress) {
     if (s.step === 'pickup' || s.step === 'transit') {
       s.completed = true
       s.timestamp = s.timestamp || new Date()
+      s.txHash = txHash || s.txHash
     }
   }
   await delivery.save()
   return toFrontend(delivery.toObject())
 }
 
-export async function completeDelivery(deliveryId, walletAddress) {
+export async function completeDelivery(deliveryId, walletAddress, txHash) {
   const delivery = await Delivery.findById(deliveryId)
   if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
   const assignedBid = delivery.selectedBidId ? await Bid.findById(delivery.selectedBidId) : null
@@ -235,7 +243,11 @@ export async function completeDelivery(deliveryId, walletAddress) {
   delivery.deliveredAt = new Date()
   delivery.escrowBalance = '0'
   for (const s of delivery.timeline) {
-    if (!s.completed) { s.completed = true; s.timestamp = new Date() }
+    if (!s.completed) {
+      s.completed = true
+      s.timestamp = new Date()
+      if (s.step === 'delivered') s.txHash = txHash || s.txHash
+    }
   }
   await delivery.save()
   return toFrontend(delivery.toObject())

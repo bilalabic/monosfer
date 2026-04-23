@@ -116,10 +116,10 @@ async function submit() {
           <PhCurrencyDollar class="size-5 text-orange-500" weight="duotone" /> Bütçe & Süre
         </h2>
         <div>
-          <label class="mb-1.5 block text-sm font-medium text-stone-700">Maks. Bütçe (MON)</label>
+          <label class="mb-1.5 block text-sm font-medium text-stone-700">Maks. Bütçe (DLV)</label>
           <div class="relative">
             <input v-model="form.maxBudget" type="number" min="1" class="input pr-14" placeholder="Örn: 25" />
-            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-stone-400">MON</span>
+            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-stone-400">DLV</span>
           </div>
           <p class="mt-1 text-xs text-stone-400">Bu tutar escrow'a kilitlenecek.</p>
         </div>
@@ -145,12 +145,12 @@ async function submit() {
           <div class="flex justify-between"><span class="text-stone-500">Nereden</span><span class="font-medium text-stone-900">{{ form.pickupAddress }}</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Nereye</span><span class="font-medium text-stone-900">{{ form.dropoffAddress }}</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Ağırlık</span><span class="font-medium text-stone-900">{{ form.weight }} kg</span></div>
-          <div class="flex justify-between"><span class="text-stone-500">Bütçe</span><span class="font-semibold text-orange-600">{{ form.maxBudget }} MON</span></div>
+          <div class="flex justify-between"><span class="text-stone-500">Bütçe</span><span class="font-semibold text-orange-600">{{ form.maxBudget }} DLV</span></div>
           <div class="flex justify-between"><span class="text-stone-500">Son Teslim</span><span class="font-medium text-stone-900">{{ form.date }} - {{ form.deadline }}</span></div>
         </div>
         <div class="flex items-start gap-2 rounded-lg border border-orange-200 bg-orange-50 p-3 text-xs text-orange-700">
           <PhCheckCircle class="mt-0.5 size-4 shrink-0" weight="fill" />
-          <span>Onayladıktan sonra <strong>{{ form.maxBudget }} MON</strong> akıllı sözleşmeye kilitlenecek</span>
+          <span>Onayladıktan sonra <strong>{{ form.maxBudget }} DLV</strong> escrow kaydına alınacak</span>
         </div>
       </div>
 

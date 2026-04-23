@@ -7,7 +7,6 @@ import {
 } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
-import TokenAmount from '@/components/TokenAmount.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,26 +23,67 @@ const blockNum = ref(0)
 const confirmations = ref(0)
 const copied = ref(false)
 
-const total = computed(() => (delivery.value?.escrowAmount ?? 0) + GAS)
-const sufficient = computed(() => wallet.balance >= total.value)
+const escrowTokenAmount = computed(() => delivery.value?.escrowAmount ?? 0)
+const sufficient = computed(() => wallet.balance >= GAS)
+const txExplorerUrl = computed(() =>
+  txHash.value ? `https://testnet.monadexplorer.com/tx/${txHash.value}` : '',
+)
+
+async function ensureMonadTestnet() {
+  const ethereum = (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum
+  if (!ethereum) throw new Error('MetaMask bulunamadi')
+  const currentChain = await ethereum.request({ method: 'eth_chainId' }) as string
+  if (currentChain === '0x279f') return
+  await ethereum.request({
+    method: 'wallet_switchEthereumChain',
+    params: [{ chainId: '0x279f' }],
+  })
+}
+
+async function sendAnchorTx(): Promise<{ hash: string; blockNumber: number }> {
+  const ethereum = (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum
+  if (!ethereum || !wallet.address) throw new Error('Cuzdan bagli degil')
+  await ensureMonadTestnet()
+
+  const hash = await ethereum.request({
+    method: 'eth_sendTransaction',
+    params: [{
+      from: wallet.address,
+      to: wallet.address,
+      value: '0x0',
+    }],
+  }) as string
+
+  while (true) {
+    const receipt = await ethereum.request({
+      method: 'eth_getTransactionReceipt',
+      params: [hash],
+    }) as { status?: string; blockNumber?: string } | null
+    if (receipt?.status === '0x1' && receipt.blockNumber) {
+      return { hash, blockNumber: Number.parseInt(receipt.blockNumber, 16) }
+    }
+    await wait(1200)
+  }
+}
 
 async function pay() {
   if (!delivery.value || !sufficient.value) return
   step.value = 'signing'
-  await wait(1800)
+  await wait(600)
 
   step.value = 'confirming'
-  txHash.value = `0x${hex(64)}`
+  const sent = await sendAnchorTx()
+  txHash.value = sent.hash
   confirmations.value = 0
 
   for (let i = 1; i <= 3; i++) {
     await wait(1100)
     confirmations.value = i
-    blockNum.value = 4582100 + i + Math.floor(Math.random() * 5)
+    blockNum.value = sent.blockNumber + i - 1
   }
 
   await wallet.fetchBalance()
-  dStore.lockEscrow(delivery.value.id)
+  await dStore.lockEscrow(delivery.value.id, txHash.value)
   step.value = 'success'
 }
 
@@ -54,7 +94,6 @@ function copyHash() {
 }
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
-const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('')
 </script>
 
 <template>
@@ -102,16 +141,16 @@ const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.rando
           <p class="mb-4 text-xs font-semibold uppercase tracking-wide text-stone-400">Ödeme Detayı</p>
           <div class="space-y-3 text-sm">
             <div class="flex items-center justify-between">
-              <span class="text-stone-600">Teslimat Ücreti (Escrow)</span>
-              <span class="font-semibold text-stone-900">{{ delivery.escrowAmount }} MON</span>
+              <span class="text-stone-600">Teslimat Ucreti (Escrow)</span>
+              <span class="font-semibold text-stone-900">{{ escrowTokenAmount }} DLV</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-stone-400">Gas Ücreti (tahmini)</span>
               <span class="text-stone-400">≈ {{ GAS }} MON</span>
             </div>
             <div class="flex items-center justify-between border-t border-stone-100 pt-3">
-              <span class="font-semibold text-stone-900">Toplam</span>
-              <TokenAmount :amount="total" size="md" />
+              <span class="font-semibold text-stone-900">Escrow Token</span>
+              <span class="font-semibold text-stone-900">{{ escrowTokenAmount }} DLV</span>
             </div>
           </div>
         </div>
@@ -150,7 +189,7 @@ const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.rando
           @click="pay"
         >
           <PhLockKey class="size-4" weight="bold" />
-          {{ sufficient ? `${total.toFixed(5)} MON Kilitle & Onayla` : 'Yetersiz Bakiye' }}
+          {{ sufficient ? `${escrowTokenAmount} DLV Escrow Kaydet` : 'Gas icin MON yetersiz' }}
         </button>
       </div>
 
@@ -166,7 +205,7 @@ const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.rando
         </div>
         <div>
           <h2 class="text-lg font-bold text-stone-900">İmza Bekleniyor</h2>
-          <p class="mt-1 text-sm text-stone-500">Cüzdanınızda işlemi onaylayın</p>
+          <p class="mt-1 text-sm text-stone-500">Cuzdaninizda Monad Testnet islemine imza verin</p>
         </div>
         <div class="w-full max-w-xs space-y-2 rounded-xl border border-stone-200 bg-stone-50 p-4 text-left">
           <p class="text-xs font-semibold text-stone-500">İşlem Özeti</p>
@@ -176,7 +215,7 @@ const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.rando
           </div>
           <div class="flex justify-between text-xs">
             <span class="text-stone-400">Miktar</span>
-            <span class="font-semibold text-stone-900">{{ delivery.escrowAmount }} MON</span>
+            <span class="font-semibold text-stone-900">{{ escrowTokenAmount }} DLV</span>
           </div>
           <div class="flex justify-between text-xs">
             <span class="text-stone-400">Gas</span>
@@ -184,7 +223,7 @@ const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.rando
           </div>
           <div class="flex justify-between text-xs">
             <span class="text-stone-400">Ağ</span>
-            <span class="font-semibold text-purple-600">Monad Mainnet</span>
+            <span class="font-semibold text-purple-600">Monad Testnet</span>
           </div>
         </div>
       </div>
@@ -211,6 +250,14 @@ const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.rando
         <div class="w-full max-w-xs rounded-xl border border-stone-200 bg-stone-50 p-4 text-left">
           <p class="mb-2 text-xs font-semibold text-stone-500">TX Hash</p>
           <p class="break-all font-mono text-[10px] text-stone-600">{{ txHash }}</p>
+          <a
+            :href="txExplorerUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mt-2 inline-block text-[11px] font-semibold text-purple-600 hover:text-purple-500"
+          >
+            Explorer'da Gor
+          </a>
         </div>
       </div>
 
@@ -222,7 +269,7 @@ const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.rando
         <div>
           <h2 class="text-2xl font-bold text-stone-900">Ödeme Kilitlendi!</h2>
           <p class="mt-1 text-sm text-stone-500">
-            {{ delivery.escrowAmount }} MON escrow sözleşmesine başarıyla kilitlendi
+            {{ escrowTokenAmount }} DLV escrow kaydi backend'e islendi ve tx testnete yazildi
           </p>
         </div>
 
@@ -239,6 +286,14 @@ const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.rando
               </button>
             </div>
             <p class="break-all font-mono text-[10px] text-stone-600">{{ txHash }}</p>
+            <a
+              :href="txExplorerUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="mt-2 inline-block text-[11px] font-semibold text-purple-600 hover:text-purple-500"
+            >
+              Explorer'da Gor
+            </a>
           </div>
           <div class="flex justify-between rounded-xl border border-green-200 bg-green-50 p-3 text-sm">
             <span class="text-stone-500">Blok Numarası</span>
@@ -250,7 +305,7 @@ const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.rando
           </div>
           <div class="flex justify-between rounded-xl border border-purple-200 bg-purple-50 p-3 text-sm">
             <span class="text-stone-500">Ağ</span>
-            <span class="font-semibold text-purple-700">Monad Mainnet</span>
+            <span class="font-semibold text-purple-700">Monad Testnet</span>
           </div>
         </div>
 

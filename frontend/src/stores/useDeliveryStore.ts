@@ -94,20 +94,20 @@ export const useDeliveryStore = defineStore('delivery', () => {
     if (idx !== -1) deliveries.value[idx] = updated
   }
 
-  async function lockEscrow(deliveryId: string) {
-    const updated = await deliveriesApi.lockEscrow(deliveryId)
+  async function lockEscrow(deliveryId: string, txHash?: string) {
+    const updated = await deliveriesApi.lockEscrow(deliveryId, txHash)
     const idx = deliveries.value.findIndex(d => d.id === deliveryId)
     if (idx !== -1) deliveries.value[idx] = updated
   }
 
-  async function confirmPickup(deliveryId: string) {
-    const updated = await deliveriesApi.confirmPickup(deliveryId)
+  async function confirmPickup(deliveryId: string, txHash?: string) {
+    const updated = await deliveriesApi.confirmPickup(deliveryId, txHash)
     const idx = deliveries.value.findIndex(d => d.id === deliveryId)
     if (idx !== -1) deliveries.value[idx] = updated
   }
 
-  async function completeDelivery(deliveryId: string) {
-    const updated = await deliveriesApi.completeDelivery(deliveryId)
+  async function completeDelivery(deliveryId: string, txHash?: string) {
+    const updated = await deliveriesApi.completeDelivery(deliveryId, txHash)
     const idx = deliveries.value.findIndex(d => d.id === deliveryId)
     if (idx !== -1) deliveries.value[idx] = updated
   }
