@@ -8,6 +8,7 @@ import {
 } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
+import { MONAD_TESTNET } from '@/config/chain'
 import QrCode from '@/components/QrCode.vue'
 import TokenAmount from '@/components/TokenAmount.vue'
 
@@ -24,7 +25,7 @@ const assignedBid = computed(() =>
 const verifyCode = computed(() => {
   const id = delivery.value?.id ?? 'x'
   const sum = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
-  return `DLV-${id.toUpperCase()}-${sum.toString(16).toUpperCase().padStart(4, '0')}`
+  return `MON-${id.toUpperCase()}-${sum.toString(16).toUpperCase().padStart(4, '0')}`
 })
 
 const qrData = computed(() => `DELIVERA:${delivery.value?.id}:${verifyCode.value}:${assignedBid.value?.courierId ?? ''}`)
@@ -42,10 +43,10 @@ async function ensureMonadTestnet() {
   const ethereum = (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum
   if (!ethereum) throw new Error('MetaMask bulunamadi')
   const currentChain = await ethereum.request({ method: 'eth_chainId' }) as string
-  if (currentChain === '0x279f') return
+  if (currentChain === MONAD_TESTNET.chainIdHex) return
   await ethereum.request({
     method: 'wallet_switchEthereumChain',
-    params: [{ chainId: '0x279f' }],
+    params: [{ chainId: MONAD_TESTNET.chainIdHex }],
   })
 }
 
@@ -267,7 +268,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
         </div>
         <div>
           <p class="text-xs font-semibold uppercase tracking-widest text-green-600">Ödeme Alındı</p>
-          <h2 class="mt-1 text-3xl font-extrabold text-stone-900">{{ earnedAmount }} DLV</h2>
+          <h2 class="mt-1 text-3xl font-extrabold text-stone-900">{{ earnedAmount }} MON</h2>
           <p class="mt-1 text-sm text-stone-500">Cüzdanınıza başarıyla aktarıldı</p>
         </div>
 

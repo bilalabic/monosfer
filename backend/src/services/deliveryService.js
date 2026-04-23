@@ -1,6 +1,7 @@
 import Delivery from '../models/Delivery.js'
 import Bid from '../models/Bid.js'
 import User from '../models/User.js'
+import CourierStats from '../models/CourierStats.js'
 
 const STATUS_TO_FRONTEND = {
   OpenForBids: 'open',
@@ -26,10 +27,13 @@ async function populateBids(bids, selectedBidId) {
   if (!bids || bids.length === 0) return []
   const wallets = [...new Set(bids.map(b => b.courier))]
   const users = await User.find({ walletAddress: { $in: wallets } }).lean()
+  const courierStats = await CourierStats.find({ walletAddress: { $in: wallets } }).lean()
   const userMap = Object.fromEntries(users.map(u => [u.walletAddress, u]))
+  const statsMap = Object.fromEntries(courierStats.map(s => [s.walletAddress, s]))
 
   return bids.map(bid => {
     const user = userMap[bid.courier] || {}
+    const stats = statsMap[bid.courier] || {}
     const name = user.name || bid.courier.slice(0, 6) + '...' + bid.courier.slice(-4)
     const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
     return {
@@ -37,8 +41,8 @@ async function populateBids(bids, selectedBidId) {
       courierId: bid.courier,
       courierName: name,
       courierAvatar: initials,
-      courierRating: 4.5,
-      courierDeliveries: 100,
+      courierRating: Number(stats.avgRating || 0),
+      courierDeliveries: Number(stats.totalDeliveries || 0),
       tokenAmount: parseFloat(bid.amount) || 0,
       estimatedTime: `${bid.estimatedMinutes} dk`,
       createdAt: bid.createdAt.toISOString(),

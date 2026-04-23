@@ -34,12 +34,13 @@ async function submit() {
       date: form.value.date,
       deadline: form.value.deadline,
     })
+    done.value = true
+    setTimeout(() => router.push('/deliveries'), 1800)
   } catch {
-    // silently continue — store fallback handles it
+    // hata durumda ekranda kalir, sahte basari verilmez
+  } finally {
+    submitting.value = false
   }
-  submitting.value = false
-  done.value = true
-  setTimeout(() => router.push('/deliveries'), 1800)
 }
 </script>
 

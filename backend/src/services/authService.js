@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import User from '../models/User.js'
+import CourierStats from '../models/CourierStats.js'
 
 function signToken(user) {
   return jwt.sign(
@@ -9,7 +10,13 @@ function signToken(user) {
   )
 }
 
-function formatUser(user) {
+async function formatUser(user) {
+  let rating = 0
+  if (user.courierProfile?.isRegistered || user.role === 'courier' || user.role === 'both') {
+    const stats = await CourierStats.findOne({ walletAddress: user.walletAddress }).lean()
+    rating = Number(stats?.avgRating || 0)
+  }
+
   return {
     id: user._id.toString(),
     walletAddress: user.walletAddress,
@@ -17,7 +24,7 @@ function formatUser(user) {
     email: user.email || '',
     phone: user.phone || '',
     role: user.role || 'both',
-    rating: user.courierProfile?.isRegistered ? 4.5 : 0,
+    rating,
     balance: 0,
   }
 }
@@ -27,11 +34,11 @@ export async function registerUser({ walletAddress, name, email, phone, role }) 
   let user = await User.findOne({ walletAddress: addr })
   if (user) {
     const token = signToken(user)
-    return { user: formatUser(user), token }
+    return { user: await formatUser(user), token }
   }
   user = await User.create({ walletAddress: addr, name, email, phone, role: role || 'both' })
   const token = signToken(user)
-  return { user: formatUser(user), token }
+  return { user: await formatUser(user), token }
 }
 
 export async function loginUser({ walletAddress, email, name, phone, role }) {
@@ -50,14 +57,14 @@ export async function loginUser({ walletAddress, email, name, phone, role }) {
     await user.save()
   }
   const token = signToken(user)
-  return { user: formatUser(user), token }
+  return { user: await formatUser(user), token }
 }
 
 export async function getCurrentUser({ userId, walletAddress }) {
   const query = userId ? { _id: userId } : { walletAddress: walletAddress?.toLowerCase() }
   const user = await User.findOne(query)
   if (!user) throw Object.assign(new Error('Kullanıcı bulunamadı'), { statusCode: 404 })
-  return { user: formatUser(user) }
+  return { user: await formatUser(user) }
 }
 
 export async function updateCurrentUser({ userId, walletAddress }, data) {
@@ -71,5 +78,5 @@ export async function updateCurrentUser({ userId, walletAddress }, data) {
   if (['customer', 'courier', 'both'].includes(data.role)) user.role = data.role
 
   await user.save()
-  return { user: formatUser(user) }
+  return { user: await formatUser(user) }
 }

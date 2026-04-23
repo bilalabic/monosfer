@@ -1,6 +1,6 @@
 <script setup lang="ts">
 withDefaults(defineProps<{ amount: number; size?: 'sm' | 'md' | 'lg'; symbol?: string }>(), {
-  symbol: 'DLV',
+  symbol: 'MON',
 })
 </script>
 

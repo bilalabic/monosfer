@@ -7,6 +7,7 @@ import {
 } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
+import { MONAD_TESTNET } from '@/config/chain'
 
 const route = useRoute()
 const router = useRouter()
@@ -33,10 +34,10 @@ async function ensureMonadTestnet() {
   const ethereum = (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum
   if (!ethereum) throw new Error('MetaMask bulunamadi')
   const currentChain = await ethereum.request({ method: 'eth_chainId' }) as string
-  if (currentChain === '0x279f') return
+  if (currentChain === MONAD_TESTNET.chainIdHex) return
   await ethereum.request({
     method: 'wallet_switchEthereumChain',
-    params: [{ chainId: '0x279f' }],
+    params: [{ chainId: MONAD_TESTNET.chainIdHex }],
   })
 }
 
@@ -211,7 +212,9 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
           <p class="text-xs font-semibold text-stone-500">İşlem Özeti</p>
           <div class="flex justify-between text-xs">
             <span class="text-stone-400">Kontrat</span>
-            <span class="font-mono text-stone-600">0x71C7...976F</span>
+            <span class="font-mono text-stone-600">
+              {{ `${MONAD_TESTNET.contracts.escrow.slice(0, 6)}...${MONAD_TESTNET.contracts.escrow.slice(-4)}` }}
+            </span>
           </div>
           <div class="flex justify-between text-xs">
             <span class="text-stone-400">Miktar</span>

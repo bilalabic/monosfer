@@ -12,7 +12,7 @@ const wallet = useWalletStore()
 const router = useRouter()
 
 type Filter = 'all' | 'open' | 'in_progress' | 'completed'
-type DemoScenario = {
+type LiveScenario = {
   key: 'sender' | 'courier'
   deliveryId: string
   role: string
@@ -35,11 +35,11 @@ const bidTarget = ref<string | null>(null)
 
 onMounted(() => store.loadDeliveries())
 
-const demoScenarios = computed<DemoScenario[]>(() => {
+const liveScenarios = computed<LiveScenario[]>(() => {
   const addr = wallet.address.toLowerCase()
   const senderDelivery = store.deliveries.find(d => d.status === 'open' && d.senderId === addr)
   const courierDelivery = store.deliveries.find(d => d.status === 'in_progress' && d.selectedBidId && d.assignedCourierId === addr)
-  const scenarios: DemoScenario[] = []
+  const scenarios: LiveScenario[] = []
 
   if (senderDelivery) {
     scenarios.push({
@@ -47,7 +47,7 @@ const demoScenarios = computed<DemoScenario[]>(() => {
       deliveryId: senderDelivery.id,
       role: 'Gönderici Akışı',
       title: 'Escrow Ödeme Yap',
-      description: `${senderDelivery.title} · ${senderDelivery.escrowAmount || senderDelivery.maxBudget} DLV · ${senderDelivery.pickupAddress} → ${senderDelivery.dropoffAddress}`,
+      description: `${senderDelivery.title} · ${senderDelivery.escrowAmount || senderDelivery.maxBudget} MON · ${senderDelivery.pickupAddress} → ${senderDelivery.dropoffAddress}`,
       flow: 'Ödeme → İmzala → Blok Onayı → Kilitlendi',
       path: `/payment/${senderDelivery.id}`,
       iconClass: 'bg-orange-100',
@@ -66,8 +66,8 @@ const demoScenarios = computed<DemoScenario[]>(() => {
       deliveryId: courierDelivery.id,
       role: 'Kurye Akışı',
       title: 'QR ile Ödeme Al',
-      description: `${courierDelivery.title} · ${courierDelivery.escrowAmount || courierDelivery.maxBudget} DLV · ${courierDelivery.pickupAddress} → ${courierDelivery.dropoffAddress}`,
-      flow: 'QR Göster → Onayla → Escrow Serbest → DLV Al',
+      description: `${courierDelivery.title} · ${courierDelivery.escrowAmount || courierDelivery.maxBudget} MON · ${courierDelivery.pickupAddress} → ${courierDelivery.dropoffAddress}`,
+      flow: 'QR Göster → Onayla → Escrow Serbest → MON Al',
       path: `/courier/receive/${courierDelivery.id}`,
       iconClass: 'bg-green-100',
       iconColorClass: 'text-green-600',
@@ -120,8 +120,8 @@ const filtered = computed(() => {
       <p class="mt-1 text-stone-500">Kuryeler için açık ilanlar — teklif ver, seçil, kazan</p>
     </div>
 
-    <!-- Demo Scenarios -->
-    <div v-if="demoScenarios.length > 0" class="mb-8 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-orange-50 p-5">
+    <!-- Canli Senaryo Ozeti -->
+    <div v-if="liveScenarios.length > 0" class="mb-8 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-orange-50 p-5">
       <div class="mb-4 flex items-center gap-2">
         <span class="rounded-full bg-purple-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-purple-700">Canlı Senaryolar</span>
         <p class="text-xs text-stone-500">Uygun teslimat kayıtlarından oluşturulan ödeme akışları</p>
@@ -129,7 +129,7 @@ const filtered = computed(() => {
 
       <div class="grid gap-3 sm:grid-cols-2">
         <button
-          v-for="scenario in demoScenarios"
+          v-for="scenario in liveScenarios"
           :key="scenario.deliveryId"
           :class="[
             'group flex flex-col gap-3 rounded-xl border bg-white p-4 text-left transition hover:shadow-md',

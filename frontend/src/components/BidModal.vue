@@ -12,7 +12,7 @@ const wallet = useWalletStore()
 
 const tokenAmount = ref<number | null>(null)
 const estimatedTime = ref('')
-const bidDeposit = ref<number | null>(null)
+const collateral = ref<number | null>(null)
 const submitting = ref(false)
 const submitted = ref(false)
 const errorMsg = ref('')
@@ -23,7 +23,7 @@ const alreadyBid = computed(() => delivery.value?.bids.some(b => b.courierId ===
 function handleAmountInput(e: Event) {
   const val = Number((e.target as HTMLInputElement).value)
   tokenAmount.value = val || null
-  bidDeposit.value = val ? 1 : null
+  collateral.value = val ? Math.ceil(val * 0.2) : null
 }
 
 async function submit() {
@@ -60,7 +60,7 @@ async function submit() {
         <div class="mb-5 flex items-center justify-between">
           <div>
             <h2 class="text-base font-semibold text-stone-900">Teklif Ver</h2>
-            <p class="text-xs text-stone-400">Teklif + sabit 1 DLV teminat kilitle</p>
+            <p class="text-xs text-stone-400">Teklif + %20 teminat yatır</p>
           </div>
           <button class="flex size-8 items-center justify-center rounded-lg border border-stone-200 text-stone-400 hover:text-stone-700" @click="emit('close')">
             <X class="size-4" weight="bold" />
@@ -85,7 +85,7 @@ async function submit() {
         <div v-else class="space-y-4">
           <div v-if="errorMsg" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{{ errorMsg }}</div>
           <div>
-            <label class="mb-1.5 block text-sm font-medium text-stone-700">Token Miktari (DLV)</label>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Token Miktarı (MON)</label>
             <div class="relative">
               <input
                 type="number"
@@ -95,9 +95,9 @@ async function submit() {
                 class="input pr-14"
                 @input="handleAmountInput"
               />
-              <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-stone-400">DLV</span>
+              <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-stone-400">MON</span>
             </div>
-            <p class="mt-1 text-xs text-stone-400">Maks: {{ maxBudget }} DLV</p>
+            <p class="mt-1 text-xs text-stone-400">Maks: {{ maxBudget }} MON</p>
           </div>
 
           <div>
@@ -105,10 +105,10 @@ async function submit() {
             <input v-model="estimatedTime" type="text" placeholder="Örn: 45 dk" class="input" />
           </div>
 
-          <div v-if="bidDeposit" class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <div v-if="collateral" class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
             <AlertCircle class="mt-0.5 size-4 shrink-0 text-amber-600" weight="fill" />
             <p class="text-xs text-amber-700">
-              <strong>{{ bidDeposit }} DLV teminat</strong> kilitlenecek. Kurallar yerine gelince iade edilir.
+              <strong>{{ collateral }} MON teminat</strong> kilitlenecek. Teslimatı tamamlarsan iade edilir.
             </p>
           </div>
 

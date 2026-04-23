@@ -34,13 +34,6 @@ export const useWalletStore = defineStore('wallet', () => {
     }
   }
 
-  async function connect(email = 'test@example.com', phone = '') {
-    const walletAddress = '0x71C7656EC7ab88b098defB751B7401B5f6d8976F'
-    const { user, token } = await authApi.login({ walletAddress, email, name: 'Demo Kullanıcı', phone, role: 'both' })
-    setToken(token)
-    applyAuth(user)
-  }
-
   async function fetchBalance() {
     if (!address.value || typeof window === 'undefined' || !window.ethereum) return
     try {
@@ -96,5 +89,5 @@ export const useWalletStore = defineStore('wallet', () => {
     }
   }
 
-  return { connected, address, balance, userProfile, displayAddress, connect, connectMetaMask, registerMetaMask, updateProfile, disconnect, restoreSession, fetchBalance }
+  return { connected, address, balance, userProfile, displayAddress, connectMetaMask, registerMetaMask, updateProfile, disconnect, restoreSession, fetchBalance }
 })

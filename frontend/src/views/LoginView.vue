@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { PhArrowRight, PhWarning, PhWallet } from '@phosphor-icons/vue'
+import { PhArrowRight, PhWarning } from '@phosphor-icons/vue'
 import { useWalletStore } from '@/stores/useWalletStore'
 import { useMetaMask } from '@/composables/useMetaMask'
 
 const router = useRouter()
-const wallet = useWalletStore()
 const mm = useMetaMask()
 
 async function handleMetaMask() {
@@ -15,10 +14,6 @@ async function handleMetaMask() {
   router.push('/dashboard')
 }
 
-function handleDemo() {
-  wallet.connect()
-  router.push('/dashboard')
-}
 </script>
 
 <template>
@@ -124,23 +119,6 @@ function handleDemo() {
           <span class="inline-block size-1.5 rounded-full bg-purple-400"></span>
           Monad Testnet · 10,000 TPS · 400ms blok süresi
         </div>
-
-        <!-- Divider -->
-        <div class="my-5 flex items-center gap-3">
-          <div class="h-px flex-1 bg-stone-100"></div>
-          <span class="text-xs text-stone-400">veya</span>
-          <div class="h-px flex-1 bg-stone-100"></div>
-        </div>
-
-        <!-- Demo mode -->
-        <button
-          type="button"
-          class="w-full rounded-xl border border-dashed border-stone-200 py-3 text-sm text-stone-400 transition hover:border-stone-300 hover:text-stone-600"
-          @click="handleDemo"
-        >
-          <PhWallet class="mr-1.5 inline size-4" weight="duotone" />
-          Demo modda devam et
-        </button>
 
         <!-- How it works -->
         <div class="mt-5 rounded-xl border border-stone-100 bg-stone-50 p-4 space-y-2">
