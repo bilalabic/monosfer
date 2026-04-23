@@ -36,8 +36,9 @@ const bidTarget = ref<string | null>(null)
 onMounted(() => store.loadDeliveries())
 
 const demoScenarios = computed<DemoScenario[]>(() => {
-  const senderDelivery = store.deliveries.find(d => d.status === 'open')
-  const courierDelivery = store.deliveries.find(d => d.status === 'in_progress' && d.selectedBidId)
+  const addr = wallet.address.toLowerCase()
+  const senderDelivery = store.deliveries.find(d => d.status === 'open' && d.senderId === addr)
+  const courierDelivery = store.deliveries.find(d => d.status === 'in_progress' && d.selectedBidId && d.assignedCourierId === addr)
   const scenarios: DemoScenario[] = []
 
   if (senderDelivery) {

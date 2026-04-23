@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { PhArrowRight, PhUser, PhPhone, PhPackage, PhTruck, PhCheckCircle, PhWarning } from '@phosphor-icons/vue'
+import { PhArrowRight, PhUser, PhPhone, PhCheckCircle, PhWarning } from '@phosphor-icons/vue'
 import { useWalletStore } from '@/stores/useWalletStore'
 import { useMetaMask } from '@/composables/useMetaMask'
 
@@ -13,7 +13,6 @@ type Step = 'wallet' | 'profile'
 const step = ref<Step>('wallet')
 const connectedAddress = ref('')
 
-const accountType = ref<'customer' | 'courier'>('customer')
 const name = ref('')
 const phone = ref('')
 const loading = ref(false)
@@ -35,7 +34,7 @@ async function handleSubmit() {
       walletAddress: connectedAddress.value,
       name: name.value,
       phone: phone.value,
-      role: accountType.value,
+      role: 'both',
     })
     router.push('/dashboard')
   } finally {
@@ -152,22 +151,6 @@ function shortAddr(addr: string) {
               <p class="text-xs font-semibold text-green-700">Cüzdan Bağlandı</p>
               <p class="font-mono text-xs text-stone-600">{{ shortAddr(connectedAddress) }}</p>
             </div>
-          </div>
-
-          <!-- Account type -->
-          <div class="mb-5 grid grid-cols-2 gap-2 rounded-xl border border-stone-100 bg-stone-50 p-1.5">
-            <button type="button"
-              :class="['flex flex-col items-center gap-1.5 rounded-lg py-2.5 text-xs font-medium transition-all', accountType === 'customer' ? 'bg-white text-stone-900 shadow-sm ring-1 ring-stone-200' : 'text-stone-500 hover:bg-stone-100']"
-              @click="accountType = 'customer'">
-              <PhPackage class="size-4" :class="accountType === 'customer' ? 'text-orange-500' : ''" weight="duotone" />
-              Müşteri
-            </button>
-            <button type="button"
-              :class="['flex flex-col items-center gap-1.5 rounded-lg py-2.5 text-xs font-medium transition-all', accountType === 'courier' ? 'bg-white text-stone-900 shadow-sm ring-1 ring-stone-200' : 'text-stone-500 hover:bg-stone-100']"
-              @click="accountType = 'courier'">
-              <PhTruck class="size-4" :class="accountType === 'courier' ? 'text-orange-500' : ''" weight="duotone" />
-              Kurye
-            </button>
           </div>
 
           <div class="space-y-4">

@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ['customer', 'courier', 'both'],
-      default: 'customer',
+      default: 'both',
     },
     name: { type: String, trim: true },
     phone: { type: String, trim: true },

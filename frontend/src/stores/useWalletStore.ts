@@ -14,7 +14,7 @@ export const useWalletStore = defineStore('wallet', () => {
     name: '',
     email: '',
     phone: '',
-    role: 'customer' as UserRole,
+    role: 'both' as UserRole,
     rating: 0,
   })
 
@@ -29,14 +29,14 @@ export const useWalletStore = defineStore('wallet', () => {
       name: user.name || 'Kullanıcı',
       email: user.email || '',
       phone: user.phone || '',
-      role: user.role || 'customer',
+      role: user.role || 'both',
       rating: user.rating ?? 0,
     }
   }
 
   async function connect(email = 'test@example.com', phone = '') {
     const walletAddress = '0x71C7656EC7ab88b098defB751B7401B5f6d8976F'
-    const { user, token } = await authApi.login({ walletAddress, email, name: 'Demo Kullanıcı', phone })
+    const { user, token } = await authApi.login({ walletAddress, email, name: 'Demo Kullanıcı', phone, role: 'both' })
     setToken(token)
     applyAuth(user)
   }
@@ -76,7 +76,7 @@ export const useWalletStore = defineStore('wallet', () => {
     connected.value = false
     address.value = ''
     balance.value = 0
-    userProfile.value = { name: '', email: '', phone: '', role: 'customer', rating: 0 }
+    userProfile.value = { name: '', email: '', phone: '', role: 'both', rating: 0 }
     clearToken()
   }
 

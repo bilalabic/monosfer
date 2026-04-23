@@ -16,7 +16,7 @@ function formatUser(user) {
     name: user.name || '',
     email: user.email || '',
     phone: user.phone || '',
-    role: user.role || 'customer',
+    role: user.role || 'both',
     rating: user.courierProfile?.isRegistered ? 4.5 : 0,
     balance: 0,
   }
@@ -29,7 +29,7 @@ export async function registerUser({ walletAddress, name, email, phone, role }) 
     const token = signToken(user)
     return { user: formatUser(user), token }
   }
-  user = await User.create({ walletAddress: addr, name, email, phone, role: role || 'customer' })
+  user = await User.create({ walletAddress: addr, name, email, phone, role: role || 'both' })
   const token = signToken(user)
   return { user: formatUser(user), token }
 }
@@ -38,11 +38,15 @@ export async function loginUser({ walletAddress, email, name, phone, role }) {
   const addr = walletAddress.toLowerCase()
   let user = await User.findOne({ walletAddress: addr })
   if (!user) {
-    user = await User.create({ walletAddress: addr, email, name, phone, role: role || 'customer' })
+    user = await User.create({ walletAddress: addr, email, name, phone, role: role || 'both' })
   } else if (name && !user.name) {
     user.name = name
     user.email = email || user.email
     user.phone = phone || user.phone
+    user.role = role || user.role || 'both'
+    await user.save()
+  } else if (user.role === 'customer') {
+    user.role = 'both'
     await user.save()
   }
   const token = signToken(user)
