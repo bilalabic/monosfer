@@ -42,6 +42,8 @@ export interface Delivery {
   createdAt: string
   deadline: string
   rating?: number
+  ratingComment?: string
+  isRated?: boolean
   timeline: TimelineStep[]
 }
 
@@ -112,9 +114,16 @@ export const useDeliveryStore = defineStore('delivery', () => {
     if (idx !== -1) deliveries.value[idx] = updated
   }
 
+  async function rateDelivery(deliveryId: string, rating: number, comment?: string) {
+    const updated = await deliveriesApi.rateDelivery(deliveryId, { rating, comment })
+    const idx = deliveries.value.findIndex(d => d.id === deliveryId)
+    if (idx !== -1) deliveries.value[idx] = updated
+    return updated
+  }
+
   return {
     deliveries, loading, filteredDeliveries, selectedFilter,
     getDelivery, loadDeliveries, createDelivery,
-    addBid, selectBid, lockEscrow, confirmPickup, completeDelivery,
+    addBid, selectBid, lockEscrow, confirmPickup, completeDelivery, rateDelivery,
   }
 })

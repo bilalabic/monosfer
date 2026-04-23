@@ -110,7 +110,7 @@ const c = config[props.rank]
         <!-- Specialties -->
         <div class="mt-2 flex flex-wrap gap-1 justify-center">
           <span
-            v-for="s in courier.specialties.slice(0, 2)"
+            v-for="s in (courier.specialties.length ? courier.specialties.slice(0, 2) : ['Yeni kurye'])"
             :key="s"
             class="rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-[10px] text-stone-500"
           >

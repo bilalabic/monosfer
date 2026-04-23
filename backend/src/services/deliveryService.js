@@ -84,6 +84,8 @@ export async function toFrontend(delivery) {
     createdAt: delivery.createdAt.toISOString(),
     deadline: delivery.deadline?.toISOString() || new Date().toISOString(),
     rating: delivery.rating,
+    ratingComment: delivery.ratingComment,
+    isRated: Boolean(delivery.isRated),
     timeline: buildTimeline(delivery),
   }
 }
@@ -253,6 +255,51 @@ export async function completeDelivery(deliveryId, walletAddress, txHash) {
       if (s.step === 'delivered') s.txHash = txHash || s.txHash
     }
   }
+  await delivery.save()
+  return toFrontend(delivery.toObject())
+}
+
+export async function rateDelivery(deliveryId, walletAddress, data) {
+  const rating = Number(data?.rating)
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    throw Object.assign(new Error('Puan 1 ile 5 arasında olmalı'), { statusCode: 400 })
+  }
+
+  const delivery = await Delivery.findById(deliveryId)
+  if (!delivery) throw Object.assign(new Error('Teslimat bulunamadı'), { statusCode: 404 })
+  if (delivery.customer !== walletAddress.toLowerCase()) {
+    throw Object.assign(new Error('Sadece ödemeyi yapan gönderici puan verebilir'), { statusCode: 403 })
+  }
+  if (delivery.status !== 'Delivered') {
+    throw Object.assign(new Error('Sadece tamamlanan teslimatlar puanlanabilir'), { statusCode: 400 })
+  }
+  if (delivery.isRated) {
+    throw Object.assign(new Error('Bu teslimat zaten puanlandı'), { statusCode: 400 })
+  }
+
+  const assignedBid = delivery.selectedBidId ? await Bid.findById(delivery.selectedBidId) : null
+  if (!assignedBid) throw Object.assign(new Error('Puanlanacak kurye bulunamadı'), { statusCode: 400 })
+
+  delivery.rating = rating
+  delivery.ratingComment = typeof data?.comment === 'string' ? data.comment.trim().slice(0, 500) : ''
+  delivery.isRated = true
+  delivery.ratedAt = new Date()
+
+  let stats = await CourierStats.findOne({ walletAddress: assignedBid.courier })
+  if (!stats) {
+    stats = await CourierStats.create({ walletAddress: assignedBid.courier })
+  }
+
+  stats.totalRatings = Number(stats.totalRatings || 0) + 1
+  stats.totalRatingSum = Number(stats.totalRatingSum || 0) + rating
+  stats.avgRating = Math.round((stats.totalRatingSum / stats.totalRatings) * 10) / 10
+  stats.leaderboardScore = Math.round(
+    (Number(stats.totalDeliveries || 0) * 10) +
+    (Number(stats.onTimeRate || 0) * 0.5) +
+    (stats.avgRating * 20),
+  )
+
+  await stats.save?.()
   await delivery.save()
   return toFrontend(delivery.toObject())
 }

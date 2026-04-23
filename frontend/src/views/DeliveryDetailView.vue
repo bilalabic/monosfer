@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { PhArrowLeft as ArrowLeft, PhMapPin as MapPin, PhClock as Clock, PhBarbell as Weight, PhPackage as Package, PhShieldCheck as Shield, PhUsers as Users, PhMagnifyingGlass, PhLockKey, PhQrCode } from '@phosphor-icons/vue'
+import { PhArrowLeft as ArrowLeft, PhMapPin as MapPin, PhClock as Clock, PhBarbell as Weight, PhPackage as Package, PhShieldCheck as Shield, PhUsers as Users, PhMagnifyingGlass, PhLockKey, PhQrCode, PhStar } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
 import StatusBadge from '@/components/StatusBadge.vue'
@@ -14,12 +14,34 @@ const router = useRouter()
 const store = useDeliveryStore()
 const wallet = useWalletStore()
 const delivery = computed(() => store.getDelivery(route.params.id as string))
+const ratingValue = ref(5)
+const ratingComment = ref('')
+const ratingSaving = ref(false)
+const ratingError = ref('')
+const ratingMessage = ref('')
 
 const isOwner = computed(() => !!wallet.address && wallet.address.toLowerCase() === delivery.value?.senderId)
 const isAssignedCourier = computed(() => !!wallet.address && wallet.address.toLowerCase() === delivery.value?.assignedCourierId)
+const selectedBid = computed(() => delivery.value?.bids.find(bid => bid.id === delivery.value?.selectedBidId))
+const canRate = computed(() => delivery.value?.status === 'completed' && isOwner.value && !delivery.value?.isRated && !!selectedBid.value)
 
 function formatDate(s: string) {
   return new Date(s).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+async function submitRating() {
+  if (!delivery.value || ratingSaving.value) return
+  ratingSaving.value = true
+  ratingError.value = ''
+  ratingMessage.value = ''
+  try {
+    await store.rateDelivery(delivery.value.id, ratingValue.value, ratingComment.value)
+    ratingMessage.value = 'Puan kaydedildi.'
+  } catch (error) {
+    ratingError.value = error instanceof Error ? error.message : 'Puan kaydedilemedi'
+  } finally {
+    ratingSaving.value = false
+  }
 }
 </script>
 
@@ -121,6 +143,43 @@ function formatDate(s: string) {
         <div class="card rounded-xl bg-white p-5">
           <p class="mb-5 text-xs font-semibold uppercase tracking-wide text-stone-400">Teslimat Süreci</p>
           <DeliveryTimeline :timeline="delivery.timeline" />
+        </div>
+
+        <div v-if="canRate || delivery.isRated" class="card rounded-xl bg-white p-5">
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">Kurye Puanı</p>
+          <template v-if="delivery.isRated">
+            <div class="flex items-center gap-1.5 text-amber-500">
+              <PhStar v-for="star in 5" :key="star" class="size-5" :weight="star <= (delivery.rating || 0) ? 'fill' : 'regular'" />
+            </div>
+            <p class="mt-2 text-sm font-semibold text-stone-900">{{ selectedBid?.courierName || 'Kurye' }} puanlandı</p>
+            <p v-if="delivery.ratingComment" class="mt-1 text-xs leading-relaxed text-stone-500">{{ delivery.ratingComment }}</p>
+          </template>
+          <template v-else>
+            <p class="text-sm font-semibold text-stone-900">{{ selectedBid?.courierName }} için puan ver</p>
+            <div class="mt-3 flex gap-1">
+              <button
+                v-for="star in 5"
+                :key="star"
+                type="button"
+                class="rounded p-0.5 text-amber-400 transition hover:scale-110"
+                @click="ratingValue = star"
+              >
+                <PhStar class="size-7" :weight="star <= ratingValue ? 'fill' : 'regular'" />
+              </button>
+            </div>
+            <textarea
+              v-model="ratingComment"
+              rows="3"
+              class="input mt-3 min-h-20 resize-none"
+              maxlength="500"
+              placeholder="Kısa yorum yazabilirsiniz"
+            />
+            <button class="btn-primary mt-3 w-full justify-center" :disabled="ratingSaving" @click="submitRating">
+              {{ ratingSaving ? 'Kaydediliyor...' : 'Puanı Kaydet' }}
+            </button>
+            <p v-if="ratingMessage" class="mt-2 text-center text-xs font-medium text-green-600">{{ ratingMessage }}</p>
+            <p v-if="ratingError" class="mt-2 text-center text-xs font-medium text-red-600">{{ ratingError }}</p>
+          </template>
         </div>
 
         <!-- Escrow badge -->

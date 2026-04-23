@@ -36,4 +36,7 @@ export const deliveriesApi = {
 
   completeDelivery: (deliveryId: string, txHash?: string) =>
     api.patch<Delivery>(`/deliveries/${deliveryId}/complete`, txHash ? { txHash } : {}),
+
+  rateDelivery: (deliveryId: string, data: { rating: number; comment?: string }) =>
+    api.patch<Delivery>(`/deliveries/${deliveryId}/rating`, data),
 }

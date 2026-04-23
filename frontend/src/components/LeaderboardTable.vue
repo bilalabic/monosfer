@@ -39,7 +39,7 @@ const medalColors: Record<number, string> = { 0: 'text-amber-500', 1: 'text-ston
           </div>
           <div class="min-w-0">
             <p class="truncate text-sm font-medium text-stone-900">{{ courier.name }}</p>
-            <span class="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-500">{{ courier.specialties[0] }}</span>
+            <span class="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-500">{{ courier.specialties[0] || 'Yeni kurye' }}</span>
           </div>
         </div>
 

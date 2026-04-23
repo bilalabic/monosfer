@@ -40,6 +40,7 @@ const courierStatsSchema = new mongoose.Schema(
     onTimeCount: { type: Number, default: 0 },
     lateCount: { type: Number, default: 0 },
     totalRatingSum: { type: Number, default: 0 },
+    totalRatings: { type: Number, default: 0 },
     leaderboardScore: { type: Number, default: 0, index: true },
     stakeAmount: { type: String, default: '0' }, // bigint → string
 

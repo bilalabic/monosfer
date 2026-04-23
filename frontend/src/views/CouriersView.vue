@@ -1,19 +1,81 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useCourierStore } from '@/stores/useCourierStore'
+import { useDeliveryStore } from '@/stores/useDeliveryStore'
+import { useWalletStore } from '@/stores/useWalletStore'
 import TopCourierCard from '@/components/TopCourierCard.vue'
 import LeaderboardTable from '@/components/LeaderboardTable.vue'
-import { PhTrophy, PhMedal, PhChartBar } from '@phosphor-icons/vue'
+import { PhTrophy, PhMedal, PhChartBar, PhStar, PhPackage } from '@phosphor-icons/vue'
 
 const store = useCourierStore()
+const deliveryStore = useDeliveryStore()
+const wallet = useWalletStore()
+const ratingByDelivery = ref<Record<string, number>>({})
+const commentByDelivery = ref<Record<string, string>>({})
+const ratingSaving = ref<Record<string, boolean>>({})
+const ratingError = ref<Record<string, string>>({})
 
-onMounted(() => store.loadCouriers())
+onMounted(() => {
+  store.loadCouriers()
+  if (deliveryStore.deliveries.length === 0) deliveryStore.loadDeliveries()
+})
 
 const podium = computed(() => {
   const [first, second, third] = store.topThree
   if (!first || !second || !third) return null
   return { first, second, third }
 })
+
+const pendingRatings = computed(() => {
+  const address = wallet.address.toLowerCase()
+  if (!address) return []
+  return deliveryStore.deliveries.filter(delivery =>
+    delivery.status === 'completed' &&
+    delivery.senderId?.toLowerCase() === address &&
+    !delivery.isRated &&
+    !!delivery.assignedCourierId,
+  )
+})
+
+function selectedCourierName(deliveryId: string) {
+  const delivery = deliveryStore.getDelivery(deliveryId)
+  const bid = delivery?.bids.find(item => item.id === delivery.selectedBidId)
+  return bid?.courierName || 'Kurye'
+}
+
+function selectedRating(deliveryId: string) {
+  return ratingByDelivery.value[deliveryId] || 5
+}
+
+function setRating(deliveryId: string, rating: number) {
+  ratingByDelivery.value = { ...ratingByDelivery.value, [deliveryId]: rating }
+}
+
+function setComment(deliveryId: string, event: Event) {
+  const target = event.target
+  if (!(target instanceof HTMLTextAreaElement)) return
+  commentByDelivery.value = { ...commentByDelivery.value, [deliveryId]: target.value }
+}
+
+async function submitRating(deliveryId: string) {
+  ratingSaving.value = { ...ratingSaving.value, [deliveryId]: true }
+  ratingError.value = { ...ratingError.value, [deliveryId]: '' }
+  try {
+    await deliveryStore.rateDelivery(
+      deliveryId,
+      selectedRating(deliveryId),
+      commentByDelivery.value[deliveryId] || '',
+    )
+    await store.loadCouriers()
+  } catch (error) {
+    ratingError.value = {
+      ...ratingError.value,
+      [deliveryId]: error instanceof Error ? error.message : 'Puan kaydedilemedi',
+    }
+  } finally {
+    ratingSaving.value = { ...ratingSaving.value, [deliveryId]: false }
+  }
+}
 </script>
 
 <template>
@@ -53,6 +115,53 @@ const podium = computed(() => {
               <PhMedal class="size-4 text-orange-700" weight="fill" /> 3. Sıra
             </p>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="wallet.connected && pendingRatings.length > 0" class="mb-8 rounded-xl border border-stone-200 bg-white p-5">
+      <div class="mb-4 flex items-center gap-2">
+        <PhStar class="size-5 text-amber-500" weight="duotone" />
+        <h2 class="font-semibold text-stone-900">Puan Bekleyen Kuryeler</h2>
+      </div>
+      <div class="grid gap-3 md:grid-cols-2">
+        <div v-for="delivery in pendingRatings" :key="delivery.id" class="rounded-xl border border-stone-100 bg-stone-50 p-4">
+          <div class="flex items-start gap-3">
+            <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-orange-100">
+              <PhPackage class="size-5 text-orange-600" weight="duotone" />
+            </div>
+            <div class="min-w-0">
+              <p class="truncate text-sm font-semibold text-stone-900">{{ delivery.title }}</p>
+              <p class="mt-0.5 text-xs text-stone-500">{{ selectedCourierName(delivery.id) }}</p>
+            </div>
+          </div>
+          <div class="mt-3 flex gap-1">
+            <button
+              v-for="star in 5"
+              :key="star"
+              type="button"
+              class="rounded p-0.5 text-amber-400 transition hover:scale-110"
+              @click="setRating(delivery.id, star)"
+            >
+              <PhStar class="size-6" :weight="star <= selectedRating(delivery.id) ? 'fill' : 'regular'" />
+            </button>
+          </div>
+          <textarea
+            :value="commentByDelivery[delivery.id] || ''"
+            rows="2"
+            maxlength="500"
+            class="input mt-3 min-h-16 resize-none bg-white"
+            placeholder="Yorum ekle"
+            @input="setComment(delivery.id, $event)"
+          />
+          <button
+            class="btn-primary mt-3 w-full justify-center"
+            :disabled="ratingSaving[delivery.id]"
+            @click="submitRating(delivery.id)"
+          >
+            {{ ratingSaving[delivery.id] ? 'Kaydediliyor...' : 'Kuryeyi Puanla' }}
+          </button>
+          <p v-if="ratingError[delivery.id]" class="mt-2 text-center text-xs font-medium text-red-600">{{ ratingError[delivery.id] }}</p>
         </div>
       </div>
     </div>
