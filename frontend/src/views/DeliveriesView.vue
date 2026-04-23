@@ -12,14 +12,74 @@ const wallet = useWalletStore()
 const router = useRouter()
 
 type Filter = 'all' | 'open' | 'in_progress' | 'completed'
+type DemoScenario = {
+  key: 'sender' | 'courier'
+  deliveryId: string
+  role: string
+  title: string
+  description: string
+  flow: string
+  path: string
+  iconClass: string
+  iconColorClass: string
+  borderClass: string
+  hoverClass: string
+  textClass: string
+  flowClass: string
+  dotClass: string
+}
+
 const filter = ref<Filter>('all')
 const search = ref('')
 const bidTarget = ref<string | null>(null)
 
 onMounted(() => store.loadDeliveries())
 
-const demoSenderId = computed(() => store.deliveries.find(d => d.status === 'open')?.id)
-const demoCourierId = computed(() => store.deliveries.find(d => d.status === 'in_progress' && d.selectedBidId)?.id)
+const demoScenarios = computed<DemoScenario[]>(() => {
+  const senderDelivery = store.deliveries.find(d => d.status === 'open')
+  const courierDelivery = store.deliveries.find(d => d.status === 'in_progress' && d.selectedBidId)
+  const scenarios: DemoScenario[] = []
+
+  if (senderDelivery) {
+    scenarios.push({
+      key: 'sender',
+      deliveryId: senderDelivery.id,
+      role: 'Gönderici Akışı',
+      title: 'Escrow Ödeme Yap',
+      description: `${senderDelivery.title} · ${senderDelivery.escrowAmount || senderDelivery.maxBudget} MON · ${senderDelivery.pickupAddress} → ${senderDelivery.dropoffAddress}`,
+      flow: 'Ödeme → İmzala → Blok Onayı → Kilitlendi',
+      path: `/payment/${senderDelivery.id}`,
+      iconClass: 'bg-orange-100',
+      iconColorClass: 'text-orange-500',
+      borderClass: 'border-orange-200',
+      hoverClass: 'hover:border-orange-400',
+      textClass: 'text-orange-500',
+      flowClass: 'border-orange-100 bg-orange-50 text-orange-700',
+      dotClass: 'bg-orange-400',
+    })
+  }
+
+  if (courierDelivery) {
+    scenarios.push({
+      key: 'courier',
+      deliveryId: courierDelivery.id,
+      role: 'Kurye Akışı',
+      title: 'QR ile Ödeme Al',
+      description: `${courierDelivery.title} · ${courierDelivery.escrowAmount || courierDelivery.maxBudget} MON · ${courierDelivery.pickupAddress} → ${courierDelivery.dropoffAddress}`,
+      flow: 'QR Göster → Onayla → Escrow Serbest → MON Al',
+      path: `/courier/receive/${courierDelivery.id}`,
+      iconClass: 'bg-green-100',
+      iconColorClass: 'text-green-600',
+      borderClass: 'border-green-200',
+      hoverClass: 'hover:border-green-400',
+      textClass: 'text-green-600',
+      flowClass: 'border-green-100 bg-green-50 text-green-700',
+      dotClass: 'bg-green-500',
+    })
+  }
+
+  return scenarios
+})
 
 function goToScenario(path: string) {
   if (!wallet.connected) {
@@ -60,60 +120,46 @@ const filtered = computed(() => {
     </div>
 
     <!-- Demo Scenarios -->
-    <div class="mb-8 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-orange-50 p-5">
+    <div v-if="demoScenarios.length > 0" class="mb-8 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-orange-50 p-5">
       <div class="mb-4 flex items-center gap-2">
-        <span class="rounded-full bg-purple-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-purple-700">Demo Senaryosu</span>
-        <p class="text-xs text-stone-500">Ödeme akışlarını dene — gerçek Monad TX simülasyonu</p>
+        <span class="rounded-full bg-purple-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-purple-700">Canlı Senaryolar</span>
+        <p class="text-xs text-stone-500">Uygun teslimat kayıtlarından oluşturulan ödeme akışları</p>
       </div>
 
       <div class="grid gap-3 sm:grid-cols-2">
-        <!-- Sender scenario -->
         <button
-          class="group flex flex-col gap-3 rounded-xl border border-orange-200 bg-white p-4 text-left transition hover:border-orange-400 hover:shadow-md disabled:opacity-40"
-          :disabled="!demoSenderId"
-          @click="demoSenderId && goToScenario(`/payment/${demoSenderId}`)"
+          v-for="scenario in demoScenarios"
+          :key="scenario.deliveryId"
+          :class="[
+            'group flex flex-col gap-3 rounded-xl border bg-white p-4 text-left transition hover:shadow-md',
+            scenario.borderClass,
+            scenario.hoverClass,
+          ]"
+          @click="goToScenario(scenario.path)"
         >
           <div class="flex items-center justify-between">
-            <div class="flex size-9 items-center justify-center rounded-xl bg-orange-100">
-              <PhLockKey class="size-5 text-orange-500" weight="duotone" />
+            <div :class="['flex size-9 items-center justify-center rounded-xl', scenario.iconClass]">
+              <PhLockKey
+                v-if="scenario.key === 'sender'"
+                :class="['size-5', scenario.iconColorClass]"
+                weight="duotone"
+              />
+              <PhQrCode
+                v-else
+                :class="['size-5', scenario.iconColorClass]"
+                weight="duotone"
+              />
             </div>
-            <PhArrowRight class="size-4 text-stone-300 transition group-hover:translate-x-0.5 group-hover:text-orange-400" weight="bold" />
+            <PhArrowRight :class="['size-4 text-stone-300 transition group-hover:translate-x-0.5', scenario.iconColorClass]" weight="bold" />
           </div>
           <div>
-            <p class="text-xs font-bold uppercase tracking-wide text-orange-500">Senaryo 1 — Gönderici</p>
-            <p class="mt-0.5 text-sm font-semibold text-stone-900">Escrow Ödeme Yap</p>
-            <p class="mt-1 text-xs leading-relaxed text-stone-500">
-              Elektronik Ürün Teslimatı · 25 MON · Kadıköy → Beşiktaş
-            </p>
+            <p :class="['text-xs font-bold uppercase tracking-wide', scenario.textClass]">{{ scenario.role }}</p>
+            <p class="mt-0.5 text-sm font-semibold text-stone-900">{{ scenario.title }}</p>
+            <p class="mt-1 text-xs leading-relaxed text-stone-500">{{ scenario.description }}</p>
           </div>
-          <div class="flex items-center gap-2 rounded-lg border border-orange-100 bg-orange-50 px-3 py-1.5">
-            <span class="size-1.5 rounded-full bg-orange-400" />
-            <span class="text-xs text-orange-700">Ödeme → İmzala → Blok Onayı → Kilitlendi</span>
-          </div>
-        </button>
-
-        <!-- Courier scenario -->
-        <button
-          class="group flex flex-col gap-3 rounded-xl border border-green-200 bg-white p-4 text-left transition hover:border-green-400 hover:shadow-md disabled:opacity-40"
-          :disabled="!demoCourierId"
-          @click="demoCourierId && goToScenario(`/courier/receive/${demoCourierId}`)"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex size-9 items-center justify-center rounded-xl bg-green-100">
-              <PhQrCode class="size-5 text-green-600" weight="duotone" />
-            </div>
-            <PhArrowRight class="size-4 text-stone-300 transition group-hover:translate-x-0.5 group-hover:text-green-500" weight="bold" />
-          </div>
-          <div>
-            <p class="text-xs font-bold uppercase tracking-wide text-green-600">Senaryo 2 — Kurye</p>
-            <p class="mt-0.5 text-sm font-semibold text-stone-900">QR ile Ödeme Al</p>
-            <p class="mt-1 text-xs leading-relaxed text-stone-500">
-              Gıda & Market · 12 MON · Bakırköy → Zeytinburnu
-            </p>
-          </div>
-          <div class="flex items-center gap-2 rounded-lg border border-green-100 bg-green-50 px-3 py-1.5">
-            <span class="size-1.5 rounded-full bg-green-500" />
-            <span class="text-xs text-green-700">QR Göster → Onayla → Escrow Serbest → MON Al</span>
+          <div :class="['flex items-center gap-2 rounded-lg border px-3 py-1.5', scenario.flowClass]">
+            <span :class="['size-1.5 rounded-full', scenario.dotClass]" />
+            <span class="text-xs">{{ scenario.flow }}</span>
           </div>
         </button>
       </div>
