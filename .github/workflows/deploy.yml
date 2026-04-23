@@ -1,0 +1,53 @@
+name: Deploy Monad
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: monad-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to production server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        env:
+          MONAD_HOST: ${{ secrets.MONAD_HOST }}
+          MONAD_USER: ${{ secrets.MONAD_USER }}
+          MONAD_SSH_KEY: ${{ secrets.MONAD_SSH_KEY }}
+          MONAD_SSH_PORT: ${{ secrets.MONAD_SSH_PORT }}
+          MONAD_PROJECT_DIR: ${{ secrets.MONAD_PROJECT_DIR }}
+        run: |
+          set -euo pipefail
+
+          : "${MONAD_HOST:?MONAD_HOST secret is required}"
+          : "${MONAD_USER:?MONAD_USER secret is required}"
+          : "${MONAD_SSH_KEY:?MONAD_SSH_KEY secret is required}"
+
+          port="${MONAD_SSH_PORT:-22}"
+          project_dir="${MONAD_PROJECT_DIR:-/home/yusuf/projects/monad}"
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$MONAD_SSH_KEY" > ~/.ssh/monad_deploy_key
+          chmod 600 ~/.ssh/monad_deploy_key
+          ssh-keyscan -p "$port" "$MONAD_HOST" >> ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/monad_deploy_key \
+            -p "$port" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$MONAD_USER@$MONAD_HOST" \
+            "cd '$project_dir' && \
+             git update-index -q --refresh && \
+             git diff --quiet && \
+             git diff --cached --quiet && \
+             git fetch origin main && \
+             git checkout main && \
+             git pull --ff-only origin main && \
+             bash deploy/scripts/deploy-production.sh --skip-pull"
