@@ -7,10 +7,11 @@ import { buildDeploymentRecord, parseEnvFile } from "./deploy-record.mjs";
 const rootDir = process.cwd();
 const contractsDir = path.join(rootDir, "contracts");
 const envPath = path.join(contractsDir, ".env");
+const frontendEnvPath = path.join(rootDir, "frontend", ".env");
 const broadcastPath = path.join(
   contractsDir,
   "broadcast",
-  "DeployCounter.s.sol",
+  "Deploy.s.sol",
   "10143",
   "run-latest.json",
 );
@@ -35,7 +36,7 @@ function runForgeDeploy(env) {
     "forge",
     [
       "script",
-      "script/DeployCounter.s.sol:DeployCounterScript",
+      "script/Deploy.s.sol:DeployScript",
       "--rpc-url",
       "monad_testnet",
       "--broadcast",
@@ -55,6 +56,27 @@ function runForgeDeploy(env) {
   if (result.status !== 0) {
     throw new Error(`forge script failed with exit code ${result.status}`);
   }
+}
+
+async function updateFrontendEnv(address) {
+  const key = "VITE_DELIVERA_ADDRESS";
+  let content = "";
+
+  if (existsSync(frontendEnvPath)) {
+    content = await readFile(frontendEnvPath, "utf8");
+  }
+
+  const line = `${key}=${address}`;
+  const pattern = new RegExp(`^${key}=.*$`, "m");
+
+  if (pattern.test(content)) {
+    content = content.replace(pattern, line);
+  } else {
+    const separator = content.length > 0 && !content.endsWith("\n") ? "\n" : "";
+    content = `${content}${separator}${line}\n`;
+  }
+
+  await writeFile(frontendEnvPath, content);
 }
 
 async function main() {
@@ -80,15 +102,17 @@ async function main() {
   const broadcast = JSON.parse(await readFile(broadcastPath, "utf8"));
   const deploymentRecord = buildDeploymentRecord(broadcast, {
     chainId: 10143,
-    contractName: "Counter",
+    contractName: "Delivera",
     rpcUrl: monadTestnetRpcUrl,
   });
 
   await mkdir(path.dirname(deploymentPath), { recursive: true });
   await writeFile(deploymentPath, `${JSON.stringify(deploymentRecord, null, 2)}\n`);
+  await updateFrontendEnv(deploymentRecord.address);
 
-  console.log(`Counter deployed to ${deploymentRecord.address}`);
+  console.log(`Delivera deployed to ${deploymentRecord.address}`);
   console.log(`Saved deployment to ${deploymentPath}`);
+  console.log(`Updated ${frontendEnvPath}`);
 }
 
 main().catch((error) => {
