@@ -1,0 +1,14 @@
+{
+  "name": "monad-workspace",
+  "private": true,
+  "scripts": {
+    "chain": "anvil --host 127.0.0.1 --port 8545 --chain-id 31337",
+    "deploy": "npm run contracts:build && node scripts/deploy-local.mjs",
+    "deploy:monad-testnet": "cd contracts && forge script script/DeployCounter.s.sol:DeployCounterScript --rpc-url monad_testnet --broadcast",
+    "contracts:build": "cd contracts && forge build",
+    "contracts:test": "cd contracts && forge test --offline",
+    "frontend": "cd frontend && npm run dev",
+    "backend": "cd backend && npm run dev",
+    "start": "sh -c 'trap \"kill 0\" EXIT; (cd backend && npm run dev) & (cd frontend && npm run dev) & wait'"
+  }
+}
