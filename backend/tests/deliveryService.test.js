@@ -138,3 +138,132 @@ test('lockEscrow rejects deliveries that already have locked funds', async () =>
     CourierStats.find = originals.statsFind
   }
 })
+
+test('confirmPickup lets the paying customer confirm the courier pickup QR', async () => {
+  const originals = {
+    deliveryFindById: Delivery.findById,
+    bidFindById: Bid.findById,
+    bidFind: Bid.find,
+    userFind: User.find,
+    statsFind: CourierStats.find,
+  }
+  const delivery = {
+    _id: { toString: () => 'delivery-id' },
+    customer: '0xcustomer',
+    selectedBidId: { toString: () => 'bid-id' },
+    title: 'Test teslimat',
+    pickup: { address: 'A noktasi' },
+    dropoff: { address: 'B noktasi' },
+    maxBudget: '12',
+    escrowBalance: '12',
+    status: 'Accepted',
+    createdAt: new Date('2026-02-01T00:00:00.000Z'),
+    deadline: new Date('2026-02-02T00:00:00.000Z'),
+    timeline: [
+      { step: 'pickup', completed: false },
+      { step: 'transit', completed: false },
+    ],
+    saveCalls: 0,
+    async save() {
+      this.saveCalls += 1
+      return this
+    },
+    toObject() {
+      return this
+    },
+  }
+  const bid = {
+    _id: { toString: () => 'bid-id' },
+    courier: '0xcourier',
+    amount: '10',
+    estimatedMinutes: 30,
+    createdAt: new Date('2026-02-01T01:00:00.000Z'),
+  }
+
+  Delivery.findById = async () => delivery
+  Bid.findById = async () => bid
+  Bid.find = () => ({ lean: async () => [bid] })
+  User.find = () => ({ lean: async () => [{ walletAddress: '0xcourier', name: 'Kurye Kullanici' }] })
+  CourierStats.find = () => ({ lean: async () => [] })
+
+  try {
+    const result = await deliveryService.confirmPickup('delivery-id', '0xcustomer', '0xtx')
+
+    assert.equal(delivery.status, 'InTransit')
+    assert.equal(delivery.timeline[0].completed, true)
+    assert.equal(delivery.timeline[1].completed, true)
+    assert.equal(delivery.saveCalls, 1)
+    assert.equal(result.status, 'in_progress')
+  } finally {
+    Delivery.findById = originals.deliveryFindById
+    Bid.findById = originals.bidFindById
+    Bid.find = originals.bidFind
+    User.find = originals.userFind
+    CourierStats.find = originals.statsFind
+  }
+})
+
+test('completeDelivery lets the paying customer confirm delivery and release escrow', async () => {
+  const originals = {
+    deliveryFindById: Delivery.findById,
+    bidFindById: Bid.findById,
+    bidFind: Bid.find,
+    userFind: User.find,
+    statsFind: CourierStats.find,
+  }
+  const delivery = {
+    _id: { toString: () => 'delivery-id' },
+    customer: '0xcustomer',
+    selectedBidId: { toString: () => 'bid-id' },
+    title: 'Test teslimat',
+    pickup: { address: 'A noktasi' },
+    dropoff: { address: 'B noktasi' },
+    maxBudget: '12',
+    escrowBalance: '12',
+    status: 'InTransit',
+    createdAt: new Date('2026-02-01T00:00:00.000Z'),
+    deadline: new Date('2026-02-02T00:00:00.000Z'),
+    timeline: [
+      { step: 'pickup', completed: true },
+      { step: 'transit', completed: true },
+      { step: 'delivered', completed: false },
+    ],
+    saveCalls: 0,
+    async save() {
+      this.saveCalls += 1
+      return this
+    },
+    toObject() {
+      return this
+    },
+  }
+  const bid = {
+    _id: { toString: () => 'bid-id' },
+    courier: '0xcourier',
+    amount: '10',
+    estimatedMinutes: 30,
+    createdAt: new Date('2026-02-01T01:00:00.000Z'),
+  }
+
+  Delivery.findById = async () => delivery
+  Bid.findById = async () => bid
+  Bid.find = () => ({ lean: async () => [bid] })
+  User.find = () => ({ lean: async () => [{ walletAddress: '0xcourier', name: 'Kurye Kullanici' }] })
+  CourierStats.find = () => ({ lean: async () => [] })
+
+  try {
+    const result = await deliveryService.completeDelivery('delivery-id', '0xcustomer', '0xtx')
+
+    assert.equal(delivery.status, 'Delivered')
+    assert.equal(delivery.escrowBalance, '0')
+    assert.equal(delivery.timeline[2].completed, true)
+    assert.equal(delivery.saveCalls, 1)
+    assert.equal(result.status, 'completed')
+  } finally {
+    Delivery.findById = originals.deliveryFindById
+    Bid.findById = originals.bidFindById
+    Bid.find = originals.bidFind
+    User.find = originals.userFind
+    CourierStats.find = originals.statsFind
+  }
+})

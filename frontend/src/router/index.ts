@@ -60,6 +60,12 @@ const router = createRouter({
       component: () => import('../views/CourierReceiveView.vue'),
       meta: { requiresAuth: true }
     },
+    {
+      path: '/delivery/:id/confirm',
+      name: 'delivery-confirm',
+      component: () => import('../views/DeliveryConfirmView.vue'),
+      meta: { requiresAuth: true }
+    },
   ],
 })
 

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, watchEffect } from 'vue'
+import { ref, computed, onMounted, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   PhArrowLeft, PhCheckCircle, PhPackage, PhCoins,
-  PhQrCode, PhSealCheck, PhCopy, PhArrowRight, PhCircleNotch,
+  PhQrCode, PhCopy, PhArrowRight,
   PhTruck, PhMapPin
 } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
@@ -27,6 +27,10 @@ const isAssignedCourier = computed(() =>
   wallet.address.toLowerCase() === delivery.value.assignedCourierId
 )
 
+onMounted(() => {
+  if (dStore.deliveries.length === 0) dStore.loadDeliveries()
+})
+
 watchEffect(() => {
   if (delivery.value && !isAssignedCourier.value) {
     router.replace('/deliveries')
@@ -39,7 +43,19 @@ const verifyCode = computed(() => {
   return `MON-${id.toUpperCase()}-${sum.toString(16).toUpperCase().padStart(4, '0')}`
 })
 
-const qrData = computed(() => `DELIVERA:${delivery.value?.id}:${verifyCode.value}:${assignedBid.value?.courierId ?? ''}`)
+const appOrigin = computed(() => {
+  if (typeof window === 'undefined') return ''
+  return window.location.origin
+})
+const pickupConfirmUrl = computed(() =>
+  `${appOrigin.value}/delivery/${delivery.value?.id}/confirm?step=pickup&code=${encodeURIComponent(verifyCode.value)}`,
+)
+const deliveryConfirmUrl = computed(() =>
+  `${appOrigin.value}/delivery/${delivery.value?.id}/confirm?step=delivery&code=${encodeURIComponent(`${verifyCode.value}-DEL`)}`,
+)
+const pickupConfirmed = computed(() =>
+  delivery.value?.timeline.some(step => step.step === 'pickup' && step.completed),
+)
 
 type Phase = 'pickup_qr' | 'pickup_confirming' | 'delivery_qr' | 'payment_confirming' | 'success'
 const phase = ref<Phase>('pickup_qr')
@@ -49,6 +65,14 @@ const earnedAmount = computed(() => assignedBid.value?.tokenAmount ?? 0)
 const txExplorerUrl = computed(() =>
   txHash.value ? `https://testnet.monadexplorer.com/tx/${txHash.value}` : '',
 )
+
+watchEffect(() => {
+  if (delivery.value?.status === 'completed' && phase.value !== 'payment_confirming') {
+    phase.value = 'success'
+  } else if (pickupConfirmed.value && phase.value === 'pickup_qr') {
+    phase.value = 'delivery_qr'
+  }
+})
 
 async function ensureMonadTestnet() {
   const ethereum = (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum
@@ -95,6 +119,10 @@ async function completeDelivery() {
   await wallet.fetchBalance()
   await dStore.completeDelivery(delivery.value!.id, hash)
   phase.value = 'success'
+}
+
+async function refreshDelivery() {
+  await dStore.loadDeliveries()
 }
 
 function copyHash() {
@@ -155,7 +183,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
             Gönderici İçin — Paket Alış QR
           </div>
           <div class="rounded-2xl bg-white p-3 shadow-md">
-            <QrCode :value="qrData" :size="200" />
+            <QrCode :value="pickupConfirmUrl" :size="200" />
           </div>
           <div class="rounded-lg bg-white px-4 py-2 shadow-sm">
             <p class="text-center font-mono text-sm font-bold tracking-widest text-stone-900">{{ verifyCode }}</p>
@@ -172,9 +200,12 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
           <TokenAmount :amount="earnedAmount" size="md" />
         </div>
 
-        <button class="btn-primary w-full justify-center" @click="confirmPickup">
+        <a class="btn-primary w-full justify-center" :href="pickupConfirmUrl" target="_blank" rel="noopener">
           <PhPackage class="size-4" weight="bold" />
-          Paketi Teslim Aldım
+          Gönderici Onay Sayfasını Aç
+        </a>
+        <button class="w-full rounded-lg border border-stone-200 py-2.5 text-sm text-stone-600 transition hover:bg-stone-50" @click="refreshDelivery">
+          Durumu Yenile
         </button>
       </div>
 
@@ -218,7 +249,7 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
             Alıcı İçin — Teslimat QR
           </div>
           <div class="rounded-2xl bg-white p-3 shadow-md">
-            <QrCode :value="`DELIVER:${qrData}`" :size="200" />
+            <QrCode :value="deliveryConfirmUrl" :size="200" />
           </div>
           <div class="rounded-lg bg-white px-4 py-2 shadow-sm">
             <p class="text-center font-mono text-sm font-bold tracking-widest text-stone-900">{{ verifyCode }}-DEL</p>
@@ -237,9 +268,12 @@ const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
           <PhCoins class="size-8 text-amber-400" weight="duotone" />
         </div>
 
-        <button class="btn-primary w-full justify-center" @click="completeDelivery">
-          <PhSealCheck class="size-4" weight="bold" />
-          Alıcı Onayladı — Teslimat Tamamlandı
+        <a class="btn-primary w-full justify-center" :href="deliveryConfirmUrl" target="_blank" rel="noopener">
+          <PhTruck class="size-4" weight="bold" />
+          Alıcı Onay Sayfasını Aç
+        </a>
+        <button class="w-full rounded-lg border border-stone-200 py-2.5 text-sm text-stone-600 transition hover:bg-stone-50" @click="refreshDelivery">
+          Durumu Yenile
         </button>
       </div>
 
