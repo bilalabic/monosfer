@@ -32,7 +32,7 @@ const podium = computed(() => {
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p class="text-xs font-semibold text-amber-600">Bu Haftanın Ödül Havuzu</p>
-          <p class="mt-1 text-3xl font-extrabold text-stone-900">2,400 MON</p>
+          <p class="mt-1 text-3xl font-extrabold text-stone-900">2,400 DLV</p>
         </div>
         <div class="flex gap-6 text-center text-sm">
           <div>
