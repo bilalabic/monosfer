@@ -6,6 +6,7 @@ import { deliveriesApi, type DeliveryCourierLocation } from '@/api/deliveries'
 import { vehicleLabel } from '@/composables/useVehicleMeta'
 import { timeAgo } from '@/composables/useTimeAgo'
 import { createCourierMarkerIcon, createPointMarkerIcon } from '@/composables/useMapMarkerIcons'
+import { createLeafletMap, destroyLeafletMap, CARTO_DARK_TILE_URL } from '@/composables/useLeafletMap'
 import {
   PhMapPin,
   PhArrowClockwise,
@@ -104,17 +105,13 @@ function initMap() {
     ? [locationData.value.lat, locationData.value.lng]
     : [38.7205, 35.4826]
 
-  map = L.map('delivery-tracking-map', {
+  map = createLeafletMap('delivery-tracking-map', {
     center,
     zoom: 14,
-    zoomControl: true,
     attributionControl: false,
+    tileUrl: CARTO_DARK_TILE_URL,
+    tileOptions: { subdomains: 'abcd' },
   })
-
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    subdomains: 'abcd',
-    maxZoom: 19,
-  }).addTo(map)
 
   if (locationData.value) updateMap(locationData.value)
 }
@@ -128,7 +125,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (refreshTimer) clearInterval(refreshTimer)
-  if (map) { map.remove(); map = null }
+  map = destroyLeafletMap(map)
   courierMarker = null
   pickupMarker = null
   dropoffMarker = null

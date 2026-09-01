@@ -19,5 +19,16 @@ export default defineConfigWithVueTs(
   ...pluginVue.configs['flat/essential'],
   vueTsConfigs.recommended,
 
+  {
+    name: 'app/nuxt-single-word-filenames',
+    // Nuxt's file-based routing (pages/, layouts/) and shadcn-vue's
+    // single-word UI primitives (Button.vue, Card.vue) name files by
+    // convention, not by component identity — this rule doesn't apply there.
+    files: ['app/pages/**/*.vue', 'app/layouts/**/*.vue', 'app/components/ui/**/*.vue'],
+    rules: {
+      'vue/multi-word-component-names': 'off',
+    },
+  },
+
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),
 )

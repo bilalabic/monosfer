@@ -74,6 +74,11 @@ export const useDeliveryStore = defineStore('delivery', () => {
     return deliveries.value.find(d => d.id === id)
   }
 
+  function replaceDelivery(updated: Delivery) {
+    const idx = deliveries.value.findIndex(d => d.id === updated.id)
+    if (idx !== -1) deliveries.value[idx] = updated
+  }
+
   async function loadDeliveries() {
     loading.value = true
     error.value = ''
@@ -109,39 +114,33 @@ export const useDeliveryStore = defineStore('delivery', () => {
 
   async function selectBid(deliveryId: string, bidId: string) {
     const updated = await deliveriesApi.selectBid(deliveryId, bidId)
-    const idx = deliveries.value.findIndex(d => d.id === deliveryId)
-    if (idx !== -1) deliveries.value[idx] = updated
+    replaceDelivery(updated)
   }
 
   async function lockEscrow(deliveryId: string, txHash?: string) {
     const updated = await deliveriesApi.lockEscrow(deliveryId, txHash)
-    const idx = deliveries.value.findIndex(d => d.id === deliveryId)
-    if (idx !== -1) deliveries.value[idx] = updated
+    replaceDelivery(updated)
   }
 
   async function confirmPickup(deliveryId: string, txHash?: string) {
     const updated = await deliveriesApi.confirmPickup(deliveryId, txHash)
-    const idx = deliveries.value.findIndex(d => d.id === deliveryId)
-    if (idx !== -1) deliveries.value[idx] = updated
+    replaceDelivery(updated)
   }
 
   async function completeDelivery(deliveryId: string, txHash?: string) {
     const updated = await deliveriesApi.completeDelivery(deliveryId, txHash)
-    const idx = deliveries.value.findIndex(d => d.id === deliveryId)
-    if (idx !== -1) deliveries.value[idx] = updated
+    replaceDelivery(updated)
   }
 
   async function completeDeliveryWithRecipientCode(deliveryId: string, deliveryCode: string, txHash?: string) {
     const updated = await deliveriesApi.completeDeliveryWithRecipientCode(deliveryId, deliveryCode, txHash)
-    const idx = deliveries.value.findIndex(d => d.id === deliveryId)
-    if (idx !== -1) deliveries.value[idx] = updated
+    replaceDelivery(updated)
     return updated
   }
 
   async function rateDelivery(deliveryId: string, rating: number, comment?: string) {
     const updated = await deliveriesApi.rateDelivery(deliveryId, { rating, comment })
-    const idx = deliveries.value.findIndex(d => d.id === deliveryId)
-    if (idx !== -1) deliveries.value[idx] = updated
+    replaceDelivery(updated)
     return updated
   }
 

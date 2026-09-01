@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { PhArrowLeft as ArrowLeft, PhMapPin as MapPin, PhClock as Clock, PhBarbell as Weight, PhPackage as Package, PhShieldCheck as Shield, PhUsers as Users, PhMagnifyingGlass, PhLockKey, PhQrCode, PhStar } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
@@ -17,8 +17,16 @@ const store = useDeliveryStore()
 const wallet = useWalletStore()
 const delivery = computed(() => store.getDelivery(route.params.id as string))
 
-onMounted(() => {
-  if (store.deliveries.length === 0) store.loadDeliveries()
+await useAsyncData('delivery-detail', async () => {
+  if (store.deliveries.length === 0) await store.loadDeliveries()
+  return true
+})
+
+useSeoMeta({
+  title: () => delivery.value ? `${delivery.value.title} — Delivera` : 'Teslimat Detayı — Delivera',
+  description: () => delivery.value
+    ? `${delivery.value.pickupAddress} → ${delivery.value.dropoffAddress} · ${delivery.value.maxBudget} MON`
+    : 'Delivera teslimat detayları.',
 })
 
 const ratingValue = ref(5)

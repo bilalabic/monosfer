@@ -10,7 +10,7 @@ export default defineNuxtConfig({
 
   srcDir: 'app/',
 
-  modules: ['@pinia/nuxt'],
+  modules: ['@pinia/nuxt', '@vite-pwa/nuxt'],
 
   // shadcn-vue's ui/*/index.ts barrel files aren't components themselves —
   // without this, Nuxt's auto-scanner collides them with the .vue file
@@ -78,5 +78,45 @@ export default defineNuxtConfig({
 
   typescript: {
     typeCheck: false,
+  },
+
+  pwa: {
+    registerType: 'autoUpdate',
+    // Reuse the hand-written public/site.webmanifest + existing favicons as-is.
+    manifest: false,
+    workbox: {
+      navigateFallback: '/',
+      // NFR-PWA-001: never let the service worker serve stale auth/financial/
+      // tracking data — every backend call bypasses the cache entirely.
+      runtimeCaching: [
+        {
+          urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+          handler: 'NetworkOnly',
+        },
+        {
+          urlPattern: /\.(?:png|jpg|jpeg|svg|webp|gif|ico)$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'delivera-images',
+            expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 },
+          },
+        },
+        {
+          urlPattern: /\.(?:woff2?|ttf|eot)$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'delivera-fonts',
+            expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
+          },
+        },
+      ],
+    },
+    client: {
+      installPrompt: true,
+    },
+    devOptions: {
+      // Service worker only in production builds — keep `nuxt dev` free of SW noise/caching.
+      enabled: false,
+    },
   },
 })

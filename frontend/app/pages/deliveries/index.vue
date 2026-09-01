@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { PhMagnifyingGlass as Search, PhPackage, PhLockKey, PhQrCode, PhArrowRight } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
@@ -32,7 +32,15 @@ const filter = ref<Filter>('all')
 const search = ref('')
 const bidTarget = ref<string | null>(null)
 
-onMounted(() => store.loadDeliveries())
+await useAsyncData('deliveries-list', async () => {
+  await store.loadDeliveries()
+  return true
+})
+
+useSeoMeta({
+  title: 'Aktif Teslimatlar — Delivera',
+  description: 'Merkeziyetsiz teslimat ağında açık ilanlar — kuryeler için teklif verme ve blockchain escrow ile güvenli ödeme.',
+})
 
 const liveScenarios = computed<LiveScenario[]>(() => {
   const addr = wallet.address.toLowerCase()

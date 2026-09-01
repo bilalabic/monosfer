@@ -1,7 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { formatEther } from 'viem'
+import { getBalance } from '@wagmi/vue/actions'
 import { authApi, type AuthUser, type UserRole } from '@/api/auth'
 import { setToken, clearToken, getToken } from '@/api/client'
+import { wagmiConfig, monadTestnetChain } from '@/config/wagmi'
 
 type UserProfile = Pick<AuthUser, 'name' | 'email' | 'phone' | 'role' | 'rating'>
 
@@ -35,13 +38,13 @@ export const useWalletStore = defineStore('wallet', () => {
   }
 
   async function fetchBalance() {
-    if (!address.value || typeof window === 'undefined' || !window.ethereum) return
+    if (!address.value) return
     try {
-      const hex = await window.ethereum.request({
-        method: 'eth_getBalance',
-        params: [address.value, 'latest'],
-      }) as string
-      balance.value = parseFloat((parseInt(hex, 16) / 1e18).toFixed(4))
+      const result = await getBalance(wagmiConfig, {
+        address: address.value as `0x${string}`,
+        chainId: monadTestnetChain.id,
+      })
+      balance.value = parseFloat(parseFloat(formatEther(result.value)).toFixed(4))
     } catch {
       // keep current value
     }

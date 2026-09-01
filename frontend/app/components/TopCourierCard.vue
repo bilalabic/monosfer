@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { Courier } from '@/stores/useCourierStore'
-import StarRating from '@/components/StarRating.vue'
 import TokenAmount from '@/components/TokenAmount.vue'
 import { PhCrown, PhStar } from '@phosphor-icons/vue'
 

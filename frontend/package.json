@@ -18,6 +18,10 @@
     "@phosphor-icons/vue": "^2.2.1",
     "@pinia/nuxt": "^1.0.2",
     "@tailwindcss/vite": "^4.2.4",
+    "@tanstack/vue-query": "^5.102.8",
+    "@vite-pwa/nuxt": "^1.1.1",
+    "@wagmi/core": "^3.6.5",
+    "@wagmi/vue": "^0.5.30",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "leaflet": "^1.9.4",
@@ -26,6 +30,7 @@
     "reka-ui": "^2.9.6",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.4",
+    "viem": "^2.56.2",
     "vue": "^3.5.32"
   },
   "devDependencies": {

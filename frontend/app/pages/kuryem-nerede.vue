@@ -15,6 +15,7 @@ import {
 } from '@phosphor-icons/vue'
 import { vehicleIcon, vehicleLabel, type VehicleType } from '@/composables/useVehicleMeta'
 import { createCourierMarkerIcon, createPointMarkerIcon } from '@/composables/useMapMarkerIcons'
+import { createLeafletMap, destroyLeafletMap } from '@/composables/useLeafletMap'
 
 interface FakeCourier {
   id: string
@@ -287,18 +288,7 @@ function tick() {
 }
 
 function initMap() {
-  map = L.map('kuryem-map', {
-    center: KAYSERI_CENTER,
-    zoom: 12,
-    zoomControl: true,
-  })
-
-  // Açık renk, canlı harita: OSM
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors',
-    subdomains: 'abc',
-    maxZoom: 19,
-  }).addTo(map)
+  map = createLeafletMap('kuryem-map', { center: KAYSERI_CENTER, zoom: 12 })
 
   // Kayseri sınırlarını basitçe vurgulamak için şeffaf daire
   L.circle(KAYSERI_CENTER, {
@@ -338,7 +328,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (animationTimer) clearInterval(animationTimer)
-  if (map) { map.remove(); map = null }
+  map = destroyLeafletMap(map)
   courierMarkers.clear()
   pickupMarkers.clear()
   dropoffMarkers.clear()

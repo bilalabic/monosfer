@@ -8,6 +8,7 @@ import { couriersApi, type CourierLocation } from '@/api/couriers'
 import { vehicleIcon, vehicleLabel } from '@/composables/useVehicleMeta'
 import { createCourierMarkerIcon } from '@/composables/useMapMarkerIcons'
 import { timeAgo } from '@/composables/useTimeAgo'
+import { createLeafletMap, destroyLeafletMap } from '@/composables/useLeafletMap'
 import {
   PhMapPin,
   PhArrowClockwise,
@@ -83,17 +84,7 @@ function flyToSelected() {
 }
 
 function initMap() {
-  map = L.map('courier-map', {
-    center: [38.7205, 35.4826],
-    zoom: 13,
-    zoomControl: true,
-  })
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors',
-    subdomains: 'abc',
-    maxZoom: 19,
-  }).addTo(map)
+  map = createLeafletMap('courier-map', { center: [38.7205, 35.4826], zoom: 13 })
 
   markersLayer = L.layerGroup().addTo(map)
   mapReady.value = true
@@ -121,7 +112,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (refreshTimer) clearInterval(refreshTimer)
-  if (map) { map.remove(); map = null }
+  map = destroyLeafletMap(map)
 })
 </script>
 

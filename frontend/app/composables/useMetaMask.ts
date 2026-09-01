@@ -1,13 +1,11 @@
-import { ref, computed } from 'vue'
-import { MONAD_TESTNET, MONAD_TESTNET_WALLET_PARAMS } from '@/config/chain'
+import { computed, ref } from 'vue'
+import { useConnect, useConnectors, useSwitchChain, useSignMessage } from '@wagmi/vue'
+import { monadTestnetChain } from '@/config/wagmi'
 
 declare global {
   interface Window {
     ethereum?: {
       isMetaMask?: boolean
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>
-      on: (event: string, handler: (...args: unknown[]) => void) => void
-      removeListener: (event: string, handler: (...args: unknown[]) => void) => void
     }
   }
 }
@@ -25,34 +23,10 @@ export function useMetaMask() {
   const connecting = ref(false)
   const error = ref<MetaMaskError | null>(null)
 
-  async function requestAccount(): Promise<string> {
-    const accounts = await window.ethereum!.request({ method: 'eth_requestAccounts' }) as string[]
-    if (!accounts[0]) throw new Error('Hesap bulunamadı')
-    return accounts[0]
-  }
-
-  async function signMessage(address: string, message: string): Promise<string> {
-    return window.ethereum!.request({
-      method: 'personal_sign',
-      params: [message, address],
-    }) as Promise<string>
-  }
-
-  async function switchToMonad(): Promise<void> {
-    try {
-      await window.ethereum!.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: MONAD_TESTNET.chainIdHex }],
-      })
-    } catch (err: unknown) {
-      if ((err as { code?: number }).code === 4902) {
-        await window.ethereum!.request({
-          method: 'wallet_addEthereumChain',
-          params: [MONAD_TESTNET_WALLET_PARAMS],
-        })
-      }
-    }
-  }
+  const connectors = useConnectors()
+  const { mutateAsync: connectAsync } = useConnect()
+  const { mutateAsync: switchChainAsync } = useSwitchChain()
+  const { mutateAsync: signMessageAsync } = useSignMessage()
 
   async function connect(): Promise<ConnectResult | null> {
     if (!isInstalled.value) {
@@ -62,13 +36,21 @@ export function useMetaMask() {
     error.value = null
     connecting.value = true
     try {
-      const address = await requestAccount()
-      await switchToMonad()
+      const metaMaskConnector = connectors.value.find(c => c.id === 'metaMask') ?? connectors.value[0]
+      if (!metaMaskConnector) throw new Error('MetaMask bağlayıcısı bulunamadı')
+
+      const { accounts } = await connectAsync({ connector: metaMaskConnector })
+      const address = accounts[0]
+      if (!address) throw new Error('Hesap bulunamadı')
+
+      await switchChainAsync({ chainId: monadTestnetChain.id })
+
       const message = `Delivera'ya giriş yapıyorum: ${Date.now()}`
-      const signature = await signMessage(address, message)
+      const signature = await signMessageAsync({ account: address, message })
+
       return { address, signature, message }
     } catch (err: unknown) {
-      const code = (err as { code?: number }).code
+      const code = (err as { code?: number })?.code
       error.value = code === 4001 ? 'user_rejected' : 'unknown'
       return null
     } finally {

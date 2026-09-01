@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useCourierStore } from '@/stores/useCourierStore'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
@@ -15,9 +15,17 @@ const commentByDelivery = ref<Record<string, string>>({})
 const ratingSaving = ref<Record<string, boolean>>({})
 const ratingError = ref<Record<string, string>>({})
 
-onMounted(() => {
-  store.loadCouriers()
-  if (deliveryStore.deliveries.length === 0) deliveryStore.loadDeliveries()
+await useAsyncData('couriers-page', async () => {
+  await Promise.all([
+    store.loadCouriers(),
+    deliveryStore.deliveries.length === 0 ? deliveryStore.loadDeliveries() : Promise.resolve(),
+  ])
+  return true
+})
+
+useSeoMeta({
+  title: 'Kurye Liderlik Tablosu — Delivera',
+  description: 'En başarılı kuryeler, puanlar ve teslimat istatistikleri — Delivera liderlik tablosu.',
 })
 
 const podium = computed(() => {

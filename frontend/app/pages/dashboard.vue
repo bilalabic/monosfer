@@ -15,7 +15,9 @@ const wallet = useWalletStore()
 const deliveryStore = useDeliveryStore()
 const router = useRouter()
 
-const activeTab = ref<'tracking' | 'incoming' | 'bids' | 'past' | 'ratings' | 'settings'>('tracking')
+type TabKey = 'tracking' | 'incoming' | 'bids' | 'past' | 'ratings' | 'settings'
+
+const activeTab = ref<TabKey>('tracking')
 
 const editPhone = ref(wallet.userProfile.phone)
 const editName = ref(wallet.userProfile.name)
@@ -81,6 +83,35 @@ const incomingOfferRows = computed(() => {
     )
 })
 
+const tabs = computed<{ key: TabKey; label: string; icon: Component; badge?: number }[]>(() => [
+  { key: 'tracking', label: 'Kargom Nerede', icon: PhMapPin },
+  { key: 'incoming', label: 'Gelen Teklifler', icon: PhBell, badge: incomingOfferRows.value.length || undefined },
+  { key: 'bids', label: 'Tekliflerim', icon: PhHandshake, badge: myBidRows.value.length || undefined },
+  { key: 'past', label: 'Geçmiş Teslimatlar', icon: PhClockCounterClockwise },
+  { key: 'ratings', label: 'Puanlamalar', icon: PhStar },
+  { key: 'settings', label: 'Profil & Ayarlar', icon: PhUser },
+])
+
+const sidebarStats = computed(() => [
+  { label: 'Toplam Teslimat', value: deliveryStore.deliveries.length, class: 'text-stone-900' },
+  { label: 'Tamamlanan', value: pastDeliveries.value.length, class: 'text-green-600' },
+  { label: 'Gelen Teklifler', value: incomingOfferRows.value.length, class: 'text-orange-600' },
+  { label: 'Tekliflerim', value: myBidRows.value.length, class: 'text-orange-600' },
+])
+
+const quickStats = computed<{ label: string; value: number | string; class: string; icon?: Component }[]>(() => [
+  { label: 'Toplam Teslimat', value: deliveryStore.deliveries.length, class: 'text-stone-900' },
+  { label: 'Tamamlanan', value: pastDeliveries.value.length, class: 'text-green-600' },
+  { label: 'Puanım', value: wallet.userProfile.rating, class: 'text-orange-500', icon: PhStar },
+])
+
+const shortcuts = computed<{ key: TabKey; icon: Component; iconClass: string; label: string; count: string }[]>(() => [
+  { key: 'past', icon: PhClockCounterClockwise, iconClass: 'text-stone-400', label: 'Geçmiş Teslimatlar', count: `${pastDeliveries.value.length} teslimat` },
+  { key: 'incoming', icon: PhBell, iconClass: 'text-orange-400', label: 'Gelen Teklifler', count: `${incomingOfferRows.value.length} teklif` },
+  { key: 'bids', icon: PhHandshake, iconClass: 'text-orange-400', label: 'Tekliflerim', count: `${myBidRows.value.length} teklif` },
+  { key: 'ratings', icon: PhStar, iconClass: 'text-amber-400', label: 'Puanlamalar', count: 'Değerlendirmeler' },
+])
+
 const roleConfig: Record<string, { label: string; color: string; icon: Component }> = {
   sender:    { label: 'Gönderici', color: 'bg-blue-100 text-blue-700', icon: PhUser },
   courier:   { label: 'Kurye',     color: 'bg-orange-100 text-orange-700', icon: PhTruck },
@@ -145,68 +176,22 @@ onMounted(() => {
       <div class="w-full md:w-64 shrink-0">
         <nav class="flex flex-row md:flex-col gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
           <button
-            :class="['flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition whitespace-nowrap', activeTab === 'tracking' ? 'bg-white text-orange-600 shadow-sm border border-stone-200' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900']"
-            @click="activeTab = 'tracking'"
+            v-for="tab in tabs"
+            :key="tab.key"
+            :class="['flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition whitespace-nowrap', activeTab === tab.key ? 'bg-white text-orange-600 shadow-sm border border-stone-200' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900']"
+            @click="activeTab = tab.key"
           >
-            <PhMapPin class="size-5 shrink-0" :weight="activeTab === 'tracking' ? 'duotone' : 'regular'" />
-            Kargom Nerede
-          </button>
-          <button
-            :class="['flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition whitespace-nowrap', activeTab === 'incoming' ? 'bg-white text-orange-600 shadow-sm border border-stone-200' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900']"
-            @click="activeTab = 'incoming'"
-          >
-            <PhBell class="size-5 shrink-0" :weight="activeTab === 'incoming' ? 'duotone' : 'regular'" />
-            Gelen Teklifler
-            <span v-if="incomingOfferRows.length" class="ml-auto rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">{{ incomingOfferRows.length }}</span>
-          </button>
-          <button
-            :class="['flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition whitespace-nowrap', activeTab === 'bids' ? 'bg-white text-orange-600 shadow-sm border border-stone-200' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900']"
-            @click="activeTab = 'bids'"
-          >
-            <PhHandshake class="size-5 shrink-0" :weight="activeTab === 'bids' ? 'duotone' : 'regular'" />
-            Tekliflerim
-            <span v-if="myBidRows.length" class="ml-auto rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">{{ myBidRows.length }}</span>
-          </button>
-          <button
-            :class="['flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition whitespace-nowrap', activeTab === 'past' ? 'bg-white text-orange-600 shadow-sm border border-stone-200' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900']"
-            @click="activeTab = 'past'"
-          >
-            <PhClockCounterClockwise class="size-5 shrink-0" :weight="activeTab === 'past' ? 'duotone' : 'regular'" />
-            Geçmiş Teslimatlar
-          </button>
-          <button
-            :class="['flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition whitespace-nowrap', activeTab === 'ratings' ? 'bg-white text-orange-600 shadow-sm border border-stone-200' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900']"
-            @click="activeTab = 'ratings'"
-          >
-            <PhStar class="size-5 shrink-0" :weight="activeTab === 'ratings' ? 'duotone' : 'regular'" />
-            Puanlamalar
-          </button>
-          <button
-            :class="['flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition whitespace-nowrap', activeTab === 'settings' ? 'bg-white text-orange-600 shadow-sm border border-stone-200' : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900']"
-            @click="activeTab = 'settings'"
-          >
-            <PhUser class="size-5 shrink-0" :weight="activeTab === 'settings' ? 'duotone' : 'regular'" />
-            Profil & Ayarlar
+            <component :is="tab.icon" class="size-5 shrink-0" :weight="activeTab === tab.key ? 'duotone' : 'regular'" />
+            {{ tab.label }}
+            <span v-if="tab.badge" class="ml-auto rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">{{ tab.badge }}</span>
           </button>
         </nav>
 
         <!-- Sidebar stats (desktop only) -->
         <div class="mt-4 hidden md:block rounded-xl border border-stone-100 bg-white p-4 space-y-3">
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-stone-500">Toplam Teslimat</span>
-            <span class="font-semibold text-stone-900">{{ deliveryStore.deliveries.length }}</span>
-          </div>
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-stone-500">Tamamlanan</span>
-            <span class="font-semibold text-green-600">{{ pastDeliveries.length }}</span>
-          </div>
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-stone-500">Gelen Teklifler</span>
-            <span class="font-semibold text-orange-600">{{ incomingOfferRows.length }}</span>
-          </div>
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-stone-500">Tekliflerim</span>
-            <span class="font-semibold text-orange-600">{{ myBidRows.length }}</span>
+          <div v-for="s in sidebarStats" :key="s.label" class="flex items-center justify-between text-sm">
+            <span class="text-stone-500">{{ s.label }}</span>
+            <span :class="['font-semibold', s.class]">{{ s.value }}</span>
           </div>
           <div class="flex items-center justify-between text-sm">
             <span class="text-stone-500">Puanım</span>
@@ -484,20 +469,12 @@ onMounted(() => {
         <div v-else-if="activeTab === 'settings'" class="space-y-6">
           <!-- Quick stats -->
           <div class="grid grid-cols-3 gap-3">
-            <div class="card bg-white rounded-xl p-4 text-center">
-              <p class="text-2xl font-bold text-stone-900">{{ deliveryStore.deliveries.length }}</p>
-              <p class="text-xs text-stone-500 mt-1">Toplam Teslimat</p>
-            </div>
-            <div class="card bg-white rounded-xl p-4 text-center">
-              <p class="text-2xl font-bold text-green-600">{{ pastDeliveries.length }}</p>
-              <p class="text-xs text-stone-500 mt-1">Tamamlanan</p>
-            </div>
-            <div class="card bg-white rounded-xl p-4 text-center">
-              <p class="text-2xl font-bold text-orange-500 flex items-center justify-center gap-1">
-                <PhStar class="size-5" weight="fill" />
-                {{ wallet.userProfile.rating }}
+            <div v-for="s in quickStats" :key="s.label" class="card bg-white rounded-xl p-4 text-center">
+              <p :class="['text-2xl font-bold flex items-center justify-center gap-1', s.class]">
+                <component :is="s.icon" v-if="s.icon" class="size-5" weight="fill" />
+                {{ s.value }}
               </p>
-              <p class="text-xs text-stone-500 mt-1">Puanım</p>
+              <p class="text-xs text-stone-500 mt-1">{{ s.label }}</p>
             </div>
           </div>
 
@@ -552,36 +529,14 @@ onMounted(() => {
           <!-- Shortcuts -->
           <div class="grid grid-cols-2 gap-3">
             <button
+              v-for="s in shortcuts"
+              :key="s.key"
               class="card bg-white rounded-xl p-4 text-left hover:border-orange-200 transition cursor-pointer border border-stone-100"
-              @click="activeTab = 'past'"
+              @click="activeTab = s.key"
             >
-              <PhClockCounterClockwise class="size-6 text-stone-400 mb-2" weight="duotone" />
-              <p class="text-sm font-semibold text-stone-900">Geçmiş Teslimatlar</p>
-              <p class="text-xs text-stone-500 mt-0.5">{{ pastDeliveries.length }} teslimat</p>
-            </button>
-            <button
-              class="card bg-white rounded-xl p-4 text-left hover:border-orange-200 transition cursor-pointer border border-stone-100"
-              @click="activeTab = 'incoming'"
-            >
-              <PhBell class="size-6 text-orange-400 mb-2" weight="duotone" />
-              <p class="text-sm font-semibold text-stone-900">Gelen Teklifler</p>
-              <p class="text-xs text-stone-500 mt-0.5">{{ incomingOfferRows.length }} teklif</p>
-            </button>
-            <button
-              class="card bg-white rounded-xl p-4 text-left hover:border-orange-200 transition cursor-pointer border border-stone-100"
-              @click="activeTab = 'bids'"
-            >
-              <PhHandshake class="size-6 text-orange-400 mb-2" weight="duotone" />
-              <p class="text-sm font-semibold text-stone-900">Tekliflerim</p>
-              <p class="text-xs text-stone-500 mt-0.5">{{ myBidRows.length }} teklif</p>
-            </button>
-            <button
-              class="card bg-white rounded-xl p-4 text-left hover:border-orange-200 transition cursor-pointer border border-stone-100"
-              @click="activeTab = 'ratings'"
-            >
-              <PhStar class="size-6 text-amber-400 mb-2" weight="duotone" />
-              <p class="text-sm font-semibold text-stone-900">Puanlamalar</p>
-              <p class="text-xs text-stone-500 mt-0.5">Değerlendirmeler</p>
+              <component :is="s.icon" :class="['size-6 mb-2', s.iconClass]" weight="duotone" />
+              <p class="text-sm font-semibold text-stone-900">{{ s.label }}</p>
+              <p class="text-xs text-stone-500 mt-0.5">{{ s.count }}</p>
             </button>
           </div>
         </div>
