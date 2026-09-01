@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "nuxt-frontend",
+      "runtimeExecutable": "env",
+      "runtimeArgs": ["NUXT_PUBLIC_API_BASE=http://localhost:3001/api", "npm", "--prefix", "frontend", "run", "dev"],
+      "port": 3000
+    }
+  ]
+}
