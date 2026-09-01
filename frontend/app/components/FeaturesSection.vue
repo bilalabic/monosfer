@@ -1,28 +1,28 @@
 <script setup lang="ts">
-import { PhLock as Lock, PhGavel as Gavel, PhTrophy as Trophy, PhTrendUp as TrendingUp } from '@phosphor-icons/vue'
+import { PhVault, PhScales, PhCrown, PhChartLineUp } from '@phosphor-icons/vue'
 import { onSpotlightMouseMove } from '@/composables/useSpotlight'
 
 const features = [
   {
-    icon: Lock,
+    icon: PhVault,
     title: 'Escrow Ödeme',
     desc: 'Para teslimat tamamlanana kadar akıllı sözleşmede kilitli. Hiç kimse tek başına dokunamaz.',
     tag: 'Güvenlik',
   },
   {
-    icon: TrendingUp,
+    icon: PhChartLineUp,
     title: 'Teklif Sistemi',
     desc: 'Kuryeler fiyatlarını kendileri belirler. Müşteri puan ve fiyatı karşılaştırarak seçer.',
     tag: 'Rekabet',
   },
   {
-    icon: Trophy,
+    icon: PhCrown,
     title: 'Leaderboard',
     desc: 'Her teslimat puanı etkiler. Haftalık en iyiler ödül havuzundan token kazanır.',
     tag: 'Ödüllendirme',
   },
   {
-    icon: Gavel,
+    icon: PhScales,
     title: 'Anlaşmazlık Çözümü',
     desc: 'Uyuşmazlıkta token sahipleri jüri olur, karar blockchain\'e yazılır ve kesindir.',
     tag: 'Adalet',
@@ -47,7 +47,7 @@ const features = [
           @mousemove="onSpotlightMouseMove"
         >
           <div class="mb-4 flex items-start justify-between">
-            <div class="flex size-10 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-amber-50 text-orange-600 ring-1 ring-orange-200/60">
               <component :is="f.icon" class="size-6" weight="duotone" />
             </div>
             <span class="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-0.5 text-xs font-medium text-orange-600">

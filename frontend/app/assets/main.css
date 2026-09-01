@@ -118,6 +118,11 @@ button, input, textarea, select {
     border-color: hsl(25 95% 88%);
   }
 
+  /* 3D tilt-on-hover — transform is set directly via @mousemove/@mouseleave (useSpotlight.ts) */
+  .tilt-card {
+    transition: transform 0.15s ease-out;
+  }
+
   /* Cursor-tracking glow — set via @mousemove listener (--x/--y in px, local to element) */
   .spotlight-card {
     position: relative;
@@ -326,6 +331,10 @@ button, input, textarea, select {
   }
   .btn-primary::after {
     display: none;
+  }
+  .tilt-card {
+    transform: none !important;
+    transition: none;
   }
 }
 

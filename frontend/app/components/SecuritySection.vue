@@ -55,7 +55,7 @@ const layers = [
             :key="layer.num"
             class="flex items-start gap-4 rounded-xl border border-orange-200 bg-orange-50 p-4"
           >
-            <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-500">
+            <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-amber-50 text-orange-500 ring-1 ring-orange-200/60">
               <component :is="layer.icon" class="size-5" weight="duotone" />
             </div>
             <div>

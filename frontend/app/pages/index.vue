@@ -4,7 +4,7 @@ import HowItWorksSection from '@/components/HowItWorksSection.vue'
 import FeaturesSection from '@/components/FeaturesSection.vue'
 import StatsSection from '@/components/StatsSection.vue'
 import SecuritySection from '@/components/SecuritySection.vue'
-import { PhRocketLaunch, PhTrophy } from '@phosphor-icons/vue'
+import { PhRocketLaunch, PhCrown } from '@phosphor-icons/vue'
 </script>
 
 <template>
@@ -27,7 +27,7 @@ import { PhRocketLaunch, PhTrophy } from '@phosphor-icons/vue'
               Teslimat Oluştur
             </NuxtLink>
             <NuxtLink to="/couriers" class="btn-secondary justify-center text-center">
-              <PhTrophy class="size-5 text-orange-500" weight="duotone" />
+              <PhCrown class="size-5 text-orange-500" weight="duotone" />
               Leaderboard'a Bak
             </NuxtLink>
           </div>

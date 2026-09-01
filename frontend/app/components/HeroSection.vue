@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { PhArrowRight as ArrowRight, PhShieldCheck as Shield, PhLightning as Zap, PhTrophy as Trophy } from '@phosphor-icons/vue'
-import { onSpotlightMouseMove as onCardMouseMove } from '@/composables/useSpotlight'
+import { PhArrowRight as ArrowRight, PhVault, PhCircuitry, PhCrown } from '@phosphor-icons/vue'
+import { onSpotlightMouseMove, onTiltMouseMove, onTiltMouseLeave } from '@/composables/useSpotlight'
+
+function onCardMouseMove(e: MouseEvent) {
+  onSpotlightMouseMove(e)
+  onTiltMouseMove(e)
+}
 
 const features = [
-  { icon: Shield, label: 'Escrow Güvenceli' },
-  { icon: Zap, label: 'Monad Blockchain' },
-  { icon: Trophy, label: 'Liderlik Tablosu' },
+  { icon: PhVault, label: 'Escrow Güvenceli' },
+  { icon: PhCircuitry, label: 'Monad Blockchain' },
+  { icon: PhCrown, label: 'Liderlik Tablosu' },
 ]
 </script>
 
@@ -72,26 +77,29 @@ const features = [
         <!-- Right — Stats card -->
         <div
           v-reveal="{ delay: 200 }"
-          class="spotlight-card rounded-2xl border border-stone-200 bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-lg"
+          class="spotlight-card rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow duration-300 hover:shadow-lg"
           @mousemove="onCardMouseMove"
+          @mouseleave="onTiltMouseLeave"
         >
-          <p class="mb-5 text-xs font-semibold uppercase tracking-widest text-stone-400">Platform Özeti</p>
-          <div class="space-y-4">
-            <div class="flex items-center justify-between rounded-xl bg-orange-50 px-4 py-3.5">
-              <span class="text-sm font-medium text-stone-700">Toplam Teslimat</span>
-              <span class="text-xl font-bold text-orange-600">1,247</span>
-            </div>
-            <div class="flex items-center justify-between rounded-xl bg-orange-50 px-4 py-3.5">
-              <span class="text-sm font-medium text-stone-700">Başarı Oranı</span>
-              <span class="text-xl font-bold text-orange-600">98.4%</span>
-            </div>
-            <div class="flex items-center justify-between rounded-xl bg-orange-50 px-4 py-3.5">
-              <span class="text-sm font-medium text-stone-700">Aktif Kurye</span>
-              <span class="text-xl font-bold text-orange-600">342</span>
-            </div>
-            <div class="flex items-center justify-between rounded-xl bg-orange-50 px-4 py-3.5">
-              <span class="text-sm font-medium text-stone-700">Dağıtılan MON</span>
-              <span class="text-xl font-bold text-orange-600">24,680</span>
+          <div class="tilt-card p-6">
+            <p class="mb-5 text-xs font-semibold uppercase tracking-widest text-stone-400">Platform Özeti</p>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between rounded-xl bg-orange-50 px-4 py-3.5">
+                <span class="text-sm font-medium text-stone-700">Toplam Teslimat</span>
+                <span class="text-xl font-bold text-orange-600">1,247</span>
+              </div>
+              <div class="flex items-center justify-between rounded-xl bg-orange-50 px-4 py-3.5">
+                <span class="text-sm font-medium text-stone-700">Başarı Oranı</span>
+                <span class="text-xl font-bold text-orange-600">98.4%</span>
+              </div>
+              <div class="flex items-center justify-between rounded-xl bg-orange-50 px-4 py-3.5">
+                <span class="text-sm font-medium text-stone-700">Aktif Kurye</span>
+                <span class="text-xl font-bold text-orange-600">342</span>
+              </div>
+              <div class="flex items-center justify-between rounded-xl bg-orange-50 px-4 py-3.5">
+                <span class="text-sm font-medium text-stone-700">Dağıtılan MON</span>
+                <span class="text-xl font-bold text-orange-600">24,680</span>
+              </div>
             </div>
           </div>
         </div>

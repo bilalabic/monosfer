@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { onSpotlightMouseMove, onTiltMouseMove, onTiltMouseLeave } from '@/composables/useSpotlight'
+
+function onCardMouseMove(e: MouseEvent) {
+  onSpotlightMouseMove(e)
+  onTiltMouseMove(e)
+}
 
 const stats = [
   { value: 1247, suffix: '', label: 'Toplam Teslimat' },
@@ -46,12 +52,16 @@ onMounted(() => {
         <div
           v-for="(stat, i) in stats"
           :key="stat.label"
-          class="rounded-xl border border-stone-200 bg-white p-5 text-center shadow-sm"
+          class="spotlight-card rounded-xl border border-stone-200 bg-white shadow-sm transition-shadow duration-300 hover:shadow-lg"
+          @mousemove="onCardMouseMove"
+          @mouseleave="onTiltMouseLeave"
         >
-          <div class="text-3xl font-extrabold tabular-nums text-orange-600">
-            {{ stat.suffix === '%' ? Number(displayed[i] ?? 0).toFixed(1) : Number(displayed[i] ?? 0).toLocaleString('tr-TR') }}{{ stat.suffix }}
+          <div class="tilt-card p-5 text-center">
+            <div class="text-3xl font-extrabold tabular-nums text-orange-600">
+              {{ stat.suffix === '%' ? Number(displayed[i] ?? 0).toFixed(1) : Number(displayed[i] ?? 0).toLocaleString('tr-TR') }}{{ stat.suffix }}
+            </div>
+            <div class="mt-1 text-sm font-medium text-stone-600">{{ stat.label }}</div>
           </div>
-          <div class="mt-1 text-sm font-medium text-stone-600">{{ stat.label }}</div>
         </div>
       </div>
     </div>

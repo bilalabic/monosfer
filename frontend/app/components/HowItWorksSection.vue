@@ -1,40 +1,40 @@
 <script setup lang="ts">
-import { PhPackage as Package, PhUsers as Users, PhCheckCircle as CheckCircle2, PhStar as Star, PhLightning as Zap, PhSealCheck as BadgeCheck } from '@phosphor-icons/vue'
+import { PhPackage, PhHandCoins, PhTarget, PhBroadcast, PhCoins, PhMedal } from '@phosphor-icons/vue'
 
 const steps = [
   {
     num: '1',
-    icon: Package,
+    icon: PhPackage,
     title: 'Teslimat Talebi',
     desc: 'Müşteri oluşturur ve ödemeyi akıllı sözleşmeye kilitler.',
   },
   {
     num: '2',
-    icon: Users,
+    icon: PhHandCoins,
     title: 'Kuryeler Teklif Verir',
     desc: 'Kaç token istediğini yazarlar. Her teklif teminatlıdır.',
   },
   {
     num: '3',
-    icon: Star,
+    icon: PhTarget,
     title: 'Müşteri Seçer',
     desc: 'Puan ve fiyata göre en uygun kuryeyi seçer.',
   },
   {
     num: '4',
-    icon: Zap,
+    icon: PhBroadcast,
     title: 'Teslimat Gerçekleşir',
     desc: 'İki tarafın onayıyla teslim blockchain\'e yazılır.',
   },
   {
     num: '5',
-    icon: CheckCircle2,
+    icon: PhCoins,
     title: 'Otomatik Ödeme',
     desc: 'Akıllı sözleşme ödemeyi kuryeye anında aktarır.',
   },
   {
     num: '6',
-    icon: BadgeCheck,
+    icon: PhMedal,
     title: 'Puan & Leaderboard',
     desc: 'Müşteri puanlar, leaderboard otomatik güncellenir.',
   },
@@ -56,7 +56,7 @@ const steps = [
           class="card card-hover rounded-xl bg-white p-5"
         >
           <div class="mb-3 flex items-center gap-3">
-            <div class="flex size-9 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
+            <div class="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-100 to-amber-50 text-orange-600 ring-1 ring-orange-200/60">
               <component :is="step.icon" class="size-5" weight="duotone" />
             </div>
             <span class="text-xs font-bold text-stone-400">Adım {{ step.num }}</span>
