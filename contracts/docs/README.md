@@ -8,6 +8,7 @@ gün, sürüm ise içeriğin revizyonu. Kronolojik sıralanır, en yenisi en alt
 | Doküman | İçerik |
 |---|---|
 | [`static-analysis-baseline.md`](static-analysis-baseline.md) | Kabul edilen legacy Slither bulguları (48) ve `forge lint` dağılımı |
+| [`governance.md`](governance.md) | Rol matrisi, zaman kilitleri, pause runbook, parametre sınırları (P0.2) |
 
 ## Analiz ve plan
 
@@ -34,7 +35,7 @@ için kökte bırakıldı; buradaki tüm dokümanlar ona referans verir.
 | Faz | Konu | Durum |
 |---|---|---|
 | P0.1 | CI, regresyon ağı, gas baseline | **Tamamlandı** — yerelde ve testnet'te doğrulandı |
-| P0.2 | `AccessManager` + `ProtocolConfig` | Devam ediyor |
+| P0.2 | `ProtocolAccessManager` + `ProtocolConfig` | **Tamamlandı** — 54 yeni test, 5 invariant |
 | P0.3 | `SettlementVault` (pull-payment, ödeme tıkanmasını çözer) | Bekliyor |
 | P0.4 | `CourierRegistry` (stake çekme, custody limiti) | Bekliyor |
 | P1.x | Yaşam döngüsü, iptal/timeout, self-dealing engeli, kapsam/teminat | Bekliyor |
