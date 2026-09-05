@@ -1,0 +1,5 @@
+DeliveraTest:test_CannotBidWithoutRegistration() (gas: 208707)
+DeliveraTest:test_FullDeliveryFlow() (gas: 1076982)
+DeliveraTest:test_Leaderboard_ThreeCouriers() (gas: 3742136)
+DeliveraTest:test_OnlyCustomerCanAcceptBid() (gas: 360463)
+DeliveryEscrowTest:test_FullTokenFlow_Works() (gas: 1483579)
