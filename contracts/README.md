@@ -303,10 +303,14 @@ Backend ve frontend adresleri bu dosyadan alinmistir; mock adres kullanilmamisti
 
 ## 11) Test Kapsami
 
-- `test/Delivera.t.sol`
+Legacy (V1 oncesi) testler `test/legacy/` altinda toplanmistir. Bu testler
+**degistirilmeden** gecmeye devam etmelidir; P5.3 cut-over onaylanana kadar
+regresyon koruma agi olarak kullanilirlar (bkz. D1 karari).
+
+- `test/legacy/Delivera.t.sol`
   - Native MON full flow
   - Leaderboard basic siralama
-- `test/DeliveryEscrow.t.sol`
+- `test/legacy/DeliveryEscrow.t.sol`
   - Token bazli full flow
   - Fee dagitimi dogrulamasi
   - Rating -> leaderboard guncellemesi
@@ -316,6 +320,72 @@ Calistirma:
 ```bash
 forge test -vv
 ```
+
+## 11.1) CI ve Kalite Kapilari
+
+Kontratlar `.github/workflows/contracts.yml` ile her pull request'te ve
+`Monosfer-V2` push'unda dogrulanir. `deploy.yml` sadece uygulamayi deploy eder;
+kontratlari **build veya test etmez**.
+
+| Kapi | Komut | Notlar |
+|---|---|---|
+| Build | `forge build` | `--offline` kullanilmaz |
+| Format | `forge fmt --check` | Legacy dosyalar `foundry.toml` icindeki `[fmt].ignore` ile haric tutulur |
+| Test | `forge test -vvv` | `FOUNDRY_PROFILE=ci` (fuzz 1024, invariant 256/128) |
+| Gas | `forge snapshot --check` | Commit'li `.gas-snapshot` ile karsilastirir |
+| Statik analiz | `slither .` | `slither.config.json`, `fail_on: medium` |
+| Deploy dry-run | `forge script ...` | Her iki legacy script simule edilir (broadcast yok) |
+
+Yerelde ayni kapilari calistirmak icin:
+
+```bash
+cd contracts
+forge build
+forge fmt --check
+forge test -vvv
+forge snapshot --check
+slither .            # pip install slither-analyzer==0.11.6
+```
+
+### Arac surumu (pinlenmistir)
+
+```text
+Foundry 1.8.1
+```
+
+CI ayni surume pinlidir (`.github/workflows/contracts.yml`). Baseline §53, Monad
+icin `Foundry >= 1.8.0` onerir; 1.8.1 bu kosulu saglar.
+
+**Onemli:** gas rakamlari Foundry surumune duyarlidir. 1.5.1 -> 1.8.1 yukseltmesinde
+kontrat kodu hic degismedigi halde olculen gas %25-61 artti (orn. `test_FullDeliveryFlow`
+666.734 -> 1.076.982). Bu bir gas regresyonu degil, Foundry'nin test gas olcum
+yonteminin degismesidir. Bu yuzden `.gas-snapshot` sadece **pinlenmis surum icinde**
+anlamlidir; surum yukseltilirse snapshot ayni PR'da yeniden uretilmelidir.
+
+### Gas snapshot guncelleme
+
+`.gas-snapshot` commit'lidir. Gas degeri bilerek degistiyse ayni pull request
+icinde yeniden uretilmeli ki fark incelenebilir olsun:
+
+```bash
+cd contracts && forge snapshot
+```
+
+`forge snapshot --check` kirmizi ise ya beklenmeyen bir gas regresyonu vardir, ya
+snapshot guncellenmemistir, ya da arac surumu pinden farklidir.
+
+### Statik analiz baseline
+
+Legacy kontratlar D1 geregi dondurulmus oldugu icin bulgular su an duzeltilemez.
+Kabul edilen baseline (48 bulgu: 0 high, 6 medium, 29 low, 7 informational,
+6 optimization) `docs/static-analysis-baseline.md` icinde kayitlidir. Filtrelenmis
+calistirma **0 sonuc** vermelidir; vermiyorsa bulgu yeni kodadir.
+
+### Solidity satir sonlari
+
+Kok dizindeki `.gitattributes`, `*.sol` dosyalarini `eol=lf` olarak sabitler.
+Windows'ta `core.autocrlf=true` ile bu ayar olmadan `forge fmt` her satiri
+degismis gosterir ve `forge fmt --check` yerelde CI'dan farkli davranir.
 
 ## 12) Bilinen Limitler (Hackathon MVP)
 
@@ -350,9 +420,17 @@ contracts/
 │   ├── TestScenario.sh
 │   └── TestScenarioSystem.sh
 ├── test/
-│   ├── Delivera.t.sol
-│   └── DeliveryEscrow.t.sol
+│   └── legacy/
+│       ├── Delivera.t.sol
+│       └── DeliveryEscrow.t.sol
+├── docs/
+│   └── static-analysis-baseline.md
+├── .gas-snapshot
+├── slither.config.json
 ├── foundry.toml
 └── .env.example
 ```
+
+V1 kontratlari P0.2'den itibaren `src/v1/` altina eklenecektir; legacy kaynaklar
+P5.3 cut-over onaylanana kadar yerinde ve degistirilmeden kalir.
 
