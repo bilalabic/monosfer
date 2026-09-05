@@ -23,6 +23,7 @@ gün, sürüm ise içeriğin revizyonu. Kronolojik sıralanır, en yenisi en alt
 |---|---|
 | [`2026-09-06-p0.1-verification-report-v1.1.md`](2026-09-06-p0.1-verification-report-v1.1.md) | P0.1 (CI, regresyon ağı, gas baseline) doğrulaması. v1.1 = Foundry 1.8.1 yükseltmesi sonrası |
 | [`2026-09-06-testnet-verification-report-v1.0.md`](2026-09-06-testnet-verification-report-v1.0.md) | Monad testnet canlı doğrulaması: 2 sistem deploy, tam yaşam döngüsü, 4 kritik bulgunun zincirde kanıtı |
+| [`2026-09-06-p0.2-verification-report-v1.0.md`](2026-09-06-p0.2-verification-report-v1.0.md) | P0.2 (ProtocolAccessManager + ProtocolConfig) doğrulaması, 59/59 test, kapatılan bulgular |
 
 ## Depo kökündeki ilgili doküman
 
