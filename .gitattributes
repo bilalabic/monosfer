@@ -1,0 +1,13 @@
+# Solidity sources must be LF in the working tree on every platform.
+#
+# Without this, Windows checkouts with `core.autocrlf=true` materialise CRLF
+# while git stores LF. `forge fmt` then reports every line of every file as
+# changed, which makes `forge fmt --check` unusable locally and causes it to
+# behave differently from Linux CI. Pinning eol=lf keeps the two in agreement.
+#
+# Scope is deliberately limited to the contract toolchain. Frontend/backend
+# files are intentionally left to git's default handling.
+*.sol            text eol=lf
+*.gas-snapshot   text eol=lf
+foundry.toml     text eol=lf
+remappings.txt   text eol=lf
