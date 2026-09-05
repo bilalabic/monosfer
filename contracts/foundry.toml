@@ -9,6 +9,50 @@ optimizer = true
 optimizer_runs = 200
 via_ir = true
 
+[profile.default.fuzz]
+runs = 256
+
+[profile.default.invariant]
+runs = 64
+depth = 64
+fail_on_revert = false
+
+# CI runs the same compilation settings as `default` (inherited), but with a
+# heavier randomised workload. Compilation settings are deliberately NOT
+# overridden here: changing optimizer/via_ir would change gas output and
+# invalidate the committed .gas-snapshot.
+[profile.ci]
+
+[profile.ci.fuzz]
+runs = 1024
+
+[profile.ci.invariant]
+runs = 256
+depth = 128
+fail_on_revert = false
+
+[fmt]
+# Legacy (pre-V1) sources are frozen under decision D1: they must remain
+# byte-identical until the approved P5.3 cut-over. They predate `forge fmt`
+# and do not satisfy it, so they are excluded from format enforcement rather
+# than reformatted.
+#
+# This list is intentionally explicit, not a glob: any NEW file added under
+# src/ or test/ is format-enforced by default, which is what we want for all
+# V1 code. Entries are removed as legacy files are deleted in P5.3.
+ignore = [
+    "src/Delivera.sol",
+    "src/DeliveryEscrow.sol",
+    "src/Leaderboard.sol",
+    "src/MCRYToken.sol",
+    "src/ReputationBadge.sol",
+    "src/RewardDistributor.sol",
+    "script/Deploy.s.sol",
+    "script/DeploySystem.s.sol",
+    "test/legacy/Delivera.t.sol",
+    "test/legacy/DeliveryEscrow.t.sol",
+]
+
 [rpc_endpoints]
 local = "${LOCAL_RPC_URL}"
 monad = "${MONAD_MAINNET_RPC_URL}"
