@@ -17,9 +17,9 @@ et → senaryoları koş → dokümante et.
 
 | | |
 |---|---|
-| Test | **119/119** |
+| Test | **154/154** |
 | Gate | **7/7** |
-| Invariant | **14** (3 suite) |
+| Invariant | **21** (4 suite) |
 | Legacy kaynaklar | **8/8 byte-byte değişmedi** |
 | Toolchain | Foundry `1.8.1`, OpenZeppelin `5.7.0`, Slither `0.11.6` |
 
@@ -29,7 +29,8 @@ et → senaryoları koş → dokümante et.
 | P0.2 | `ProtocolAccessManager` + `ProtocolConfig` | Tamamlandı |
 | P0.3 | `SettlementVault` | Tamamlandı |
 | P0.4 | `CourierRegistry` | Tamamlandı |
-| P1.1 | `DeliveryHub` | Sırada |
+| P1.1 | `DeliveryHub` | Tamamlandı |
+| P1.3 | İmzalı risk teklifi, kapsam | Sırada |
 
 ---
 
@@ -127,6 +128,31 @@ değil **stake'ten türetiliyor**.
 
 ---
 
+## P1.1 — DeliveryHub
+
+12 durumlu yaşam döngüsü, teklif yönetimi, iki taraflı fonlama ve uzlaşma.
+Ayrıntı: [`delivery-lifecycle.md`](delivery-lifecycle.md).
+
+**`[PoC-A]` yapısal olarak kapandı.** Legacy bütçeyi oluşturma anında escrow'a
+alıyordu; teklif gelmezse çıkış yoktu. Burada oluşturma **para almaz** — fonlama
+seçimden sonra başlar (sec. 10), yani "oluşturuldu ama terk edildi" sınıfı yamanmadı,
+ortadan kalktı. Testnet'te doğrulandı: oluşturmada vault bakiyesi hiç değişmedi.
+
+**`[PoC-C]` kapandı.** Self-dealing hem teklif hem seçim adımında reddediliyor.
+
+**Sınırsız döngü kaldırıldı.** Legacy `acceptBid` teklif listesini dolaşıyordu.
+Burada kaybeden kuryeler kendi rezervasyonlarını serbest bırakır; seçim üç
+teklifle de üç bin teklifle de aynı gası harcar (sec. 45).
+
+**Yakalanan üç test hatası (kontrat değil):**
+1. `vm.prank` sonrası view çağrısı prank'i yutuyordu — bu tuzak dört kez tekrarladı;
+   ardından tüm test dosyaları sistematik olarak tarandı, başka örnek çıkmadı.
+2. Boşluk güvencesi kırmızı yandı: kuryeler stake'siz kaldığı için teslimatlar
+   `Bidding`'i geçemiyor, diğer invariant'lar **boşuna** geçiyordu. Düzeltince
+   `invariant_AllDeliveriesCanBeDrivenTerminal` gerçekten çalışmaya başladı.
+3. Invariant fonksiyonu içinde `vm.warp(block.timestamp + delta)` ilk turdan sonra
+   ilerlemiyordu; mutlak zaman damgasıyla düzeltildi.
+
 ## Testnet doğrulaması
 
 Adresler: [`../deployments/10143.json`](../deployments/10143.json)
@@ -148,6 +174,11 @@ Koşulan senaryolar (hepsi geçti):
 | S13 | sec. 33-10 custody | 2. paket reddedildi; paket varken `deregister` reddedildi |
 | S14 | Seviyeler / askı | C2 → R3 uygun; R4 devre dışı; askıdayken rezervasyon reddedildi |
 | S15 | Çekim cooldown | Beklemeden çekim reddedildi; **bekleyen çekim teminat olarak kullanılamadı** |
+| S16 | **[PoC-A]** oluşturma | Vault bakiyesi hiç değişmedi; escrow kilidi 0 |
+| S17 | **[PoC-C]** self-dealing | Kendi teslimatına teklif ve kendini seçme, ikisi de reddedildi |
+| S18 | Tam yaşam döngüsü | 7 adım; sec. 18.1 uzlaşması birebir: kurye 5 MON, hazine 0.1 MON (%2), müşteri 1 MON |
+| S19 | Terminal değişmezliği | Tamamlanmış teslimatta `confirmDelivery`, `poke`, `confirmPickup` — üçü de reddedildi |
+| S20 | Poke koruması | Süresi gelmeden `poke` reddedildi; müşteri iptali çalıştı |
 
 **Son durum:** vault bakiye = yükümlülük, surplus 0, **fark 0**.
 

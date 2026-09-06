@@ -3,27 +3,32 @@
   "name": "monad-testnet",
   "rpcUrl": "https://testnet-rpc.monad.xyz",
   "explorer": "https://testnet.monadexplorer.com",
-  "commit": "80704e2356aa85d89c822f734c222d6c9b2d4be6",
+  "commit": "ea6f5a6130228d3032bcab879e587531f7094fa1",
   "contracts": {
     "ProtocolAccessManager": {
-      "address": "0x8b790f4f7daf91f30df8cd94b63b3070cf4a55ab",
-      "txHash": "0x58721843b361dfe3a79811b58561ccd47d265862bf96d97d022c39fb10061ae9",
-      "block": 60099835
+      "address": "0x4668d830d17b1398e924e8ea0cb950994ddd0e49",
+      "txHash": "0xc9e1cd91f29eeb42565ecbc55c56f4cb64f3b89b29a845597948cf5a8312acca",
+      "block": 60116868
     },
     "ProtocolConfig": {
-      "address": "0x7c36ee9d6251d0f363b3eb0ad1f25bc203eac1f2",
-      "txHash": "0x63404f9c24c3fbea4646f12fe7edecff9dbd862cc7dbdba648339635a3ce7b42",
-      "block": 60099837
+      "address": "0x27192c10593f88177d181c94f05bfad63d2ec69b",
+      "txHash": "0xa28abd18ccf61563ad25cb9e075c134b713d2d96ec34104a123a6aac38bc42ac",
+      "block": 60116870
     },
     "SettlementVault": {
-      "address": "0x7b9331d20b33358be519316d194f4f057f7dccf7",
-      "txHash": "0x1857556cfbd95e9e02521d905fcad21aad9756d0ecd5811631434c9d3ac74832",
-      "block": 60099842
+      "address": "0x89d41c3dbc6150b4d0b978a5719d3ba52e17cad2",
+      "txHash": "0x7aefe1a9f1b1f01d0fb6898fbe8da999f1edeafa31dbf93f3e5f7237e352836a",
+      "block": 60116877
     },
     "CourierRegistry": {
-      "address": "0xa9bf4cb31251e9567d0351f6230d95c2ee75cc97",
-      "txHash": "0xcf90a9d8bce6f2de52a87436feb593533a25c28aa20d36513506921e2b2a88c2",
-      "block": 60099849
+      "address": "0x0128c45afd2bc26282f8cb08e8b79156d20bfeaf",
+      "txHash": "0x45887ff54a17750aaa4ccbff1c90a508fe696a190eb4dcaa478ee2a045239cda",
+      "block": 60116879
+    },
+    "DeliveryHub": {
+      "address": "0xab1680bcd850a17ffb729fdbf9e8269e1805eefe",
+      "txHash": "0x8fb676214f87cf9a762a3e6d9b05563078736356349bee49e87dec066f0d7644",
+      "block": 60116883
     },
     "Delivera": {
       "address": "0x70042757830398af367c989d9bc8bab244c871d9",

@@ -156,30 +156,45 @@ contract CourierRegistry is ReentrancyGuard {
      *      to C0 (sec. 4.3). Higher levels are set by the verifier, never by staking.
      */
     function depositStake() external payable nonReentrant whenNotPaused {
-        if (msg.value == 0) revert ZeroAmount();
+        _deposit(msg.sender, msg.value);
+    }
 
-        Courier storage c = _couriers[msg.sender];
-        uint256 newStake = uint256(c.stake) + msg.value;
+    /**
+     * @notice Stake on behalf of `courier`, paid by the caller.
+     * @dev Lets DeliveryHub take a courier's top-up and their coverage
+     *      reservation in one transaction (sec. 8.3 additional bond). Restricted to
+     *      protocol contracts, so nobody can inflate a stranger's stake.
+     */
+    function depositStakeFor(address courier) external payable nonReentrant whenNotPaused onlyRegistryController {
+        if (courier == address(0)) revert ZeroAddress();
+        _deposit(courier, msg.value);
+    }
+
+    function _deposit(address courier, uint256 amount) internal {
+        if (amount == 0) revert ZeroAmount();
+
+        Courier storage c = _couriers[courier];
+        uint256 newStake = uint256(c.stake) + amount;
         if (newStake > type(uint96).max) revert AmountTooLarge(newStake);
 
-        bytes32 lockId = stakeLockId(msg.sender);
+        bytes32 lockId = stakeLockId(courier);
         bool isFirstLock = vault.lockAmount(lockId) == 0;
 
         // Effects before the interaction. The vault call reverts the whole
         // transaction if it fails, so recording first is safe and keeps CEI.
         c.stake = SafeCast.toUint96(newStake);
-        totalStaked += msg.value;
+        totalStaked += amount;
 
         if (c.level == VerificationLevel.None && newStake >= config.courierBaseDeposit()) {
             c.level = VerificationLevel.C0;
-            emit VerificationLevelSet(msg.sender, VerificationLevel.C0);
+            emit VerificationLevelSet(courier, VerificationLevel.C0);
         }
-        emit StakeDeposited(msg.sender, msg.value, newStake);
+        emit StakeDeposited(courier, amount, newStake);
 
         if (isFirstLock) {
-            vault.lock{value: msg.value}(lockId, msg.sender);
+            vault.lock{value: amount}(lockId, courier);
         } else {
-            vault.topUpLock{value: msg.value}(lockId);
+            vault.topUpLock{value: amount}(lockId);
         }
     }
 

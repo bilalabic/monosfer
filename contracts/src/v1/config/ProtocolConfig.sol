@@ -48,7 +48,11 @@ contract ProtocolConfig {
         uint8 juryAppeal1Size; // sec. 48: 5
         uint8 juryAppeal2Size; // sec. 48: 7
         // --- windows (seconds) ---
+        uint32 biddingWindow; // beyond sec. 48 — see note below
         uint32 fundingWindow; // sec. 48: 15 min
+        uint32 pickupWindow; // beyond sec. 48
+        uint32 transitWindow; // beyond sec. 48
+        uint32 returnWindow; // beyond sec. 48
         uint32 challengeWindow; // sec. 48: 24 h
         uint32 courierWithdrawalCooldown; // sec. 48: 24 h
         uint32 riskQuoteValidity; // sec. 48: 5 min
@@ -86,6 +90,13 @@ contract ProtocolConfig {
 
     uint32 public constant MIN_FUNDING_WINDOW = 5 minutes;
     uint32 public constant MAX_FUNDING_WINDOW = 24 hours;
+
+    // Lifecycle windows the sec. 48 table does not list. Every non-terminal delivery
+    // state needs a deadline, otherwise a stalled delivery has no exit and the
+    // escrow is stranded — the legacy failure this design removes. Defaults live
+    // in BaselineParams; the bounds are here.
+    uint32 public constant MIN_LIFECYCLE_WINDOW = 10 minutes;
+    uint32 public constant MAX_LIFECYCLE_WINDOW = 30 days;
 
     uint32 public constant MIN_CHALLENGE_WINDOW = 1 hours;
     uint32 public constant MAX_CHALLENGE_WINDOW = 7 days;
@@ -262,6 +273,26 @@ contract ProtocolConfig {
         return _params.challengeWindow;
     }
 
+    function biddingWindow() external view returns (uint32) {
+        return _params.biddingWindow;
+    }
+
+    function pickupWindow() external view returns (uint32) {
+        return _params.pickupWindow;
+    }
+
+    function transitWindow() external view returns (uint32) {
+        return _params.transitWindow;
+    }
+
+    function returnWindow() external view returns (uint32) {
+        return _params.returnWindow;
+    }
+
+    function customerMaxActiveListings() external view returns (uint8) {
+        return _params.customerMaxActiveListings;
+    }
+
     function courierWithdrawalCooldown() external view returns (uint32) {
         return _params.courierWithdrawalCooldown;
     }
@@ -419,6 +450,10 @@ contract ProtocolConfig {
         if (p.fundingWindow < MIN_FUNDING_WINDOW || p.fundingWindow > MAX_FUNDING_WINDOW) {
             revert OutOfBounds("fundingWindow");
         }
+        _validateLifecycleWindow(p.biddingWindow, "biddingWindow");
+        _validateLifecycleWindow(p.pickupWindow, "pickupWindow");
+        _validateLifecycleWindow(p.transitWindow, "transitWindow");
+        _validateLifecycleWindow(p.returnWindow, "returnWindow");
         if (p.challengeWindow < MIN_CHALLENGE_WINDOW || p.challengeWindow > MAX_CHALLENGE_WINDOW) {
             revert OutOfBounds("challengeWindow");
         }
@@ -450,6 +485,10 @@ contract ProtocolConfig {
         // never be slashed for more than is locked for the case (sec. 27).
         if (p.jurorLockPerCase > p.minJurorStake) revert InvalidJurorEconomics();
         if (p.nonRevealSlash > p.jurorLockPerCase) revert InvalidJurorEconomics();
+    }
+
+    function _validateLifecycleWindow(uint32 window, string memory name) internal pure {
+        if (window < MIN_LIFECYCLE_WINDOW || window > MAX_LIFECYCLE_WINDOW) revert OutOfBounds(name);
     }
 
     function _validateJurySize(uint8 size) internal pure {

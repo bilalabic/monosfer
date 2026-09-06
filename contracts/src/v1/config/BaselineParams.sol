@@ -28,7 +28,11 @@ library BaselineParams {
             juryFirstSize: 3, // sec. 48
             juryAppeal1Size: 5, // sec. 48
             juryAppeal2Size: 7, // sec. 48
+            biddingWindow: 24 hours, // lifecycle window, not in sec. 48
             fundingWindow: 15 minutes, // sec. 48
+            pickupWindow: 24 hours, // lifecycle window, not in sec. 48
+            transitWindow: 72 hours, // lifecycle window, not in sec. 48
+            returnWindow: 72 hours, // lifecycle window, not in sec. 48
             challengeWindow: 24 hours, // sec. 48
             courierWithdrawalCooldown: 24 hours, // sec. 48
             riskQuoteValidity: 5 minutes, // sec. 48
