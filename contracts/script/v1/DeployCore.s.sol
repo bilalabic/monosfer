@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 import {ProtocolAccessManager} from "../../src/v1/access/ProtocolAccessManager.sol";
 import {ProtocolConfig} from "../../src/v1/config/ProtocolConfig.sol";
+import {SettlementVault} from "../../src/v1/vault/SettlementVault.sol";
 
 /**
  * @title DeployCore
@@ -24,6 +25,7 @@ contract DeployCoreScript is Script {
     error RoleAddressMissing(string role);
     error CriticalRolesShareAnAddress(string roleA, string roleB);
     error WrongChain(uint256 expected, uint256 actual);
+    error VaultNotEmpty(string what);
 
     struct RoleSet {
         address defaultAdmin;
@@ -64,9 +66,16 @@ contract DeployCoreScript is Script {
             roles.podAttestationSigner
         );
 
+        SettlementVault vault = new SettlementVault(accessManager);
+
         vm.stopBroadcast();
 
-        _report(accessManager, config, roles);
+        // A freshly deployed vault must owe nothing and hold nothing. If either
+        // is untrue the deployment is already inconsistent and must not ship.
+        if (vault.totalLiabilities() != 0) revert VaultNotEmpty("liabilities");
+        if (address(vault).balance != 0) revert VaultNotEmpty("balance");
+
+        _report(accessManager, config, vault, roles);
     }
 
     function _loadRoles() internal view returns (RoleSet memory roles) {
@@ -139,9 +148,15 @@ contract DeployCoreScript is Script {
         });
     }
 
-    function _report(ProtocolAccessManager accessManager, ProtocolConfig config, RoleSet memory roles) internal pure {
+    function _report(
+        ProtocolAccessManager accessManager,
+        ProtocolConfig config,
+        SettlementVault vault,
+        RoleSet memory roles
+    ) internal pure {
         console2.log("ProtocolAccessManager:", address(accessManager));
         console2.log("ProtocolConfig:       ", address(config));
+        console2.log("SettlementVault:      ", address(vault));
         console2.log("default admin:        ", roles.defaultAdmin);
         console2.log("config admin:         ", roles.configAdmin);
         console2.log("emergency:            ", roles.emergency);
@@ -151,5 +166,8 @@ contract DeployCoreScript is Script {
         console2.log("Roles are NOT granted by this script. The default admin must grant");
         console2.log("CONFIG_ADMIN / EMERGENCY / SIGNER_ADMIN / TREASURER from its own");
         console2.log("multisig, so no deployer key ever holds them.");
+        console2.log("");
+        console2.log("VAULT_CONTROLLER_ROLE must go to protocol CONTRACTS only");
+        console2.log("(DeliveryHub in P1, DisputeCourt in P4), never to an EOA.");
     }
 }
