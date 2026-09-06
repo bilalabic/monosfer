@@ -84,7 +84,12 @@ test etmez**.
 | Test | `forge test -vvv` |
 | Gas | `forge snapshot --check --no-match-test "testFuzz\|invariant_"` |
 | Statik analiz | `slither .` (`fail_on: medium`) |
-| Deploy dry-run | Deploy script'leri simüle edilir |
+| Deploy dry-run | Devralınan iki deploy script'i simüle edilir |
+
+**Kapı olmayan iki şey.** `script/v1/DeployCore.s.sol` CI'da simüle edilmiyor ve
+`npm run contracts:exports:check` bir kapı değil — ikisi de yerelde koşuluyor.
+Yani bozuk bir V1 deploy script'i veya bayat bir `exports/` paketi CI'dan sessizce
+geçer. Bilinçli bir boşluk değil, kapatılmayı bekleyen bir eksik.
 
 ### Arac surumu (pinlenmistir)
 

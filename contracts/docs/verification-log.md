@@ -131,7 +131,7 @@ değil **stake'ten türetiliyor**.
 
 ## P1.1 — DeliveryHub
 
-12 durumlu yaşam döngüsü, teklif yönetimi, iki taraflı fonlama ve uzlaşma.
+11 durumlu yaşam döngüsü, teklif yönetimi, iki taraflı fonlama ve uzlaşma.
 Ayrıntı: [`delivery-lifecycle.md`](delivery-lifecycle.md).
 
 **`[PoC-A]` yapısal olarak kapandı.** Legacy bütçeyi oluşturma anında escrow'a

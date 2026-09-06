@@ -42,9 +42,12 @@ Sürümlü belgeler; içerik revize edilirse sürüm numarası artar.
 | P0.3 | `SettlementVault` | **Tamamlandı** |
 | P0.4 | `CourierRegistry` | **Tamamlandı** |
 | P1.1 | `DeliveryHub` — yaşam döngüsü, iptal/timeout, self-dealing engeli | **Tamamlandı** |
+| P1.2 | İki taraflı fonlama oturumu | **Tamamlandı** (P1.1 içinde) |
 | P1.3 | İmzalı risk teklifi ve kapsam matematiği | **Tamamlandı** |
 | P2.1 | Teslim alma kanıtı (EIP-712 / ERC-1271) | **Tamamlandı** |
 | P2.2 | PoD attestation (cüzdansız alıcı) | Sırada |
+| P2.3 | İtiraz penceresi ve izinsiz finalize | Mekanizma **tamamlandı** (P1.1 içinde); ihtilaf girişi P4'e bağlı |
+| P2.4 | İade akışı | Durumlar ve rezerv ödemesi **tamamlandı** (P1.1 içinde); iade kanıtı P2.2'ye bağlı |
 | P3 | İtibar, rozet, ödül, referans | Bekliyor |
 | P4 | İhtilaf, jüri, randomness | Bekliyor |
 | P5 | Invariant/failure suite, deploy sertleştirme, cut-over | Bekliyor |
