@@ -123,6 +123,13 @@ için gereken temeldir.
 kaldırılacaktır. Geçiş süresince mevcut uygulamanın çalışmaya devam etmesi için
 export ediliyorlar.
 
+### `commit` alanı neden önemli
+
+Kaynak doğrulaması **o commit'ten** build edilerek yapılır, `main`'in ucundan
+değil. Derleyici ayarları zamanla değişir — örneğin `bytecode_hash` ayarı
+sonradan `none` yapıldı — ve farklı bir commit'ten build almak zincirdeki kodla
+eşleşmez. Manifest'teki commit'ten build alındığında bytecode birebir eşleşir.
+
 Yeni bir ağ eklemek: o `chainId` için bir manifest dosyası koy, üreticiyi çalıştır.
 
 ---
