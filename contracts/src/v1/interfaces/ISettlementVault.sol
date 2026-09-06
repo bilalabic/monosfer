@@ -31,6 +31,14 @@ interface ISettlementVault {
     /// @notice Split a lock into claimable balances. Payout total must equal the lock exactly.
     function releaseLock(bytes32 lockId, Payout[] calldata payouts) external;
 
+    /**
+     * @notice Credit part of a lock, leaving the remainder locked and active.
+     * @dev Needed by stake accounting, where a holder withdraws part of a balance
+     *      that must otherwise stay under custody. Delivery settlement uses
+     *      `releaseLock` instead, whose exact-total rule is a safety property.
+     */
+    function releasePartial(bytes32 lockId, Payout[] calldata payouts) external;
+
     /// @notice Return a lock in full to its owner's claimable balance.
     function refundLock(bytes32 lockId) external;
 
@@ -48,6 +56,7 @@ interface ISettlementVault {
     event Locked(bytes32 indexed lockId, address indexed owner, uint256 amount);
     event LockToppedUp(bytes32 indexed lockId, uint256 amount, uint256 newTotal);
     event LockReleased(bytes32 indexed lockId, uint256 amount);
+    event LockPartiallyReleased(bytes32 indexed lockId, uint256 amount, uint256 remaining);
     event LockRefunded(bytes32 indexed lockId, address indexed owner, uint256 amount);
     event Credited(address indexed account, uint256 amount, bytes32 indexed lockId);
     event Claimed(address indexed account, uint256 amount);

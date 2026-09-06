@@ -43,6 +43,14 @@ contract ProtocolAccessManager is AccessControlDefaultAdminRules {
     /// @dev Held by contracts (DeliveryHub, DisputeCourt), never by an EOA.
     bytes32 public constant VAULT_CONTROLLER_ROLE = keccak256("MONOSFER_VAULT_CONTROLLER_ROLE");
 
+    /// @notice Protocol contracts allowed to move courier collateral and custody counters.
+    /// @dev Held by contracts (DeliveryHub, DisputeCourt), never by an EOA.
+    bytes32 public constant REGISTRY_CONTROLLER_ROLE = keccak256("MONOSFER_REGISTRY_CONTROLLER_ROLE");
+
+    /// @notice May set courier verification levels and suspend couriers.
+    /// @dev Reflects an off-chain verification decision on-chain (sec.4.4, sec.4.5).
+    bytes32 public constant VERIFIER_ROLE = keccak256("MONOSFER_VERIFIER_ROLE");
+
     /// @notice Delay between scheduling an unpause and being able to execute it.
     uint256 public constant UNPAUSE_DELAY = 6 hours;
 

@@ -186,6 +186,42 @@ contract SettlementVault is ISettlementVault, ReentrancyGuard {
         emit LockReleased(lockId, lockedAmount);
     }
 
+    /**
+     * @inheritdoc ISettlementVault
+     * @dev Unlike `releaseLock`, the payout total may be less than the lock; the
+     *      remainder stays locked and the lock stays active. That is exactly what
+     *      a partial stake withdrawal needs. Paying out the whole remainder is
+     *      allowed and settles the lock.
+     */
+    function releasePartial(bytes32 lockId, Payout[] calldata payouts) external onlyController solvent {
+        Lock storage l = _locks[lockId];
+        if (l.status != LockStatus.Active) revert LockNotActive(lockId);
+        if (payouts.length == 0) revert NoPayouts();
+
+        uint256 lockedAmount = l.amount;
+
+        uint256 distributed = 0;
+        for (uint256 i = 0; i < payouts.length; i++) {
+            if (payouts[i].to == address(0)) revert ZeroAddress();
+            if (payouts[i].amount == 0) revert ZeroAmount();
+            distributed += payouts[i].amount;
+        }
+        if (distributed > lockedAmount) revert PayoutMismatch(lockedAmount, distributed);
+
+        uint256 remaining = lockedAmount - distributed;
+        l.amount = uint96(remaining);
+        if (remaining == 0) l.status = LockStatus.Settled;
+        totalLocked -= distributed;
+        totalClaimable += distributed;
+
+        for (uint256 i = 0; i < payouts.length; i++) {
+            _claimable[payouts[i].to] += payouts[i].amount;
+            emit Credited(payouts[i].to, payouts[i].amount, lockId);
+        }
+
+        emit LockPartiallyReleased(lockId, distributed, remaining);
+    }
+
     /// @inheritdoc ISettlementVault
     function refundLock(bytes32 lockId) external onlyController solvent {
         Lock storage l = _locks[lockId];

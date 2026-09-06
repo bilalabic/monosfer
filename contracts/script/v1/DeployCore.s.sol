@@ -7,6 +7,7 @@ import {ProtocolAccessManager} from "../../src/v1/access/ProtocolAccessManager.s
 import {ProtocolConfig} from "../../src/v1/config/ProtocolConfig.sol";
 import {SettlementVault} from "../../src/v1/vault/SettlementVault.sol";
 import {BaselineParams} from "../../src/v1/config/BaselineParams.sol";
+import {CourierRegistry} from "../../src/v1/registry/CourierRegistry.sol";
 
 /**
  * @title DeployCore
@@ -68,6 +69,7 @@ contract DeployCoreScript is Script {
         );
 
         SettlementVault vault = new SettlementVault(accessManager);
+        CourierRegistry registry = new CourierRegistry(accessManager, config, vault);
 
         vm.stopBroadcast();
 
@@ -75,8 +77,10 @@ contract DeployCoreScript is Script {
         // is untrue the deployment is already inconsistent and must not ship.
         if (vault.totalLiabilities() != 0) revert VaultNotEmpty("liabilities");
         if (address(vault).balance != 0) revert VaultNotEmpty("balance");
+        if (registry.totalStaked() != 0) revert VaultNotEmpty("registry stake");
+        if (address(registry).balance != 0) revert VaultNotEmpty("registry balance");
 
-        _report(accessManager, config, vault, roles);
+        _report(accessManager, config, vault, registry, roles);
     }
 
     function _loadRoles() internal view returns (RoleSet memory roles) {
@@ -127,11 +131,13 @@ contract DeployCoreScript is Script {
         ProtocolAccessManager accessManager,
         ProtocolConfig config,
         SettlementVault vault,
+        CourierRegistry registry,
         RoleSet memory roles
     ) internal pure {
         console2.log("ProtocolAccessManager:", address(accessManager));
         console2.log("ProtocolConfig:       ", address(config));
         console2.log("SettlementVault:      ", address(vault));
+        console2.log("CourierRegistry:      ", address(registry));
         console2.log("default admin:        ", roles.defaultAdmin);
         console2.log("config admin:         ", roles.configAdmin);
         console2.log("emergency:            ", roles.emergency);
@@ -144,5 +150,7 @@ contract DeployCoreScript is Script {
         console2.log("");
         console2.log("VAULT_CONTROLLER_ROLE must go to protocol CONTRACTS only");
         console2.log("(DeliveryHub in P1, DisputeCourt in P4), never to an EOA.");
+        console2.log("The registry itself needs VAULT_CONTROLLER_ROLE: it moves");
+        console2.log("courier stake inside the vault. Grant it after deployment.");
     }
 }
