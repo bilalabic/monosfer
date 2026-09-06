@@ -15,37 +15,41 @@ import {RiskQuoteVerifier} from "../risk/RiskQuoteVerifier.sol";
  * @title DeliveryHub
  * @notice The delivery lifecycle: creation, bidding, selection, funding,
  *         custody transitions and settlement.
- * @dev Baseline refs: sec. 7 (bidding), sec. 10 (funding session), sec. 11 (state machine),
- *      sec. 16 (challenge window), sec. 17 (return), sec. 18 (settlement), sec. 48 (windows),
- *      invariants sec. 33-2, sec. 33-6, sec. 33-16, sec. 33-17.
+ * @dev Baseline refs: sec. 7 (bidding), sec. 10 (funding session), sec. 11 (state
+ *      machine), sec. 16 (challenge window), sec. 17 (return), sec. 18
+ *      (settlement), sec. 48 (windows), invariants sec. 33-2, sec. 33-6,
+ *      sec. 33-16 and sec. 33-17.
  *
- *      ## Creating a delivery takes no money
+ *      ## Nothing is escrowed until both sides commit
  *
- *      The legacy contract escrowed the budget at creation. If nobody bid, the
- *      money had no way out — reproduced on a live chain, and the deployed
- *      legacy contract still holds MON no function can release.
+ *      Creating a delivery costs nothing and locks nothing. Money enters only
+ *      after a bid is selected and both parties fund the session (sec. 10), so an
+ *      unbid or abandoned listing has no value to strand: it simply expires.
  *
- *      Here funding happens only after a bid is selected (sec. 10). A delivery that
- *      nobody bids on simply expires with nothing at stake. The whole class of
- *      "created but abandoned" stranded escrow is removed structurally rather
- *      than patched.
+ *      ## Every live state has a deadline
  *
- *      ## Every non-terminal state has a deadline
- *
- *      Each live state carries `stateDeadline`. Once it passes, **anyone** may
- *      call `poke`, which advances the delivery toward a terminal state and
- *      releases whatever is held. No delivery can sit forever, and no party
- *      needs the other's cooperation to get their money back.
+ *      Each non-terminal state carries `stateDeadline`. Once it passes, anyone
+ *      may call `poke`, which advances the delivery toward a terminal state and
+ *      releases whatever is held. The guarantee is that no participant ever needs
+ *      the other's cooperation to recover their funds, and no delivery can sit
+ *      indefinitely holding value.
  *
  *      Timeouts resolve deterministically and never open a jury case (sec. 26).
- *      Loss and damage claims are dispute matters and arrive with P4.
+ *      Fault-based outcomes need evidence and belong to the dispute court.
  *
- *      ## Bid deposits are reservations, not a second escrow
+ *      ## Selection cost does not grow with the number of bids
  *
- *      Bidding reserves collateral in CourierRegistry. Losing couriers release
- *      their own reservation by calling `withdrawBid`; nothing iterates over a
- *      bidder list, so `selectCourier` costs the same with three bidders or
- *      three thousand (sec. 45).
+ *      Placing a bid reserves collateral in CourierRegistry; a courier who is not
+ *      selected releases their own reservation with `withdrawBid`. Nothing
+ *      iterates a bidder list, so `selectCourier` costs the same whether three
+ *      couriers bid or three thousand (sec. 45).
+ *
+ *      ## Terms are fixed by a signed quote and by the selected bid
+ *
+ *      The risk tier and required coverage come from a coverage quote signed by
+ *      the risk service and re-bounded on-chain (sec. 6, sec. 8.3). Price and ETA
+ *      come from the bid version the customer explicitly selects, so a courier
+ *      cannot re-price between being read and being chosen.
  */
 contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier {
     // --------------------------------------------------------------------
@@ -208,10 +212,9 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier {
 
     /**
      * @notice Publish a delivery for bidding. Takes no payment (sec. 10).
-     * @dev The risk tier and required coverage come from a signed quote, not from
-     *      the caller. Before this, a customer could open a high-risk delivery
-     *      backed by a token amount of collateral; both figures are now priced by
-     *      the risk service and re-bounded on-chain (sec. 6, sec. 8.3).
+     * @dev The risk tier and required coverage come from the signed quote, never
+     *      from the caller, so a customer cannot choose their own coverage
+     *      (sec. 6, sec. 8.3).
      * @param quote Signed coverage quote, issued to `msg.sender`.
      * @param signature EOA or ERC-1271 signature over the quote digest.
      * @return deliveryId Identifier of the published delivery.
@@ -422,8 +425,8 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier {
 
     /**
      * @notice Courier takes custody. Moves straight to IN_TRANSIT (sec. 11).
-     * @dev P2 replaces the caller check with an EIP-712 PickupAcceptance signature
-     *      from the sender; the state transition itself is unchanged.
+     * @dev Authorisation is currently the caller check; P2 replaces it with an
+     *      EIP-712 PickupAcceptance signature. The state transition is unchanged.
      */
     function confirmPickup(uint256 deliveryId) external nonReentrant whenNotPaused {
         Delivery storage d = _requireDelivery(deliveryId);
@@ -437,7 +440,8 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier {
 
     /**
      * @notice Courier submits delivery proof, opening the challenge window (sec. 16).
-     * @dev P2 replaces the caller check with a signed PoD attestation.
+     * @dev Authorisation is currently the caller check; P2 replaces it with a
+     *      signed proof-of-delivery attestation.
      */
     function submitDeliveryProof(uint256 deliveryId) external nonReentrant whenNotPaused {
         Delivery storage d = _requireDelivery(deliveryId);
@@ -513,8 +517,8 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier {
         } else if (s == State.ReturnRequired) {
             // The window elapsed without a confirmed return. Resolve
             // deterministically: the customer is made whole and the courier's
-            // coverage is released. Fault-based slashing needs evidence and
-            // belongs to the dispute court (sec. 13, sec. 26).
+            // coverage is released. Slashing requires evidence and belongs to
+            // the dispute court (sec. 13, sec. 26).
             registry.closeCustody(d.courier);
             _settleReturn(deliveryId, d, false);
         } else {

@@ -12,10 +12,10 @@ Sistem geliştikçe güncellenir; sürüm/tarih taşımazlar.
 | [`governance.md`](governance.md) | Rol matrisi, zaman kilitleri, pause runbook, parametre sınırları |
 | [`settlement.md`](settlement.md) | Pull-payment modeli, ödeme gücü, reentrancy, pause davranışı |
 | [`courier-registry.md`](courier-registry.md) | Stake bölünmesi, çıkış yolu, C0/C1/C2, custody limiti |
-| [`delivery-lifecycle.md`](delivery-lifecycle.md) | 12 durumlu makine, her durumun çıkışı, teklifler, fonlama, uzlaşma |
+| [`delivery-lifecycle.md`](delivery-lifecycle.md) | 11 durumlu makine, her durumun çıkışı, teklifler, fonlama, uzlaşma |
 | [`risk-quote.md`](risk-quote.md) | İmzalı kapsam teklifi, kapsam bandı, tekrar koruması, teminat bölünmesi |
 | [`integration.md`](integration.md) | Frontend/backend için adres + ABI + tip paylaşımı |
-| [`static-analysis-baseline.md`](static-analysis-baseline.md) | Kabul edilen legacy Slither bulguları ve `forge lint` dağılımı |
+| [`static-analysis-baseline.md`](static-analysis-baseline.md) | Devralınan kontratların kabul edilen Slither bulguları ve `forge lint` dağılımı |
 
 ## Analiz ve plan
 

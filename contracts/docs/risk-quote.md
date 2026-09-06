@@ -6,15 +6,15 @@
 
 ---
 
-## 1. Kapatılan açık
+## 1. Risk katmanını ve teminatı kim belirler
 
-P1.1'de `createDelivery(riskTier, requiredCollateral)` **müşterinin ikisini de
-seçmesine** izin veriyordu. Yani R3 (yüksek risk) bir teslimat 1 wei teminatla
-açılabilirdi. Risk katmanı sadece bir etiketti; hiçbir şeyi zorlamıyordu.
+Risk katmanı ve gereken teminat, **müşteriden değil**, risk servisinin imzaladığı
+bir tekliften gelir. Teklif zincir dışında üretilir — girdiler (beyan edilen
+değer, rota, geçmiş) zaten zincir dışıdır (sec. 34) — ve imzalanır ki zincir
+onları görmeden güvenebilsin.
 
-Artık ikisi de **imzalı bir tekliften** geliyor. Teklif zincir dışında üretilir —
-girdiler (beyan edilen değer, rota, geçmiş) zaten zincir dışıdır (sec. 34) — ve
-imzalanır ki zincir onları görmeden güvenebilsin.
+Müşterinin kendi teminatını seçebilmesi, risk katmanını anlamsız bir etikete
+indirgerdi: yüksek riskli bir teslimat sembolik bir teminatla açılabilirdi.
 
 ---
 

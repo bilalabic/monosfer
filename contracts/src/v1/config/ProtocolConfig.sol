@@ -101,10 +101,10 @@ contract ProtocolConfig {
     uint32 public constant MIN_FUNDING_WINDOW = 5 minutes;
     uint32 public constant MAX_FUNDING_WINDOW = 24 hours;
 
-    // Lifecycle windows the sec. 48 table does not list. Every non-terminal delivery
-    // state needs a deadline, otherwise a stalled delivery has no exit and the
-    // escrow is stranded — the legacy failure this design removes. Defaults live
-    // in BaselineParams; the bounds are here.
+    // Lifecycle windows the sec. 48 table does not list. Every non-terminal
+    // delivery state needs a deadline: without one a stalled delivery has no
+    // exit and its escrow cannot be recovered by anyone. Defaults live in
+    // BaselineParams; the bounds are here.
     uint32 public constant MIN_LIFECYCLE_WINDOW = 10 minutes;
     uint32 public constant MAX_LIFECYCLE_WINDOW = 30 days;
 
