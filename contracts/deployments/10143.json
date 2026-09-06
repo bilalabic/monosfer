@@ -3,32 +3,32 @@
   "name": "monad-testnet",
   "rpcUrl": "https://testnet-rpc.monad.xyz",
   "explorer": "https://testnet.monadexplorer.com",
-  "commit": "ea6f5a6130228d3032bcab879e587531f7094fa1",
+  "commit": "452ce4b03818cb67d5cad445ba05403adc01843e",
   "contracts": {
     "ProtocolAccessManager": {
-      "address": "0x4668d830d17b1398e924e8ea0cb950994ddd0e49",
-      "txHash": "0xc9e1cd91f29eeb42565ecbc55c56f4cb64f3b89b29a845597948cf5a8312acca",
-      "block": 60116868
+      "address": "0x6af2d23b1ae0d1cf1c33e86b52bbf114b90c7b66",
+      "txHash": "0x77efc99b48758b207fb5b80e14978024c9643344380bc7b8354b247d41739dd8",
+      "block": 60199399
     },
     "ProtocolConfig": {
-      "address": "0x27192c10593f88177d181c94f05bfad63d2ec69b",
-      "txHash": "0xa28abd18ccf61563ad25cb9e075c134b713d2d96ec34104a123a6aac38bc42ac",
-      "block": 60116870
+      "address": "0x370183f71590250eb523623448359190bb528835",
+      "txHash": "0x8d8fe07e62c13cf725be31fb6a8a2c244db3d4aae58169e651572c78f720e128",
+      "block": 60199402
     },
     "SettlementVault": {
-      "address": "0x89d41c3dbc6150b4d0b978a5719d3ba52e17cad2",
-      "txHash": "0x7aefe1a9f1b1f01d0fb6898fbe8da999f1edeafa31dbf93f3e5f7237e352836a",
-      "block": 60116877
+      "address": "0x57f6ae769ff89102d911ac0ed0c5df1322b3af55",
+      "txHash": "0x781c923b3d2264959e45ef19051173fdc7a52468dcff6602d6a7bf8b4e08336a",
+      "block": 60199411
     },
     "CourierRegistry": {
-      "address": "0x0128c45afd2bc26282f8cb08e8b79156d20bfeaf",
-      "txHash": "0x45887ff54a17750aaa4ccbff1c90a508fe696a190eb4dcaa478ee2a045239cda",
-      "block": 60116879
+      "address": "0xcdbb52e4c0b143f53163bcb3ebe0ec8489e3e37c",
+      "txHash": "0x5ff89a97c25cfa996a6f8368bc60b3acc7a2a35dcb7222b4e5df948847909ffc",
+      "block": 60199415
     },
     "DeliveryHub": {
-      "address": "0xab1680bcd850a17ffb729fdbf9e8269e1805eefe",
-      "txHash": "0x8fb676214f87cf9a762a3e6d9b05563078736356349bee49e87dec066f0d7644",
-      "block": 60116883
+      "address": "0xe5d80b4a06d3c1489b97ae74f7ed78578efecc39",
+      "txHash": "0x3029398bc9fa445054431728ad40f186fb3e58cf4d8fd75ddd8f5439c321eb41",
+      "block": 60199419
     },
     "Delivera": {
       "address": "0x70042757830398af367c989d9bc8bab244c871d9",
