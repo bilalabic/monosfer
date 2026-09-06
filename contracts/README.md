@@ -77,7 +77,7 @@ submodule kurulumu gerekmez.
 | `forge build` | Derle |
 | `forge test` | Tüm testler (`FOUNDRY_PROFILE=ci` daha ağır fuzz/invariant koşar) |
 | `forge fmt` | Biçimlendir (legacy `foundry.toml` içinde hariç tutulmuştur) |
-| `forge snapshot` | Gas snapshot'ını yeniden üret |
+| `forge snapshot --no-match-test "testFuzz\|invariant_"` | Gas snapshot'ını yeniden üret |
 | `slither .` | Statik analiz (`pip install slither-analyzer==0.11.6`) |
 
 ---
@@ -93,7 +93,7 @@ test etmez**.
 | Build | `forge build` |
 | Format | `forge fmt --check` |
 | Test | `forge test -vvv` |
-| Gas | `forge snapshot --check` |
+| Gas | `forge snapshot --check --no-match-test "testFuzz\|invariant_"` |
 | Statik analiz | `slither .` (`fail_on: medium`) |
 | Deploy dry-run | Her iki legacy script simüle edilir |
 
@@ -107,6 +107,11 @@ CI aynı sürüme pinlidir. **Gas rakamları Foundry sürümüne duyarlıdır**:
 1.8.1 yükseltmesinde kontrat değişmeden ölçülen gas %25–61 arttı. Bu yüzden
 `.gas-snapshot` yalnızca pinlenmiş sürüm içinde anlamlıdır; sürüm yükseltilirse
 aynı PR'da yeniden üretilmelidir.
+
+Snapshot **yalnızca deterministik testleri** kapsar. Fuzz ve invariant testlerinin
+raporladığı gas, rastgele girdiler üzerinden bir ortalamadır ve fuzz seed'iyle
+değişir; snapshot'a dahil edilseler kapı dalgalı olurdu. Kapıya anlamını veren şey
+determinizmdir.
 
 ### Statik analiz baseline
 

@@ -71,7 +71,11 @@ jobs:
         # Fails if any committed gas number moved. Intentional gas changes
         # require regenerating .gas-snapshot in the same pull request so the
         # delta is reviewable.
-        run: forge snapshot --check
+        #
+        # Fuzz and invariant tests are excluded: their reported gas is a mean
+        # over randomly drawn inputs, so it changes with the fuzz seed and would
+        # make this gate flaky. Determinism is what gives it meaning.
+        run: forge snapshot --check --no-match-test "testFuzz|invariant_"
 
       - name: Deploy dry-run (legacy Delivera)
         env:
