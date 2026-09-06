@@ -6,7 +6,10 @@ dist-ssr
 *.log
 contracts/.env
 contracts/.env.local
-contracts/deployments
+# contracts/deployments/ is the committed source of truth for addresses
+# (see contracts/docs/integration.md). The legacy per-run record written by
+# scripts/deploy-monad-testnet.mjs is excluded; the chain manifests are not.
+contracts/deployments/monad-testnet.json
 contracts/out
 contracts/cache
 contracts/broadcast

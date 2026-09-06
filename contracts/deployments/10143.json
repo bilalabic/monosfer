@@ -1,0 +1,65 @@
+{
+  "chainId": 10143,
+  "name": "monad-testnet",
+  "rpcUrl": "https://testnet-rpc.monad.xyz",
+  "explorer": "https://testnet.monadexplorer.com",
+  "commit": "80704e2356aa85d89c822f734c222d6c9b2d4be6",
+  "contracts": {
+    "ProtocolAccessManager": {
+      "address": "0x8b790f4f7daf91f30df8cd94b63b3070cf4a55ab",
+      "txHash": "0x58721843b361dfe3a79811b58561ccd47d265862bf96d97d022c39fb10061ae9",
+      "block": 60099835
+    },
+    "ProtocolConfig": {
+      "address": "0x7c36ee9d6251d0f363b3eb0ad1f25bc203eac1f2",
+      "txHash": "0x63404f9c24c3fbea4646f12fe7edecff9dbd862cc7dbdba648339635a3ce7b42",
+      "block": 60099837
+    },
+    "SettlementVault": {
+      "address": "0x7b9331d20b33358be519316d194f4f057f7dccf7",
+      "txHash": "0x1857556cfbd95e9e02521d905fcad21aad9756d0ecd5811631434c9d3ac74832",
+      "block": 60099842
+    },
+    "CourierRegistry": {
+      "address": "0xa9bf4cb31251e9567d0351f6230d95c2ee75cc97",
+      "txHash": "0xcf90a9d8bce6f2de52a87436feb593533a25c28aa20d36513506921e2b2a88c2",
+      "block": 60099849
+    },
+    "Delivera": {
+      "address": "0x70042757830398af367c989d9bc8bab244c871d9",
+      "txHash": "0x485722b567e89cefa7329c34d7c968df2b2e07bb93fba4078a05f476b53b7368",
+      "block": 60021693,
+      "legacy": true
+    },
+    "MCRYToken": {
+      "address": "0x4cd3d3e5f738eb78ff8b41bd261a45044692c049",
+      "txHash": "0x91a94c1d755320f881b71bdac46d9d1e788ab963a28ea904dc3271183a23989d",
+      "block": 60022392,
+      "legacy": true
+    },
+    "ReputationBadge": {
+      "address": "0x81e480f6b54fafdf4de404321f2991a051b8d931",
+      "txHash": "0x1878a91ea688291fe0a6efafbf4d2c9071d3cf3864854a1733a16f5996227bec",
+      "block": 60022399,
+      "legacy": true
+    },
+    "Leaderboard": {
+      "address": "0xe19c2e7cd1579fb8ba4b1ca2e1e6066d07b7ff97",
+      "txHash": "0x66d78b2c2e7f6e64f64ef230b0fbafa501749c023bc1463e7206594ff6251a39",
+      "block": 60022401,
+      "legacy": true
+    },
+    "RewardDistributor": {
+      "address": "0x2cd2158dd751930eaca0ff24d4d3d9106d3aa1a7",
+      "txHash": "0xae505befd164660d202aba335da6818e67b31f0ec813855978eeecbbe43b9e72",
+      "block": 60022407,
+      "legacy": true
+    },
+    "DeliveryEscrow": {
+      "address": "0x0b0afb512a50ed98e58f8c3922fc89e9332a4c89",
+      "txHash": "0xc42df664fbe668005be5a2380e92c834427cdc78b707866f53ab9c8f459ff1c5",
+      "block": 60022414,
+      "legacy": true
+    }
+  }
+}
