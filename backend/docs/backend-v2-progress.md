@@ -31,5 +31,9 @@
 
 ## Devam notu
 
-Faz 1 yerel commit kimliği sonraki kayıt bölümüne eklenecek. Push/deploy yapılmadı. Yerel PostgreSQL/Redis konteynerleri geliştirme için çalışır bırakıldı; API test process'leri kapandı.
+Faz 1 yerel commit'i `dd866ff` — `feat(backend): establish V2 phase 1 NestJS infrastructure`. Commit yalnız backend altında 29 dosya içeriyor. Push/deploy yapılmadı. Yerel PostgreSQL/Redis konteynerleri geliştirme için çalışır bırakıldı; API test process'leri kapandı.
 Sonraki işler: Faz 2 SIWE ile wallet sahipliği/session güvenliği; Faz 3 private veri ve koruyucu MongoDB aktarımı. Bu fazlar henüz uygulanmadı.
+
+## 2026-09-07 — Teslim kaydı
+
+`dd866ff` commit kimliği faz tamamlandıktan sonra bu dokümantasyon kaydına işlendi. Bu takip kaydı ayrı bir docs commit'idir; uygulama kodu değişmez.
