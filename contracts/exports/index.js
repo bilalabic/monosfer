@@ -12,29 +12,29 @@ export const CHAINS = {
     "explorer": "https://testnet.monadexplorer.com",
     "contracts": {
       "ProtocolAccessManager": {
-        "address": "0x6af2d23b1ae0d1cf1c33e86b52bbf114b90c7b66",
-        "txHash": "0x77efc99b48758b207fb5b80e14978024c9643344380bc7b8354b247d41739dd8",
-        "block": 60199399
+        "address": "0x1dd739b4cd546a2f8e6a6aeccac94a078d1a2848",
+        "txHash": "0x21f4b5277c54797657edadd9d41671a280822bf87247c2dbebc2bb5ba27d8a7b",
+        "block": 60231831
       },
       "ProtocolConfig": {
-        "address": "0x370183f71590250eb523623448359190bb528835",
-        "txHash": "0x8d8fe07e62c13cf725be31fb6a8a2c244db3d4aae58169e651572c78f720e128",
-        "block": 60199402
+        "address": "0xda5296b4b85c253c909d36b6898a8ce7ca2bccb6",
+        "txHash": "0xa07baa5ea1535bdbe459345b1338334faf46a9e466dbb37f18b6d76dd4c150f8",
+        "block": 60231840
       },
       "SettlementVault": {
-        "address": "0x57f6ae769ff89102d911ac0ed0c5df1322b3af55",
-        "txHash": "0x781c923b3d2264959e45ef19051173fdc7a52468dcff6602d6a7bf8b4e08336a",
-        "block": 60199411
+        "address": "0x5cf9f885e80899bf87ecb93d803f995da79752c8",
+        "txHash": "0xa3472cf5bf4f633b14a82cc68156b2cd6c88f82e8d6dbfba468c0949613e2163",
+        "block": 60231843
       },
       "CourierRegistry": {
-        "address": "0xcdbb52e4c0b143f53163bcb3ebe0ec8489e3e37c",
-        "txHash": "0x5ff89a97c25cfa996a6f8368bc60b3acc7a2a35dcb7222b4e5df948847909ffc",
-        "block": 60199415
+        "address": "0x167fea4ffbc57026f1af71796c658799895e19c0",
+        "txHash": "0x003a3992ebde3d64f1703ddac970a8910bac694f07b11f7f94b0f8dcf9e24477",
+        "block": 60231845
       },
       "DeliveryHub": {
-        "address": "0xe5d80b4a06d3c1489b97ae74f7ed78578efecc39",
-        "txHash": "0x3029398bc9fa445054431728ad40f186fb3e58cf4d8fd75ddd8f5439c321eb41",
-        "block": 60199419
+        "address": "0x5c455a903930d02be89a84f693d535ebaed56f48",
+        "txHash": "0x7d7888f796bfcbb62cd805e367d83b19aa89cf62a2b46ee47021a8e3a7ba2519",
+        "block": 60231849
       },
       "Delivera": {
         "address": "0x70042757830398af367c989d9bc8bab244c871d9",
