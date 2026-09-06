@@ -12,6 +12,7 @@ Sistem geliştikçe güncellenir; sürüm/tarih taşımazlar.
 | [`governance.md`](governance.md) | Rol matrisi, zaman kilitleri, pause runbook, parametre sınırları |
 | [`settlement.md`](settlement.md) | Pull-payment modeli, ödeme gücü, reentrancy, pause davranışı |
 | [`courier-registry.md`](courier-registry.md) | Stake bölünmesi, çıkış yolu, C0/C1/C2, custody limiti |
+| [`delivery-lifecycle.md`](delivery-lifecycle.md) | 12 durumlu makine, her durumun çıkışı, teklifler, fonlama, uzlaşma |
 | [`integration.md`](integration.md) | Frontend/backend için adres + ABI + tip paylaşımı |
 | [`static-analysis-baseline.md`](static-analysis-baseline.md) | Kabul edilen legacy Slither bulguları ve `forge lint` dağılımı |
 
@@ -38,8 +39,8 @@ Sürümlü belgeler; içerik revize edilirse sürüm numarası artar.
 | P0.2 | `ProtocolAccessManager` + `ProtocolConfig` | **Tamamlandı** |
 | P0.3 | `SettlementVault` | **Tamamlandı** |
 | P0.4 | `CourierRegistry` | **Tamamlandı** |
-| P1.1 | `DeliveryHub` — yaşam döngüsü, iptal/timeout, self-dealing engeli | Sırada |
-| P1.2–P1.3 | Funding session, risk katmanı ve kapsam | Bekliyor |
+| P1.1 | `DeliveryHub` — yaşam döngüsü, iptal/timeout, self-dealing engeli | **Tamamlandı** |
+| P1.3 | İmzalı risk teklifi ve kapsam matematiği | Sırada |
 | P2 | Pickup/PoD kanıtları, challenge penceresi, iade akışı | Bekliyor |
 | P3 | İtibar, rozet, ödül, referans | Bekliyor |
 | P4 | İhtilaf, jüri, randomness | Bekliyor |

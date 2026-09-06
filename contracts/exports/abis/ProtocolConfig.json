@@ -63,7 +63,27 @@
             "internalType": "uint8"
           },
           {
+            "name": "biddingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "fundingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "pickupWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "transitWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "returnWindow",
             "type": "uint32",
             "internalType": "uint32"
           },
@@ -269,6 +289,19 @@
   },
   {
     "type": "function",
+    "name": "MAX_LIFECYCLE_WINDOW",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MAX_POD_VALIDITY",
     "inputs": [],
     "outputs": [
@@ -451,6 +484,19 @@
   },
   {
     "type": "function",
+    "name": "MIN_LIFECYCLE_WINDOW",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MIN_POD_VALIDITY",
     "inputs": [],
     "outputs": [
@@ -510,6 +556,19 @@
         "name": "",
         "type": "address",
         "internalType": "contract ProtocolAccessManager"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "biddingWindow",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
       }
     ],
     "stateMutability": "view"
@@ -601,6 +660,19 @@
         "name": "",
         "type": "uint16",
         "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "customerMaxActiveListings",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
       }
     ],
     "stateMutability": "view"
@@ -708,7 +780,27 @@
             "internalType": "uint8"
           },
           {
+            "name": "biddingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "fundingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "pickupWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "transitWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "returnWindow",
             "type": "uint32",
             "internalType": "uint32"
           },
@@ -823,7 +915,27 @@
             "internalType": "uint8"
           },
           {
+            "name": "biddingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "fundingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "pickupWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "transitWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "returnWindow",
             "type": "uint32",
             "internalType": "uint32"
           },
@@ -883,6 +995,19 @@
         "name": "readyAt",
         "type": "uint64",
         "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "pickupWindow",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
       }
     ],
     "stateMutability": "view"
@@ -955,7 +1080,27 @@
             "internalType": "uint8"
           },
           {
+            "name": "biddingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "fundingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "pickupWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "transitWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "returnWindow",
             "type": "uint32",
             "internalType": "uint32"
           },
@@ -1069,6 +1214,19 @@
   },
   {
     "type": "function",
+    "name": "returnWindow",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "riskQuoteSigner",
     "inputs": [],
     "outputs": [
@@ -1105,6 +1263,19 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "transitWindow",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -1200,7 +1371,27 @@
             "internalType": "uint8"
           },
           {
+            "name": "biddingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "fundingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "pickupWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "transitWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "returnWindow",
             "type": "uint32",
             "internalType": "uint32"
           },
@@ -1321,7 +1512,27 @@
             "internalType": "uint8"
           },
           {
+            "name": "biddingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "fundingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "pickupWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "transitWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "returnWindow",
             "type": "uint32",
             "internalType": "uint32"
           },

@@ -44,6 +44,7 @@ const EXPORTED = {
   ProtocolConfig: "ProtocolConfig.sol",
   SettlementVault: "SettlementVault.sol",
   CourierRegistry: "CourierRegistry.sol",
+  DeliveryHub: "DeliveryHub.sol",
   // Legacy: frozen under decision D1, retired at P5.3. Exported so the existing
   // app keeps working until the cut-over.
   Delivera: "Delivera.sol",

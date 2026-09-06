@@ -4,6 +4,7 @@ export type ContractName =
   | "ProtocolConfig"
   | "SettlementVault"
   | "CourierRegistry"
+  | "DeliveryHub"
   | "Delivera"
   | "DeliveryEscrow"
   | "Leaderboard"

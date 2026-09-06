@@ -8,6 +8,7 @@ import {ProtocolConfig} from "../../src/v1/config/ProtocolConfig.sol";
 import {SettlementVault} from "../../src/v1/vault/SettlementVault.sol";
 import {BaselineParams} from "../../src/v1/config/BaselineParams.sol";
 import {CourierRegistry} from "../../src/v1/registry/CourierRegistry.sol";
+import {DeliveryHub} from "../../src/v1/hub/DeliveryHub.sol";
 
 /**
  * @title DeployCore
@@ -55,6 +56,7 @@ contract DeployCoreScript is Script {
 
         uint48 adminDelay = uint48(vm.envOr("ADMIN_TRANSFER_DELAY", uint256(3 days)));
         uint64 configTimelock = uint64(vm.envOr("CONFIG_TIMELOCK", uint256(2 days)));
+        uint96 bidDeposit = uint96(vm.envOr("BID_DEPOSIT", uint256(1 ether)));
 
         vm.startBroadcast(deployerKey);
 
@@ -70,6 +72,7 @@ contract DeployCoreScript is Script {
 
         SettlementVault vault = new SettlementVault(accessManager);
         CourierRegistry registry = new CourierRegistry(accessManager, config, vault);
+        DeliveryHub hub = new DeliveryHub(accessManager, config, registry, vault, bidDeposit);
 
         vm.stopBroadcast();
 
@@ -79,8 +82,9 @@ contract DeployCoreScript is Script {
         if (address(vault).balance != 0) revert VaultNotEmpty("balance");
         if (registry.totalStaked() != 0) revert VaultNotEmpty("registry stake");
         if (address(registry).balance != 0) revert VaultNotEmpty("registry balance");
+        if (hub.nextDeliveryId() != 0) revert VaultNotEmpty("hub deliveries");
 
-        _report(accessManager, config, vault, registry, roles);
+        _report(accessManager, config, vault, registry, hub, roles);
     }
 
     function _loadRoles() internal view returns (RoleSet memory roles) {
@@ -132,12 +136,14 @@ contract DeployCoreScript is Script {
         ProtocolConfig config,
         SettlementVault vault,
         CourierRegistry registry,
+        DeliveryHub hub,
         RoleSet memory roles
     ) internal pure {
         console2.log("ProtocolAccessManager:", address(accessManager));
         console2.log("ProtocolConfig:       ", address(config));
         console2.log("SettlementVault:      ", address(vault));
         console2.log("CourierRegistry:      ", address(registry));
+        console2.log("DeliveryHub:          ", address(hub));
         console2.log("default admin:        ", roles.defaultAdmin);
         console2.log("config admin:         ", roles.configAdmin);
         console2.log("emergency:            ", roles.emergency);
@@ -150,7 +156,9 @@ contract DeployCoreScript is Script {
         console2.log("");
         console2.log("VAULT_CONTROLLER_ROLE must go to protocol CONTRACTS only");
         console2.log("(DeliveryHub in P1, DisputeCourt in P4), never to an EOA.");
-        console2.log("The registry itself needs VAULT_CONTROLLER_ROLE: it moves");
-        console2.log("courier stake inside the vault. Grant it after deployment.");
+        console2.log("Grant after deployment:");
+        console2.log("  VAULT_CONTROLLER_ROLE    -> CourierRegistry and DeliveryHub");
+        console2.log("  REGISTRY_CONTROLLER_ROLE -> DeliveryHub");
+        console2.log("Both are contracts. Neither role may ever go to an EOA.");
     }
 }

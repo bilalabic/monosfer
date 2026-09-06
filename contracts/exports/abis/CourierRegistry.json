@@ -155,6 +155,19 @@
   },
   {
     "type": "function",
+    "name": "depositStakeFor",
+    "inputs": [
+      {
+        "name": "courier",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
     "name": "deregister",
     "inputs": [],
     "outputs": [],
