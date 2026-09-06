@@ -22,9 +22,6 @@ abstract contract PickupFixture is Test {
     /// @dev Senders need real keys because they sign; addresses alone will not do.
     uint256 internal constant SENDER_KEY_BASE = 0x5E4DE100;
 
-    /// @dev Incremented per acceptance so two in one test never share a nonce.
-    uint256 private _nonceCounter;
-
     function senderKey(uint256 index) internal pure returns (uint256) {
         return SENDER_KEY_BASE + index;
     }
@@ -36,22 +33,35 @@ abstract contract PickupFixture is Test {
     /// @notice A well-formed acceptance for `deliveryId`, valid for one hour.
     function buildAcceptance(uint256 deliveryId, address courier)
         internal
+        view
         returns (PickupProof.Acceptance memory acceptance)
     {
-        return buildAcceptanceWithExpiry(deliveryId, courier, uint64(block.timestamp) + 1 hours);
+        return buildAcceptanceWithExpiry(deliveryId, courier, uint64(block.timestamp) + 1 hours, 0);
     }
 
-    /// @notice An acceptance with an explicit expiry, for staleness tests.
-    function buildAcceptanceWithExpiry(uint256 deliveryId, address courier, uint64 expiresAt)
+    /**
+     * @notice An acceptance with an explicit expiry and discriminator.
+     * @dev The nonce is derived from the arguments rather than drawn from a
+     *      counter. A counter makes the nonce a function of how many acceptances
+     *      were built earlier, which depends on which other tests ran first; the
+     *      nonce reaches calldata, so its byte pattern moved the measured gas of
+     *      whole tests and made the gas snapshot depend on the test filter rather
+     *      than on the code. Deriving it keeps every measurement reproducible in
+     *      isolation.
+     * @param tag Distinguishes two acceptances that would otherwise be identical,
+     *        for example an authorised attempt and a forged one on the same
+     *        delivery. Callers that need the *same* nonce assign it explicitly.
+     */
+    function buildAcceptanceWithExpiry(uint256 deliveryId, address courier, uint64 expiresAt, uint256 tag)
         internal
+        pure
         returns (PickupProof.Acceptance memory acceptance)
     {
-        _nonceCounter += 1;
         acceptance = PickupProof.Acceptance({
             deliveryId: deliveryId,
             courier: courier,
             action: PickupProof.PICKUP_ACTION,
-            nonce: _nonceCounter,
+            nonce: uint256(keccak256(abi.encode("monosfer-test-pickup", deliveryId, courier, expiresAt, tag))),
             expiresAt: expiresAt
         });
     }

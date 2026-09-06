@@ -265,7 +265,10 @@ contract HubHandler is QuoteFixture, PickupFixture {
         wrongKey = bound(wrongKey, 1, type(uint128).max);
         if (wrongKey == senderKey(0) || wrongKey == senderKey(1)) return;
 
-        PickupProof.Acceptance memory a = buildAcceptance(id, d.courier);
+        // A distinct tag: sharing the authorised attempt's nonce would make this
+        // fail on the nonce check instead of on the signature, which is the check
+        // it exists to exercise.
+        PickupProof.Acceptance memory a = buildAcceptanceWithExpiry(id, d.courier, uint64(block.timestamp) + 1 hours, 1);
         bytes memory sig = signAcceptance(hub, a, wrongKey);
 
         forgeAttempts++;

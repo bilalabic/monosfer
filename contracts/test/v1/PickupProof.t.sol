@@ -199,7 +199,7 @@ contract PickupProofTest is QuoteFixture, PickupFixture {
     function test_Rejects_Expired() public {
         uint256 id = _readyForPickup();
         uint64 expiresAt = uint64(block.timestamp) + 60;
-        PickupProof.Acceptance memory a = buildAcceptanceWithExpiry(id, courier, expiresAt);
+        PickupProof.Acceptance memory a = buildAcceptanceWithExpiry(id, courier, expiresAt, 0);
         bytes memory sig = signAcceptance(hub, a, senderKey(0));
 
         vm.warp(expiresAt + 1);
@@ -211,7 +211,7 @@ contract PickupProofTest is QuoteFixture, PickupFixture {
     function test_Accepts_OnFinalSecondOfValidity() public {
         uint256 id = _readyForPickup();
         uint64 expiresAt = uint64(block.timestamp) + 60;
-        PickupProof.Acceptance memory a = buildAcceptanceWithExpiry(id, courier, expiresAt);
+        PickupProof.Acceptance memory a = buildAcceptanceWithExpiry(id, courier, expiresAt, 0);
         bytes memory sig = signAcceptance(hub, a, senderKey(0));
 
         vm.warp(expiresAt);
@@ -362,7 +362,7 @@ contract PickupProofTest is QuoteFixture, PickupFixture {
     function test_ExpiredAcceptance_LeavesNonceReusable() public {
         uint256 id = _readyForPickup();
         uint64 expiresAt = uint64(block.timestamp) + 60;
-        PickupProof.Acceptance memory a = buildAcceptanceWithExpiry(id, courier, expiresAt);
+        PickupProof.Acceptance memory a = buildAcceptanceWithExpiry(id, courier, expiresAt, 0);
 
         vm.warp(expiresAt + 1);
         assertFalse(hub.pickupNonceUsed(customer, a.nonce));

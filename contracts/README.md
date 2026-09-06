@@ -107,6 +107,12 @@ raporladığı gas, rastgele girdiler üzerinden bir ortalamadır ve fuzz seed'i
 değişir; snapshot'a dahil edilseler kapı dalgalı olurdu. Kapıya anlamını veren şey
 determinizmdir.
 
+Determinizm testin **kendi başına** ölçülebilmesi demektir: bir girdinin gası,
+ondan önce hangi testlerin koştuğuna bağlı olmamalı. Test fixture'larında artan
+sayaçtan üretilip calldata'ya ulaşan değerler tam olarak bu bağımlılığı yaratır
+ve kapıyı kodun değil test filtresinin fonksiyonu haline getirir. Fixture'lar bu
+yüzden nonce/salt gibi değerleri argümanlardan türetir.
+
 ### Tekrarlanabilir derleme
 
 `foundry.toml` içinde `bytecode_hash = "none"`. Varsayılan davranışta solc,

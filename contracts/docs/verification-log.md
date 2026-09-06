@@ -213,6 +213,25 @@ tek koddan çıkarıldı:
    bir kabul üretmektir. Düzeltildikten sonra nonce yakma satırı kaldırıldığında
    invariant kırmızıya dönüyor — öncesinde dönmüyordu.
 
+### Gas kapısında yakalanan gerçek hata
+
+PR CI'da gas kapısı iki testte düştü (+87 ve −36), yerelde geçiyordu. Sebep
+platform değil **çalıştırma bağlamıydı**: `PickupFixture` nonce'u artan bir
+sayaçtan üretiyordu, nonce calldata'ya ulaşıyordu, dolayısıyla bir testin ölçülen
+gası ondan önce kaç kabul üretildiğine — yani hangi testlerin koştuğuna —
+bağlıydı. Snapshot tam suite ile üretilmiş, kapı ise `--no-match-test` filtresiyle
+kontrol ediyordu; iki farklı küme, iki farklı sayaç değeri.
+
+Nonce artık argümanlardan türetiliyor. Sonuç, snapshot'taki **181 girdinin
+tamamı** için doğrulandı: her test kontratı tek başına koşturulduğunda ölçülen gas
+tam suite'tekiyle birebir aynı, ve kapı hem `default` hem `ci` profilinde geçiyor.
+
+Ders: gas kapısı yalnızca kodun fonksiyonu olan ölçümleri içermeli. Fuzz ve
+invariant testlerini dışarıda bırakmak yetmiyor; kalan testlerin de birbirinden
+bağımsız olması gerekiyor.
+
+---
+
 ### Doğrulama araçlarında yakalanan hata
 
 İlk zincir-üstü koşuda geçerli kabul de reddedildi. Sebep kontrat değil, benim
