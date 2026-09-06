@@ -8,8 +8,11 @@ import {BaselineParams} from "../../src/v1/config/BaselineParams.sol";
 import {SettlementVault} from "../../src/v1/vault/SettlementVault.sol";
 import {CourierRegistry} from "../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../src/v1/hub/DeliveryHub.sol";
+import {CoverageQuote} from "../../src/v1/risk/CoverageQuote.sol";
+import {RiskQuoteVerifier} from "../../src/v1/risk/RiskQuoteVerifier.sol";
+import {QuoteFixture} from "./helpers/QuoteFixture.sol";
 
-contract DeliveryHubTest is Test {
+contract DeliveryHubTest is QuoteFixture {
     ProtocolAccessManager internal manager;
     ProtocolConfig internal config;
     SettlementVault internal vault;
@@ -27,7 +30,8 @@ contract DeliveryHubTest is Test {
     address internal stranger = address(0xBAD);
 
     uint96 internal constant BID_DEPOSIT = 1 ether;
-    uint96 internal constant COLLATERAL = 5 ether;
+    uint96 internal constant COLLATERAL = 5 ether; // R1 (%25) of DECLARED_VALUE
+    uint96 internal constant DECLARED_VALUE = 20 ether;
     uint96 internal constant ASK = 10 ether;
     uint96 internal constant RETURN_ASK = 2 ether;
 
@@ -35,7 +39,9 @@ contract DeliveryHubTest is Test {
 
     function setUp() public {
         manager = new ProtocolAccessManager(3 days, admin);
-        config = new ProtocolConfig(manager, 2 days, BaselineParams.baseline(), treasury, address(0x1), address(0x2));
+        config = new ProtocolConfig(
+            manager, 2 days, BaselineParams.baseline(), treasury, quoteSignerAddress(), address(0x2)
+        );
         vault = new SettlementVault(manager);
         registry = new CourierRegistry(manager, config, vault);
         hub = new DeliveryHub(manager, config, registry, vault, BID_DEPOSIT);
@@ -63,8 +69,14 @@ contract DeliveryHubTest is Test {
     // ------------------------------------------------------------ helpers
 
     function _create() internal returns (uint256 id) {
-        vm.prank(customer);
-        id = hub.createDelivery(1, COLLATERAL);
+        return _createFor(customer, 1);
+    }
+
+    function _createFor(address who, uint8 tier) internal returns (uint256 id) {
+        CoverageQuote.Quote memory q = buildQuote(config, who, tier, DECLARED_VALUE);
+        bytes memory sig = signQuote(hub, q);
+        vm.prank(who);
+        id = hub.createDelivery(q, sig);
     }
 
     function _bid(uint256 id, address who) internal returns (uint32 version) {
@@ -301,9 +313,11 @@ contract DeliveryHubTest is Test {
         for (uint32 i = 0; i < limit; i++) {
             _create();
         }
+        CoverageQuote.Quote memory q = buildQuote(config, customer, 1, DECLARED_VALUE);
+        bytes memory sig = signQuote(hub, q);
         vm.expectRevert(abi.encodeWithSelector(DeliveryHub.TooManyActiveListings.selector, limit));
         vm.prank(customer);
-        hub.createDelivery(1, COLLATERAL);
+        hub.createDelivery(q, sig);
     }
 
     // ------------------------------------------------------------ funding
@@ -508,9 +522,11 @@ contract DeliveryHubTest is Test {
         vm.prank(emergency);
         manager.pause();
 
+        CoverageQuote.Quote memory q = buildQuote(config, customer, 1, DECLARED_VALUE);
+        bytes memory sig = signQuote(hub, q);
         vm.expectRevert(ProtocolAccessManager.EnforcedPause.selector);
         vm.prank(customer);
-        hub.createDelivery(1, COLLATERAL);
+        hub.createDelivery(q, sig);
 
         // A stalled delivery can still be driven to a terminal state while paused.
         vm.warp(block.timestamp + config.biddingWindow() + 1);

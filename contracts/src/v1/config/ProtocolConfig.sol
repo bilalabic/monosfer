@@ -41,6 +41,11 @@ contract ProtocolConfig {
         uint16 coverageBpsR1; // sec. 6: 25% = 2500
         uint16 coverageBpsR2; // sec. 6: 60% = 6000
         uint16 coverageBpsR3; // sec. 6: 100% = 10000
+        // Bounds on the reputation multiplier the off-chain risk service may
+        // apply to the tier baseline (sec. 8.3). Enforced on-chain so a
+        // compromised quote signer cannot price coverage at zero.
+        uint16 coverageMultiplierMinBps; // 0.75x
+        uint16 coverageMultiplierMaxBps; // 1.5x
         // --- limits ---
         uint8 maxActiveCustody; // sec. 9: 1
         uint8 customerMaxActiveListings; // sec. 48: 5
@@ -78,6 +83,11 @@ contract ProtocolConfig {
     uint16 public constant MAX_PROTOCOL_FEE_BPS = 1_000; // 10% hard ceiling
 
     uint16 public constant MAX_COVERAGE_BPS = BPS_DENOMINATOR;
+
+    /// @dev The multiplier may never take coverage below half or above double
+    ///      the tier baseline, whatever the risk service asks for.
+    uint16 public constant MIN_COVERAGE_MULTIPLIER_BPS = 5_000; // 0.5x
+    uint16 public constant MAX_COVERAGE_MULTIPLIER_BPS = 20_000; // 2x
 
     uint8 public constant MIN_ACTIVE_CUSTODY = 1;
     uint8 public constant MAX_ACTIVE_CUSTODY = 10;
@@ -297,6 +307,18 @@ contract ProtocolConfig {
         return _params.courierWithdrawalCooldown;
     }
 
+    function coverageMultiplierMinBps() external view returns (uint16) {
+        return _params.coverageMultiplierMinBps;
+    }
+
+    function coverageMultiplierMaxBps() external view returns (uint16) {
+        return _params.coverageMultiplierMaxBps;
+    }
+
+    function riskQuoteValidity() external view returns (uint32) {
+        return _params.riskQuoteValidity;
+    }
+
     /// @notice Coverage basis points for a risk tier. Tier 4 (R4) is disabled per sec. 49.
     function coverageBpsForTier(uint8 tier) external view returns (uint16) {
         if (tier == 1) return _params.coverageBpsR1;
@@ -426,6 +448,20 @@ contract ProtocolConfig {
         if (p.coverageBpsR1 > p.coverageBpsR2 || p.coverageBpsR2 > p.coverageBpsR3) {
             revert InvalidCoverageOrdering();
         }
+
+        if (
+            p.coverageMultiplierMinBps < MIN_COVERAGE_MULTIPLIER_BPS
+                || p.coverageMultiplierMinBps > MAX_COVERAGE_MULTIPLIER_BPS
+        ) {
+            revert OutOfBounds("coverageMultiplierMinBps");
+        }
+        if (
+            p.coverageMultiplierMaxBps < MIN_COVERAGE_MULTIPLIER_BPS
+                || p.coverageMultiplierMaxBps > MAX_COVERAGE_MULTIPLIER_BPS
+        ) {
+            revert OutOfBounds("coverageMultiplierMaxBps");
+        }
+        if (p.coverageMultiplierMinBps > p.coverageMultiplierMaxBps) revert InvalidCoverageOrdering();
     }
 
     function _validateLimits(Params memory p) internal pure {
