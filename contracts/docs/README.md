@@ -1,47 +1,46 @@
 # MONOSFER Kontrat Dokümantasyonu
 
-İsimlendirme: `YYYY-AA-GG-konu-vX.Y.md` — tarih dokümanın **oluşturulduğu/güncellendiği**
-gün, sürüm ise içeriğin revizyonu. Kronolojik sıralanır, en yenisi en altta.
+Şartname depo kökündedir: `MONOSFER_Initial_Release_Base_Documentation_v1.0.md`
+(kontrat + backend + frontend kapsar). Buradaki tüm dokümanlar ona referans verir.
 
-## Kalıcı referanslar (sürümsüz, sürekli güncellenir)
+## Tasarım referansları
+
+Sistem geliştikçe güncellenir; sürüm/tarih taşımazlar.
 
 | Doküman | İçerik |
 |---|---|
-| [`static-analysis-baseline.md`](static-analysis-baseline.md) | Kabul edilen legacy Slither bulguları (48) ve `forge lint` dağılımı |
-| [`governance.md`](governance.md) | Rol matrisi, zaman kilitleri, pause runbook, parametre sınırları (P0.2) |
-| [`settlement.md`](settlement.md) | Pull-payment modeli, ödeme gücü, reentrancy, pause davranışı (P0.3) |
+| [`governance.md`](governance.md) | Rol matrisi, zaman kilitleri, pause runbook, parametre sınırları |
+| [`settlement.md`](settlement.md) | Pull-payment modeli, ödeme gücü, reentrancy, pause davranışı |
+| [`courier-registry.md`](courier-registry.md) | Stake bölünmesi, çıkış yolu, C0/C1/C2, custody limiti |
+| [`integration.md`](integration.md) | Frontend/backend için adres + ABI + tip paylaşımı |
+| [`static-analysis-baseline.md`](static-analysis-baseline.md) | Kabul edilen legacy Slither bulguları ve `forge lint` dağılımı |
 
 ## Analiz ve plan
 
-| Doküman | İçerik |
-|---|---|
-| [`2026-09-05-contract-analysis-v1.0.md`](2026-09-05-contract-analysis-v1.0.md) | Kontratların v1.0 baseline'a karşı boşluk analizi. Doğru olanlar, eksikler, iyileştirilecekler, dokunulmayacaklar |
-| [`2026-09-05-implementation-plan-v1.0.md`](2026-09-05-implementation-plan-v1.0.md) | P0–P5 fazlı uygulama planı, branch stratejisi, artefakt paylaşımı, onay gereken kararlar |
-
-## Doğrulama raporları
+Sürümlü belgeler; içerik revize edilirse sürüm numarası artar.
 
 | Doküman | İçerik |
 |---|---|
-| [`2026-09-06-p0.1-verification-report-v1.1.md`](2026-09-06-p0.1-verification-report-v1.1.md) | P0.1 (CI, regresyon ağı, gas baseline) doğrulaması. v1.1 = Foundry 1.8.1 yükseltmesi sonrası |
-| [`2026-09-06-testnet-verification-report-v1.0.md`](2026-09-06-testnet-verification-report-v1.0.md) | Monad testnet canlı doğrulaması: 2 sistem deploy, tam yaşam döngüsü, 4 kritik bulgunun zincirde kanıtı |
-| [`2026-09-06-p0.2-verification-report-v1.0.md`](2026-09-06-p0.2-verification-report-v1.0.md) | P0.2 (ProtocolAccessManager + ProtocolConfig) doğrulaması, 59/59 test, kapatılan bulgular |
-| [`2026-09-06-p0.3-verification-report-v1.0.md`](2026-09-06-p0.3-verification-report-v1.0.md) | P0.3 (SettlementVault) doğrulaması, 86/86 test, 65.536 çağrılık ödeme gücü invariant'ı, verilen kararlar |
-| [`2026-09-06-v1-core-testnet-verification-v1.0.md`](2026-09-06-v1-core-testnet-verification-v1.0.md) | P0.1–P0.3 çekirdeğinin Monad testnet doğrulaması: 10 senaryo, tutarsızlık düzeltmeleri, deploy adresleri |
-| [`2026-09-06-p0.4-verification-report-v1.0.md`](2026-09-06-p0.4-verification-report-v1.0.md) | P0.4 (CourierRegistry) doğrulaması, 119/119 test, testnet senaryoları, Monad gas-limit bulgusu |
+| [`contract-analysis-v1.0.md`](contract-analysis-v1.0.md) | Kontratların baseline'a karşı boşluk analizi: doğru olanlar, eksikler, iyileştirilecekler, dokunulmayacaklar |
+| [`implementation-plan-v1.0.md`](implementation-plan-v1.0.md) | P0–P5 fazlı uygulama planı, branch stratejisi, artefakt paylaşımı, onay gerektiren kararlar |
 
-## Depo kökündeki ilgili doküman
+## Kayıt
 
-`MONOSFER_Initial_Release_Base_Documentation_v1.0.md` — ürünün tamamını (kontrat +
-backend + frontend) kapsayan baseline şartname. Kapsamı yalnızca kontratlar olmadığı
-için kökte bırakıldı; buradaki tüm dokümanlar ona referans verir.
+| Doküman | İçerik |
+|---|---|
+| [`verification-log.md`](verification-log.md) | Faz faz doğrulama sonuçları, testnet senaryoları, yakalanan hatalar |
 
 ## Faz durumu
 
 | Faz | Konu | Durum |
 |---|---|---|
-| P0.1 | CI, regresyon ağı, gas baseline | **Tamamlandı** — yerelde ve testnet'te doğrulandı |
-| P0.2 | `ProtocolAccessManager` + `ProtocolConfig` | **Tamamlandı** — 54 yeni test, 5 invariant |
-| P0.3 | `SettlementVault` (pull-payment, ödeme tıkanmasını çözer) | **Tamamlandı** — 27 test, 4 invariant, 65.536 çağrı |
-| P0.4 | `CourierRegistry` (stake çekme, custody limiti) | **Tamamlandı** — 30 test, 5 invariant, testnet doğrulandı |
-| P1.x | Yaşam döngüsü, iptal/timeout, self-dealing engeli, kapsam/teminat | Bekliyor |
-| P2–P5 | Kanıtlar, itibar, ödül, ihtilaf, sertleştirme | Bekliyor |
+| P0.1 | CI, regresyon ağı, gas baseline | **Tamamlandı** |
+| P0.2 | `ProtocolAccessManager` + `ProtocolConfig` | **Tamamlandı** |
+| P0.3 | `SettlementVault` | **Tamamlandı** |
+| P0.4 | `CourierRegistry` | **Tamamlandı** |
+| P1.1 | `DeliveryHub` — yaşam döngüsü, iptal/timeout, self-dealing engeli | Sırada |
+| P1.2–P1.3 | Funding session, risk katmanı ve kapsam | Bekliyor |
+| P2 | Pickup/PoD kanıtları, challenge penceresi, iade akışı | Bekliyor |
+| P3 | İtibar, rozet, ödül, referans | Bekliyor |
+| P4 | İhtilaf, jüri, randomness | Bekliyor |
+| P5 | Invariant/failure suite, deploy sertleştirme, cut-over | Bekliyor |
