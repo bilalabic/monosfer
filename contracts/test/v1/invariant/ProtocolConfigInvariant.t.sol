@@ -229,7 +229,7 @@ contract ProtocolConfigInvariantTest is StdInvariant, Test {
      *      random run to land on the authorised path would be a property of the
      *      fuzzer's luck, not of the contract.
      */
-    function test_HandlerCanReachExecution() public {
+    function test_invariant_HandlerCanReachExecution() public {
         // actorSeed % 4 == 0 selects configAdmin.
         handler.propose(0, 300, 1_000, 2_000, 3_000, 1);
         handler.execute(0, uint32(3 days)); // clears the 2-day timelock
@@ -240,7 +240,7 @@ contract ProtocolConfigInvariantTest is StdInvariant, Test {
     }
 
     /// @dev Unauthorised or out-of-bounds handler paths must leave state untouched.
-    function test_HandlerWildProposalsAreRejected() public {
+    function test_invariant_HandlerWildProposalsAreRejected() public {
         uint64 versionBefore = config.configVersion();
         handler.proposeWild(0, type(uint16).max, 9_000, 1_000, 500, 0);
         handler.execute(0, uint32(3 days));

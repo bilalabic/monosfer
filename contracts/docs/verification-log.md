@@ -226,9 +226,20 @@ Nonce artık argümanlardan türetiliyor. Sonuç, snapshot'taki **181 girdinin
 tamamı** için doğrulandı: her test kontratı tek başına koşturulduğunda ölçülen gas
 tam suite'tekiyle birebir aynı, ve kapı hem `default` hem `ci` profilinde geçiyor.
 
-Ders: gas kapısı yalnızca kodun fonksiyonu olan ölçümleri içermeli. Fuzz ve
-invariant testlerini dışarıda bırakmak yetmiyor; kalan testlerin de birbirinden
-bağımsız olması gerekiyor.
+Bu düzeltmeden sonra CI'da **tek bir** girdi kaldı: fuzz handler'ının
+erişilebilirlik probu, platformlar arasında 36 gas oynuyordu. Aynı forge sürümü,
+aynı commit SHA, farklı platform binary'si; diğer 180 girdi CI ile birebir
+aynıydı, yani sapma protokol kodunda değil test iskelesindeydi.
+
+Problar artık kapının dışında. Ölçtükleri şey handler'ın defter tutması, protokol
+değil; ve zaten var oluş sebepleri gasları değil, fuzzer'ın yetkili yolu
+katedebildiğini kanıtlamaları. `test_invariant_` önekini taşıyorlar, böylece
+kapının mevcut `testFuzz|invariant_` filtresine takılıyorlar ve test olarak
+koşmaya devam ediyorlar.
+
+Ders: gas kapısı yalnızca **kodun fonksiyonu olan** ölçümleri içermeli. Fuzz ve
+invariant testlerini dışarıda bırakmak yetmiyor — kalan testlerin birbirinden
+bağımsız olması, ve test iskelesini ölçen girdilerin hiç bulunmaması gerekiyor.
 
 ---
 

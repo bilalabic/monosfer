@@ -212,7 +212,7 @@ contract SettlementVaultInvariantTest is StdInvariant, Test {
 
     /// @dev Guards against vacuity: the fuzzer must actually reach settlement
     ///      and withdrawal, otherwise the invariants above prove nothing.
-    function test_HandlerReachesSettlementAndClaim() public {
+    function test_invariant_HandlerReachesSettlementAndClaim() public {
         handler.lock(1, 0, 5 ether); // authorised caller, actor 0
         assertEq(handler.locksOpened(), 1, "lock must succeed");
 
@@ -226,7 +226,7 @@ contract SettlementVaultInvariantTest is StdInvariant, Test {
 
     /// @dev A credited account that always reverts on receive must not break
     ///      solvency or block the rest of the system.
-    function test_RejectorCreditIsHeldNotLost() public {
+    function test_invariant_RejectorCreditIsHeldNotLost() public {
         handler.lock(1, 3, 4 ether); // actor 3 is the Rejector
         handler.release(1, 0, 3, 3, 10_000);
 

@@ -228,7 +228,7 @@ contract CourierRegistryInvariantTest is StdInvariant, Test {
     }
 
     /// @dev Guards against vacuity: the authorised paths must be reachable.
-    function test_HandlerReachesStakeAndWithdrawal() public {
+    function test_invariant_HandlerReachesStakeAndWithdrawal() public {
         handler.deposit(0, uint96(config.courierBaseDeposit()));
         assertGt(handler.deposits(), 0, "deposit must be reachable");
 

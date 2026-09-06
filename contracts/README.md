@@ -113,6 +113,13 @@ sayaçtan üretilip calldata'ya ulaşan değerler tam olarak bu bağımlılığ�
 ve kapıyı kodun değil test filtresinin fonksiyonu haline getirir. Fixture'lar bu
 yüzden nonce/salt gibi değerleri argümanlardan türetir.
 
+Aynı gerekçeyle `test/v1/invariant/` altındaki **erişilebilirlik probları** da
+kapının dışındadır. Bunlar fuzzer'ın yetkili yolu gerçekten kat edebildiğini
+kanıtlayan vacuity guard'larıdır; ölçtükleri gas handler'ın defter tutmasının
+özelliğidir, protokolün değil, ve platformlar arasında birkaç on gas oynar.
+`test_invariant_` önekini taşırlar, böylece kapının `testFuzz|invariant_`
+filtresine takılırlar — testler olarak koşmaya devam ederler.
+
 ### Tekrarlanabilir derleme
 
 `foundry.toml` içinde `bytecode_hash = "none"`. Varsayılan davranışta solc,

@@ -524,7 +524,7 @@ contract DeliveryHubInvariantTest is StdInvariant, QuoteFixture {
     }
 
     /// @dev Guards against vacuity: the authorised lifecycle must be reachable.
-    function test_HandlerReachesFullLifecycle() public {
+    function test_invariant_HandlerReachesFullLifecycle() public {
         handler.createDelivery(0, 1, 20 ether);
         assertGt(handler.created(), 0, "creation reachable");
 
