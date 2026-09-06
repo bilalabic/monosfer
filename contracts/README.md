@@ -8,25 +8,11 @@ o dokümana yapılır.
 
 ---
 
-## 1) Depoda iki kontrat kümesi var
+## 1) V1 kontratları
 
-| | Konum | Durum |
-|---|---|---|
-| **V1** | `src/v1/` | **Aktif geliştirme.** Baseline sec. 32'deki mimari. |
-| **Legacy** | `src/*.sol` | **Dondurulmuş.** Hackathon MVP'si. Değiştirilmez, P5.3 cut-over'ında kaldırılır. |
-
-Legacy kontratlar (`Delivera`, `DeliveryEscrow`, `Leaderboard`, `MCRYToken`,
-`ReputationBadge`, `RewardDistributor`) karar **D1** gereği **byte-byte
-dondurulmuştur**. Mevcut demo çalışmaya devam etsin diye duruyorlar; üzerlerinde
-düzeltme yapılmaz.
-
-> ⚠️ Legacy kontratlarda **kalıcı para kilitlenmesine** yol açan doğrulanmış
-> açıklar var (iptal yolu yok, `Delivera`'da stake çekme yok, ödeme iten alıcı
-> tüm uzlaşmayı tıkıyor). Ayrıntı ve zincir üzerinde kanıt:
-> [`docs/contract-analysis-v1.0.md`](docs/contract-analysis-v1.0.md).
-> Yeni geliştirme V1 üzerinde yapılır.
-
-### V1 kontratları
+Aktif geliştirme `src/v1/` altındadır ve baseline sec. 32'deki mimariyi izler:
+sorumluluklar ayrı kontratlara bölünmüş, tüm değer tek bir vault'ta custody
+edilir, yetkiler tek bir rol yöneticisinden gelir.
 
 | Kontrat | Sorumluluk | Doküman |
 |---|---|---|
@@ -34,8 +20,10 @@ düzeltme yapılmaz.
 | `ProtocolConfig` | sec. 48 parametreleri, sınırlar, zaman kilidi, sürümleme | [governance](docs/governance.md) |
 | `SettlementVault` | Custody, pull-payment uzlaşma, ödeme gücü | [settlement](docs/settlement.md) |
 | `CourierRegistry` | Stake, C0/C1/C2, askı, teminat, custody | [courier-registry](docs/courier-registry.md) |
+| `DeliveryHub` | Teslimat yaşam döngüsü, teklif, fonlama, uzlaşma | [delivery-lifecycle](docs/delivery-lifecycle.md) |
+| `RiskQuoteVerifier` | İmzalı kapsam teklifi, zincirde kapsam bandı | [risk-quote](docs/risk-quote.md) |
 
-Sıradaki fazlar (`DeliveryHub`, `ReputationRegistry`, `DisputeCourt`, …):
+Sıradaki fazlar (`ReputationRegistry`, `DisputeCourt`, PoD attestation, …):
 [`docs/implementation-plan-v1.0.md`](docs/implementation-plan-v1.0.md).
 
 ---
@@ -76,7 +64,7 @@ submodule kurulumu gerekmez.
 |---|---|
 | `forge build` | Derle |
 | `forge test` | Tüm testler (`FOUNDRY_PROFILE=ci` daha ağır fuzz/invariant koşar) |
-| `forge fmt` | Biçimlendir (legacy `foundry.toml` içinde hariç tutulmuştur) |
+| `forge fmt` | Biçimlendir |
 | `forge snapshot --no-match-test "testFuzz\|invariant_"` | Gas snapshot'ını yeniden üret |
 | `slither .` | Statik analiz (`pip install slither-analyzer==0.11.6`) |
 
@@ -95,7 +83,7 @@ test etmez**.
 | Test | `forge test -vvv` |
 | Gas | `forge snapshot --check --no-match-test "testFuzz\|invariant_"` |
 | Statik analiz | `slither .` (`fail_on: medium`) |
-| Deploy dry-run | Her iki legacy script simüle edilir |
+| Deploy dry-run | Deploy script'leri simüle edilir |
 
 ### Arac surumu (pinlenmistir)
 
@@ -113,12 +101,20 @@ raporladığı gas, rastgele girdiler üzerinden bir ortalamadır ve fuzz seed'i
 değişir; snapshot'a dahil edilseler kapı dalgalı olurdu. Kapıya anlamını veren şey
 determinizmdir.
 
+### Tekrarlanabilir derleme
+
+`foundry.toml` içinde `bytecode_hash = "none"`. Varsayılan davranışta solc,
+bytecode'a **mutlak kaynak yollarını** içeren bir metadata hash'i gömer; aynı
+kaynak Windows'ta ve Linux CI'da farklı bytecode, farklı CREATE adresi ve —
+adres byte'ları calldata'ya girdiğinde — farklı gas üretir. Bu ayar makineler
+arasında aynı çıktıyı garanti eder.
+
 ### Statik analiz baseline
 
-Legacy kontratlar dondurulmuş olduğu için bulguları düzeltilemez. Kabul edilen
-baseline (48 bulgu: 0 high, 6 medium) `slither.config.json` ile filtrelenir ve
-[`docs/static-analysis-baseline.md`](docs/static-analysis-baseline.md)'de
-kayıtlıdır. Filtrelenmiş koşu **0 sonuç** vermelidir; vermiyorsa bulgu yeni kodadır.
+Kabul edilen baseline ve gerekçeleri
+[`docs/static-analysis-baseline.md`](docs/static-analysis-baseline.md)'de kayıtlı,
+filtreler `slither.config.json`'da. Filtrelenmiş koşu **0 sonuç** vermelidir;
+vermiyorsa bulgu yeni kodadır.
 
 ### Solidity satır sonları
 
@@ -146,9 +142,8 @@ Paket ESM + `.d.ts` yayınlar: TypeScript frontend tip denetimi, JavaScript back
 editör tamamlaması alır. Ayrıntı ve gerekçe:
 [`docs/integration.md`](docs/integration.md).
 
-> Adresleri `chain.ts`, `.env` veya bu README'ye **kopyalamayın**. Daha önce üç
-> ayrı kopya vardı ve birbirinden kaymışlardı; bu katman tam olarak onu önlemek
-> için var.
+> Adresleri `chain.ts`, `.env` veya bu README'ye **kopyalamayın**. Elle tutulan her
+> kopya zamanla diğerlerinden ayrışır; bu katman tam olarak onu önlemek için var.
 
 ---
 
@@ -178,16 +173,32 @@ Deploy sonrası manifest ve export'ları güncelleyin (sec. 5).
 
 | Suite | Kapsam |
 |---|---|
-| `test/legacy/` | Dondurulmuş MVP'nin regresyon ağı. **Değiştirilmeden geçmeye devam etmeli.** |
 | `test/v1/` | V1 birim + fuzz testleri |
 | `test/v1/invariant/` | Durum-bilgili invariant suiteleri |
+| `test/legacy/` | Devralınan kontratların regresyon ağı (bkz. sec. 8) |
 
 Güncel sonuçlar, faz faz özet ve testnet senaryoları:
 [`docs/verification-log.md`](docs/verification-log.md).
 
 ---
 
-## 8) Dosya haritası
+## 8) Devralınan kontratlar
+
+`src/*.sol` altındaki kontratlar (`Delivera`, `DeliveryEscrow`, `Leaderboard`,
+`MCRYToken`, `ReputationBadge`, `RewardDistributor`) V1 öncesi MVP'ye aittir.
+Karar **D1** gereği **byte-byte dondurulmuşlardır**: mevcut demo çalışmaya devam
+etsin diye dururlar, düzeltme almazlar ve P5.3 cut-over'ında kaldırılacaklardır.
+`test/legacy/` davranışlarını sabitler, `foundry.toml` ve `slither.config.json`
+onları biçimlendirme ve statik analiz kapsamının dışında tutar.
+
+> ⚠️ Bu kontratlarda **kalıcı para kilitlenmesine** yol açan doğrulanmış açıklar
+> vardır. Zincir üzerinde kanıtlanmış ayrıntı:
+> [`docs/contract-analysis-v1.0.md`](docs/contract-analysis-v1.0.md).
+> Yeni geliştirme yalnızca V1 üzerinde yapılır.
+
+---
+
+## 9) Dosya haritası
 
 ```text
 contracts/
@@ -197,14 +208,16 @@ contracts/
 │   │   ├── config/             ProtocolConfig, BaselineParams
 │   │   ├── vault/              SettlementVault
 │   │   ├── registry/           CourierRegistry
+│   │   ├── hub/                DeliveryHub
+│   │   ├── risk/               CoverageQuote, RiskQuoteVerifier
 │   │   └── interfaces/         ISettlementVault
-│   └── *.sol                   legacy (dondurulmus)
+│   └── *.sol                   devralinan (dondurulmus, bkz. sec. 8)
 ├── script/
 │   ├── v1/DeployCore.s.sol     V1 deploy (rol ayrilik korumalari)
-│   └── Deploy*.s.sol           legacy deploy
+│   └── Deploy*.s.sol           devralinan deploy
 ├── test/
 │   ├── v1/                     V1 testleri + invariant/
-│   └── legacy/                 dondurulmus regresyon agi
+│   └── legacy/                 devralinan regresyon agi
 ├── deployments/10143.json      adres manifesti (tek gercek kaynak)
 ├── exports/                    URETILEN: frontend/backend paketi
 ├── tools/build-exports.mjs     export ureticisi

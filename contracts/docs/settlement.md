@@ -1,113 +1,108 @@
-# Settlement Modeli: Pull-Payment ve Ödeme Güvenliği
+# Uzlaşma Modeli: Pull-Payment ve Ödeme Gücü
 
-> Kalıcı referans (sürümsüz, sistem geliştikçe güncellenir).
-> Kaynak: `src/v1/vault/SettlementVault.sol`, `src/v1/interfaces/ISettlementVault.sol`
+> Kalıcı referans. Kaynak: `src/v1/vault/SettlementVault.sol`, `src/v1/interfaces/ISettlementVault.sol`
 > Baseline: sec. 32.2, sec. 18.2, sec. 45, invariant sec. 33-1, sec. 33-2, sec. 33-3, sec. 33-11
-> Faz: P0.3
 
 ---
 
-## 1. Çözülen sorun
-
-Legacy kontratlar ödemeyi **iterek** yapıyor:
-
-```solidity
-(bool ok, ) = platformTreasury.call{value: treasuryFee}("");
-require(okTreasury, "Treasury transfer failed");   // <-- burası
-```
-
-Tek bir alıcı (hazine, ödül havuzu veya kurye) MON kabul etmiyorsa `confirmDelivery`
-**kalıcı olarak** revert eder: kuryenin ödemesi de, müşterinin escrow'u da donar.
-Bu teorik değil — canlı zincirde yeniden üretildi (`[PoC-D]`) ve deploy edilmiş
-legacy Delivera kontratı şu anda hiçbir fonksiyonun serbest bırakamayacağı MON tutuyor.
-
----
-
-## 2. Çözüm: settlement değer göndermez
-
-`SettlementVault`'ta uzlaşma **sadece defter kaydıdır**.
+## 1. Uzlaşma defter kaydıdır; değeri yalnızca sahibi taşır
 
 ```text
 lock()        -> kontrat parayı alır, "locked" olarak kaydeder
-releaseLock() -> locked bakiyeyi claimable'a tasir    (HIC dis cagri yok)
-claim()       -> sahibi kendi parasini ceker          (tek deger cikisi)
+releaseLock() -> locked bakiyeyi claimable'a taşır      (hiç dış çağrı yok)
+claim()       -> sahibi kendi parasını çeker            (tek değer çıkışı)
 ```
 
-`releaseLock` hiçbir dış çağrı yapmadığı için **üçüncü bir taraf onu
-başarısız kılamaz**. Değer kontrattan tek bir yerde çıkar: `_payOut`, ve oraya
-yalnızca kişi kendi parasını çekerken gelinir. O transfer başarısız olursa
-sadece **o çağıranın kendi işlemi** geri alınır; bakiyesi yerinde kalır ve
-başka hiç kimse etkilenmez.
+`releaseLock` ve `refundLock` hiçbir dış çağrı yapmaz. Değer kontrattan tek bir
+yerden çıkar — `_payOut` — ve oraya yalnızca kişi **kendi** parasını çekerken
+gelinir.
 
-| Legacy | V1 Vault |
-|---|---|
-| Uzlaşma sırasında 3 dış çağrı | **0 dış çağrı** |
-| Bir alıcı reddederse herkes bloke | Sadece o alıcı çekemiyor |
-| Bloke olan para kalıcı kilitli | Bakiye duruyor, sonra çekilebilir |
+Bunun kazandırdığı özellik:
+
+> **Hiçbir alacaklı, başka bir alacaklıyı etkileyemez.**
+
+MON kabul etmeyen, tüm gazı yakan veya hiç `claim` çağırmayan bir cüzdan yine de
+alacaklandırılır; diğer herkes normal şekilde uzlaşır ve parasını çeker.
+Başarısız bir çekim yalnızca o çağıranın işlemini geri alır, bakiyesi yerinde
+kalır ve sonra tekrar denenebilir.
+
+Bu, uzlaşmanın üçüncü bir tarafın davranışına bağımlı olmamasını sağlar
+(sec. 18.2, invariant sec. 33-11).
 
 ---
 
-## 3. Ödeme gücü (solvency)
+## 2. Ödeme gücü
+
+Durum değiştiren her çağrıdan sonra:
 
 ```text
 address(this).balance  >=  totalLocked + totalClaimable
 ```
 
-Bu koşul **her durum değiştiren çağrıdan sonra kodda** kontrol edilir (`solvent`
-modifier), sadece testlerde değil — ihlali kullanıcı parasının çoktan gitmiş
-olması demektir.
+Bu koşul **kodda** kontrol edilir (`solvent` modifier), sadece testlerde değil —
+ihlali, kullanıcı parasının çoktan gitmiş olması demektir.
 
 Bakiye yükümlülüğü **aşabilir**: `selfdestruct` ile zorla gönderilen değer
-kaydedilmez, `surplus()` ile raporlanır ve kimse tarafından talep edilemez.
-Bakiye yükümlülüğün **altına düşemez**.
+kaydedilmez, `surplus()` ile raporlanır ve kimse talep edemez. Bakiye
+yükümlülüğün **altına düşemez**.
 
 ### Değer korunumu
 
-`releaseLock` ödemelerin toplamının kilide **tam eşit** olmasını şart koşar —
-"en fazla" değil. Eksik ödeme, sahibi olmayan bir bakiye artığı bırakırdı ki bu
-tam da kaldırmaya çalıştığımız legacy davranışı.
+`releaseLock`, ödemelerin toplamının kilide **tam eşit** olmasını şart koşar —
+"en fazla" değil. Eksik ödeme, sahibi olmayan bir bakiye artığı bırakırdı: gürültülü
+bir hata değil, sessiz bir sızıntı (invariant sec. 33-3).
 
 ---
 
-## 4. Reentrancy ve CEI
+## 3. Reentrancy ve CEI
 
 - Tüm değer çıkışları `nonReentrant`.
-- `_payOut` bakiyeyi **dış çağrıdan önce** sıfırlar (checks-effects-interactions).
+- `_payOut` bakiyeyi **dış çağrıdan önce** sıfırlar.
 - Uzlaşma yolunda hiç dış çağrı olmadığı için orada reentrancy yüzeyi yoktur.
 
-`ReentrantClaimer` testi: alıcı `receive()` içinden `claim()`'i tekrar çağırıyor,
-reddediliyor, ve saldırgan tam olarak kendi bakiyesini **bir kez** alıyor.
+`ReentrantClaimer` testi bunu doğrular: alıcı `receive()` içinden `claim()`'i
+tekrar çağırır, reddedilir ve tam olarak kendi bakiyesini **bir kez** alır.
 
 ---
 
-## 5. Pause davranışı
+## 4. Pause davranışı
 
-sec. 45 "duraklatma sırasında güvenli kullanıcı çıkışı" şart koşuyor:
+sec. 45 duraklatma sırasında güvenli kullanıcı çıkışı şart koşar:
 
 | İşlem | Pause'da | Gerekçe |
 |---|---|---|
 | `lock`, `topUpLock` | **Bloke** | Yeni emanet alınmaz |
-| `releaseLock`, `refundLock` | **Açık** | Sadece iç bakiyeyi kullanıcıya doğru taşır |
-| `claim`, `claimFor` | **Açık** | Kullanıcı her zaman çıkabilmeli |
+| `releaseLock`, `refundLock` | **Açık** | Yalnızca iç bakiyeyi kullanıcıya doğru taşır |
+| `claim`, `claimFor` | **Açık** | Duraklatılmış bir protokolden çıkılabilmeli |
 
 ---
 
-## 6. Yetkilendirme
+## 5. Yetkilendirme
 
-`lock` / `releaseLock` / `refundLock` yalnızca `VAULT_CONTROLLER_ROLE` sahibi
-çağırabilir. Bu rol **kontratlara** verilir (P1'de `DeliveryHub`, P4'te
-`DisputeCourt`), asla bir EOA'ya. `claim` ve `claimFor` izinsizdir.
+`lock` / `releaseLock` / `releasePartial` / `refundLock` yalnızca
+`VAULT_CONTROLLER_ROLE` ile çağrılır. Bu rol **kontratlara** verilir
+(`DeliveryHub`, `CourierRegistry`, ileride `DisputeCourt`), asla bir EOA'ya.
 
-`claimFor` her zaman **hesabın kendisine** öder, çağırana değil — bir keeper
-kullanıcıya parayı itebilir ama yönünü değiştiremez.
+`claim` ve `claimFor` izinsizdir. `claimFor` her zaman **hesabın kendisine** öder,
+çağırana değil — bir keeper kullanıcıya parayı itebilir ama yönünü değiştiremez.
+
+### Tam ve kısmi serbest bırakma
+
+| Fonksiyon | Kural | Kullanım |
+|---|---|---|
+| `releaseLock` | Toplam kilide **tam eşit**, kilit kapanır | Teslimat uzlaşması |
+| `releasePartial` | Toplam kilitten **küçük olabilir**, kalan kilitli kalır | Stake çekimi, slash |
+
+Katı eşitlik kuralı teslimat yolunda korunur; kısmi çekim yalnızca bakiyenin bir
+kısmının serbest kalması gereken yerlerde kullanılır.
 
 ---
 
-## 7. sec. 32.12 rail soyutlaması
+## 6. Rail soyutlaması (sec. 32.12)
 
 Teslimat yaşam döngüsü `ISettlementVault` arayüzüne bağımlıdır, somut kontrata
-değil. V1 native MON ile uzlaşan tek bir uygulama sunar; ileride farklı bir ödeme
-rayı **aynı arayüzün başka bir uygulaması** olur, `DeliveryHub`'da değişiklik
+değil. V1 native MON ile uzlaşan tek bir uygulama sunar; farklı bir ödeme rayı
+**aynı arayüzün başka bir uygulaması** olur ve `DeliveryHub`'da değişiklik
 gerektirmez.
 
 Arayüz bilinçli olarak **push-free**: içinde üçüncü tarafa değer gönderen tek bir
@@ -115,7 +110,7 @@ fonksiyon yoktur.
 
 ---
 
-## 8. Test kapsamı
+## 7. Test kapsamı
 
 24 birim/fuzz testi + 4 invariant.
 
@@ -126,20 +121,9 @@ fonksiyon yoktur.
 | `invariant_NeverOwesMoreThanDeposited` | Vault aldığından fazlasını borçlanamaz |
 | `invariant_LockedMatchesActiveLocks` | Uzlaşmış kilit tekrar değer tutamaz |
 
-Değer korunumu, vault'un kendi sayaçlarına değil, **dışarıdan gözlenen akışa**
+Değer korunumu, vault'un kendi sayaçlarına değil **dışarıdan gözlenen akışa**
 karşı ölçülür; böylece vault kendi yanlış rakamlarıyla tutarlı olarak testi
-geçemez.
+geçemez. Fuzzer sürekli olarak MON kabul etmeyen bir alıcıya kredi verir.
 
-Boşluk güvencesi: `test_HandlerReachesSettlementAndClaim` fuzzer'ın gerçekten
-uzlaşma ve çekim noktasına ulaşabildiğini kanıtlar — yoksa invariant'lar boşuna
-yeşil olurdu.
-
----
-
-## 9. Henüz yapılmayanlar
-
-Bu faz custody **primitifini** kurar. Teslimat-özel muhasebe sonraki fazlarda:
-
-- kurye teminatı ve ek bond → P0.4 `CourierRegistry`
-- teslimat escrow'u ve iptal/timeout yolları → P1.1 `DeliveryHub`
-- jüri stake'i ve tahkim ücretleri → P4 `DisputeCourt`
+`test_HandlerReachesSettlementAndClaim`, fuzzer'ın gerçekten uzlaşma ve çekim
+noktasına ulaşabildiğini kanıtlar — yoksa invariant'lar boşuna yeşil olurdu.

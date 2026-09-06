@@ -19,9 +19,11 @@
 
 **Ayrılık kuralı:** deploy script'i şu çiftlerin aynı adres olmasını **reddeder** —
 `DEFAULT_ADMIN`/`CONFIG_ADMIN`, `CONFIG_ADMIN`/`EMERGENCY`, `CONFIG_ADMIN`/`SIGNER_ADMIN`,
-`DEFAULT_ADMIN`/`EMERGENCY`, ve iki imzacı birbirinden. Legacy script'lerde hazine,
-ödül havuzu ve tüm sahiplikler tek deployer EOA'sıydı (sec. 32.11 ihlali); burada bu
-yapısal olarak imkânsız.
+`DEFAULT_ADMIN`/`EMERGENCY`, ve iki imzacı birbirinden.
+
+Bu, sec. 32.11'in "hiçbir tek EOA kritik izinleri kontrol etmemeli" kuralını bir
+konvansiyon olmaktan çıkarıp deploy zamanında zorunlu hale getirir: yanlış
+yapılandırılmış bir dağıtım sessizce çalışmaz, hiç deploy olmaz.
 
 Deploy script'i rolleri **vermez**. Sadece `DEFAULT_ADMIN`'i atar; diğer roller
 multisig'in kendisi tarafından verilir, böylece deployer anahtarı hiçbir zaman

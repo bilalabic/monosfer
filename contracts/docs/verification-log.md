@@ -30,7 +30,8 @@ et → senaryoları koş → dokümante et.
 | P0.3 | `SettlementVault` | Tamamlandı |
 | P0.4 | `CourierRegistry` | Tamamlandı |
 | P1.1 | `DeliveryHub` | Tamamlandı |
-| P1.3 | İmzalı risk teklifi, kapsam | Sırada |
+| P1.3 | İmzalı risk teklifi, kapsam | Tamamlandı |
+| P2 | Pickup/PoD kanıtları | Sırada |
 
 ---
 
@@ -152,6 +153,29 @@ teklifle de üç bin teklifle de aynı gası harcar (sec. 45).
    `invariant_AllDeliveriesCanBeDrivenTerminal` gerçekten çalışmaya başladı.
 3. Invariant fonksiyonu içinde `vm.warp(block.timestamp + delta)` ilk turdan sonra
    ilerlemiyordu; mutlak zaman damgasıyla düzeltildi.
+
+## P1.3 — İmzalı risk teklifi
+
+P1.1'de müşteri hem risk katmanını hem teminatı kendisi seçebiliyordu; R3 bir
+teslimat 1 wei teminatla açılabilirdi. Artık ikisi de imzalı bir tekliften geliyor.
+
+**Asıl tasarım kararı:** imza gerekli ama yeterli değil. Yalnızca imza istemek
+güveni taşırdı, azaltmazdı — anahtarı tutan herkes sıfır teminat fiyatlayabilirdi.
+Bu yüzden her teklif zincirin kendi hesapladığı bir banda karşı da kontrol edilir.
+Ele geçirilmiş bir imzacı yanlış fiyatlayabilir, **teminatı kaldıramaz**.
+Ayrıntı: [`risk-quote.md`](risk-quote.md).
+
+**Slither üç bulgu çıkardı, üçü de düzeltildi:**
+1. `divide-before-multiply` — band sınırları önce baseline'ı bölüp sonra çarpanı
+   uyguluyordu, yani iki kez yuvarlıyordu. Tek bölmeye indirildi; kabul aralığı
+   artık yuvarlamaya değil politikaya bağlı.
+2. `shadowing-state` — hub, miras aldığı sabiti gölgeliyordu.
+3. `reentrancy-benign` — iptal yolunda durum, dış çağrılardan sonra yazılıyordu;
+   sıralama CEI'ye çekildi.
+
+**Cheatcode tuzağının beşinci varyantı:** bu kez view çağrısı `_create(q, signQuote(...))`
+içinde **argüman** olarak `vm.expectRevert`'i yutuyordu. Tarama deseni bu biçimi de
+yakalayacak şekilde genişletildi; tüm test dosyaları yeniden tarandı, başka örnek yok.
 
 ## Testnet doğrulaması
 

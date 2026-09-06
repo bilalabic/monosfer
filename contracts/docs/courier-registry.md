@@ -31,19 +31,19 @@ aynı anda koruyamaz (invariant sec. 33-4).
 kurye başına bir kilitte durur. Böylece protokolün tamamı için **tek bir ödeme
 gücü invariant'ı** olur, kontrat başına bir tane değil (sec. 32.2).
 
-Kilit id'si registry adresini içerir. K-1 kararıyla kontratlar immutable ve göç
-yolu "yeniden deploy" olduğu için, yeni bir registry eski vault'u paylaşır;
-adres olmasaydı kilit id'leri çakışır ve yeni registry hiç kilit açamazdı.
+Kilit id'si registry adresini içerir; böylece aynı vault'u paylaşan iki registry,
+aynı kurye için farklı id türetir. Kontratlar immutable olup yeniden deploy ile
+değiştirildiği ve vault yinelenen id'yi reddettiği için, bu olmadan yeni bir
+registry mevcut bir kurye için hiç kilit açamazdı.
 
 ---
 
-## 3. Her kurye çıkabilir
+## 3. Çıkış her zaman ulaşılabilir
 
-Legacy'de `Delivera.withdrawStake` **hiç yoktu** ve `DeliveryEscrow`'da
-`isRegisteredCourier` tek yönlü bir bayraktı — minimumdaki bir kurye hiçbir şey
-çekemiyordu. İkisi de canlı zincirde yeniden üretildi.
-
-Burada çıkış yolu her zaman açıktır:
+Teminatı ve elinde paketi olmayan bir kurye tüm stake'ini talep edebilir,
+cooldown'ı bekler ve alır. Kayıt durumu bir bayrak değil, **stake'ten
+türetilir**: minimumun altına düşen kurye otomatik olarak devre dışı kalır, yani
+hiçbir durum kimseyi bu rolde hapsedemez.
 
 ```bash
 # 1) talep (veya tam cikis icin deregister)
@@ -59,11 +59,9 @@ cast send $REGISTRY "executeWithdrawal()" ...
 cast send $VAULT "claim()" ...
 ```
 
-`deregister` yalnızca **teminat ve elde paket yokken** çalışır — paketi taşıyan
-ya da bir teslimatı garanti eden kurye çekip gidemez.
-
-Kayıt durumu bayrak değil, **stake'ten türetilir**: minimumun altına düşünce
-seviye otomatik olarak `None` olur (çekim ve slash sonrası).
+`deregister` yalnızca **teminat ve elde paket yokken** çalışır. Bu iki ön koşul
+dürüst olanlardır: paketi taşıyan ya da bir teslimatı garanti eden kurye çekip
+gidemez.
 
 `executeWithdrawal` doğrudan MON göndermez, vault'ta `claimable`'a yazar — cüzdanı
 MON kabul etmeyen bir kurye hiçbir şeyi tıkayamaz.
