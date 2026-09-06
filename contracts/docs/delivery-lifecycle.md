@@ -49,7 +49,7 @@ kalır.
 |---|---|---|
 | `Bidding` | `Expired` | Ortada değer yok |
 | `AwaitingFunding` | `Cancelled` | Fonlayan taraf iade alır (sec. 10) |
-| `ReadyForPickup` | `Cancelled` | Kurye gelmedi; escrow müşteriye |
+| `ReadyForPickup` | `Cancelled` | Devir gerçekleşmedi; escrow müşteriye, teminat kesintisiz serbest |
 | `InTransit` | `ReturnRequired` | Kurye pakete sahip; iade etmeli |
 | `ReturnRequired` | `Returned` | Deterministik; müşteri tam iade alır |
 | `DeliveredPending` | `Completed` | İzinsiz finalize edici (sec. 16) |
@@ -139,9 +139,18 @@ teklifinden gelir ve zincirde yeniden sınırlandırılır — bkz.
 
 ---
 
-## 8. Sonraki fazların bağlanacağı yerler
+## 8. Devir yetkisi
 
-- **P2.1 / P2.2:** `confirmPickup` ve `submitDeliveryProof` şu an çağıran
-  kontrolü yapar; yerlerine EIP-712 pickup imzası ve PoD attestation'ı gelecek.
-  Durum geçişleri değişmeyecek.
+`confirmPickup` kurye tarafından gönderilir ve **gönderenin imzalı kabulünü**
+taşır (sec. 12). Hiçbir taraf paketi tek başına transit'e sokamaz — bkz.
+[`proofs.md`](proofs.md).
+
+`submitDeliveryProof` hâlâ çağıran kontrolü yapar; P2.2'de yerine imzalı PoD
+attestation'ı gelecek. Durum geçişleri değişmeyecek.
+
+---
+
+## 9. Sonraki fazların bağlanacağı yerler
+
+- **P2.2:** PoD attestation'ı (cüzdansız alıcı, sec. 15).
 - **P4:** `Disputed` / `Resolved` durumları ve ihtilaf girişi.

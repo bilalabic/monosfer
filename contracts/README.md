@@ -22,8 +22,9 @@ edilir, yetkiler tek bir rol yöneticisinden gelir.
 | `CourierRegistry` | Stake, C0/C1/C2, askı, teminat, custody | [courier-registry](docs/courier-registry.md) |
 | `DeliveryHub` | Teslimat yaşam döngüsü, teklif, fonlama, uzlaşma | [delivery-lifecycle](docs/delivery-lifecycle.md) |
 | `RiskQuoteVerifier` | İmzalı kapsam teklifi, zincirde kapsam bandı | [risk-quote](docs/risk-quote.md) |
+| `PickupProofVerifier` | Gönderenin imzalı devir kabulü, nonce, ERC-1271 | [proofs](docs/proofs.md) |
 
-Sıradaki fazlar (`ReputationRegistry`, `DisputeCourt`, PoD attestation, …):
+Sıradaki fazlar (PoD attestation, `ReputationRegistry`, `DisputeCourt`, …):
 [`docs/implementation-plan-v1.0.md`](docs/implementation-plan-v1.0.md).
 
 ---
@@ -210,6 +211,7 @@ contracts/
 │   │   ├── registry/           CourierRegistry
 │   │   ├── hub/                DeliveryHub
 │   │   ├── risk/               CoverageQuote, RiskQuoteVerifier
+│   │   ├── proof/              PickupProof, PickupProofVerifier
 │   │   └── interfaces/         ISettlementVault
 │   └── *.sol                   devralinan (dondurulmus, bkz. sec. 8)
 ├── script/

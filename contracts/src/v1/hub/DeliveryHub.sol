@@ -8,6 +8,8 @@ import {ProtocolAccessManager} from "../access/ProtocolAccessManager.sol";
 import {ProtocolConfig} from "../config/ProtocolConfig.sol";
 import {CourierRegistry} from "../registry/CourierRegistry.sol";
 import {ISettlementVault} from "../interfaces/ISettlementVault.sol";
+import {PickupProof} from "../proof/PickupProof.sol";
+import {PickupProofVerifier} from "../proof/PickupProofVerifier.sol";
 import {CoverageQuote} from "../risk/CoverageQuote.sol";
 import {RiskQuoteVerifier} from "../risk/RiskQuoteVerifier.sol";
 
@@ -50,8 +52,14 @@ import {RiskQuoteVerifier} from "../risk/RiskQuoteVerifier.sol";
  *      the risk service and re-bounded on-chain (sec. 6, sec. 8.3). Price and ETA
  *      come from the bid version the customer explicitly selects, so a courier
  *      cannot re-price between being read and being chosen.
+ *
+ *      ## Custody changes hands only when both sides are present
+ *
+ *      `confirmPickup` is sent by the courier and carries the sender's
+ *      signed acceptance of the handover (sec. 12). Neither party can move
+ *      the package into transit alone.
  */
-contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier {
+contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier {
     // --------------------------------------------------------------------
     // State machine (sec. 11)
     // --------------------------------------------------------------------
@@ -425,13 +433,24 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier {
 
     /**
      * @notice Courier takes custody. Moves straight to IN_TRANSIT (sec. 11).
-     * @dev Authorisation is currently the caller check; P2 replaces it with an
-     *      EIP-712 PickupAcceptance signature. The state transition is unchanged.
+     * @dev Both sides must be present: the courier sends the transaction and the
+     *      sender's EIP-712 acceptance authorises the handover (sec. 12). The
+     *      acceptance is validated and its nonce burned before the state moves,
+     *      so a failed proof leaves the delivery exactly where it was.
+     * @param deliveryId The delivery being picked up.
+     * @param acceptance The sender's signed acceptance of this handover.
+     * @param signature EOA or ERC-1271 signature over `hashPickupAcceptance`.
      */
-    function confirmPickup(uint256 deliveryId) external nonReentrant whenNotPaused {
+    function confirmPickup(uint256 deliveryId, PickupProof.Acceptance calldata acceptance, bytes calldata signature)
+        external
+        nonReentrant
+        whenNotPaused
+    {
         Delivery storage d = _requireDelivery(deliveryId);
         _requireState(deliveryId, d, State.ReadyForPickup);
         if (msg.sender != d.courier) revert NotCourier(msg.sender);
+
+        _consumePickupAcceptance(deliveryId, d.courier, d.customer, acceptance, signature);
 
         emit PickupConfirmed(deliveryId, d.courier);
         _transition(deliveryId, d, State.InTransit, config.transitWindow());
