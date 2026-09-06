@@ -26,6 +26,7 @@ gün, sürüm ise içeriğin revizyonu. Kronolojik sıralanır, en yenisi en alt
 | [`2026-09-06-testnet-verification-report-v1.0.md`](2026-09-06-testnet-verification-report-v1.0.md) | Monad testnet canlı doğrulaması: 2 sistem deploy, tam yaşam döngüsü, 4 kritik bulgunun zincirde kanıtı |
 | [`2026-09-06-p0.2-verification-report-v1.0.md`](2026-09-06-p0.2-verification-report-v1.0.md) | P0.2 (ProtocolAccessManager + ProtocolConfig) doğrulaması, 59/59 test, kapatılan bulgular |
 | [`2026-09-06-p0.3-verification-report-v1.0.md`](2026-09-06-p0.3-verification-report-v1.0.md) | P0.3 (SettlementVault) doğrulaması, 86/86 test, 65.536 çağrılık ödeme gücü invariant'ı, verilen kararlar |
+| [`2026-09-06-v1-core-testnet-verification-v1.0.md`](2026-09-06-v1-core-testnet-verification-v1.0.md) | P0.1–P0.3 çekirdeğinin Monad testnet doğrulaması: 10 senaryo, tutarsızlık düzeltmeleri, deploy adresleri |
 
 ## Depo kökündeki ilgili doküman
 
