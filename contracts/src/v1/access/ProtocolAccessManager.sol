@@ -39,6 +39,10 @@ contract ProtocolAccessManager is AccessControlDefaultAdminRules {
     /// @notice May perform treasury operations.
     bytes32 public constant TREASURER_ROLE = keccak256("MONOSFER_TREASURER_ROLE");
 
+    /// @notice Protocol contracts allowed to lock and settle funds in SettlementVault.
+    /// @dev Held by contracts (DeliveryHub, DisputeCourt), never by an EOA.
+    bytes32 public constant VAULT_CONTROLLER_ROLE = keccak256("MONOSFER_VAULT_CONTROLLER_ROLE");
+
     /// @notice Delay between scheduling an unpause and being able to execute it.
     uint256 public constant UNPAUSE_DELAY = 6 hours;
 
