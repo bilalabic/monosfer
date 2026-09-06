@@ -37,7 +37,7 @@ contract ProtocolConfigTest is Test {
 
     // ---------------------------------------------------------- construction
 
-    /// @dev The deployed config must literally match the §48 table.
+    /// @dev The deployed config must literally match the sec. 48 table.
     function test_Constructor_MatchesBaselineTable() public view {
         ProtocolConfig.Params memory p = config.params();
         assertEq(p.protocolFeeBps, 200, "protocol fee must be 2% (sec.48)");
@@ -105,7 +105,7 @@ contract ProtocolConfigTest is Test {
         _deployWith(p);
     }
 
-    /// @dev §6: a higher risk tier can never require less coverage than a lower one.
+    /// @dev sec. 6: a higher risk tier can never require less coverage than a lower one.
     function test_Bounds_RejectsInvertedCoverageOrdering() public {
         ProtocolConfig.Params memory p = BaselineParams.baseline();
         p.coverageBpsR1 = 9_000; // above R2
@@ -120,7 +120,7 @@ contract ProtocolConfigTest is Test {
         _deployWith(p);
     }
 
-    /// @dev §28: each appeal round must be strictly larger than the previous one.
+    /// @dev sec. 28: each appeal round must be strictly larger than the previous one.
     function test_Bounds_RejectsNonIncreasingJuryRounds() public {
         ProtocolConfig.Params memory p = BaselineParams.baseline();
         p.juryAppeal1Size = 3; // equal to first round
@@ -128,7 +128,7 @@ contract ProtocolConfigTest is Test {
         _deployWith(p);
     }
 
-    /// @dev §27: a juror can never be locked for more than the minimum stake.
+    /// @dev sec. 27: a juror can never be locked for more than the minimum stake.
     function test_Bounds_RejectsLockAboveStake() public {
         ProtocolConfig.Params memory p = BaselineParams.baseline();
         p.jurorLockPerCase = p.minJurorStake + 1;
@@ -136,7 +136,7 @@ contract ProtocolConfigTest is Test {
         _deployWith(p);
     }
 
-    /// @dev §27: a juror can never be slashed for more than is locked for the case.
+    /// @dev sec. 27: a juror can never be slashed for more than is locked for the case.
     function test_Bounds_RejectsSlashAboveLock() public {
         ProtocolConfig.Params memory p = BaselineParams.baseline();
         p.nonRevealSlash = p.jurorLockPerCase + 1;
@@ -331,7 +331,7 @@ contract ProtocolConfigTest is Test {
         assertEq(config.coverageBpsForTier(3), 10_000);
     }
 
-    /// @dev §49: R4 stays disabled; asking for it must not silently return 0.
+    /// @dev sec. 49: R4 stays disabled; asking for it must not silently return 0.
     function test_CoverageForTier_RejectsR4AndUnknown() public {
         vm.expectRevert(abi.encodeWithSelector(ProtocolConfig.OutOfBounds.selector, "riskTier"));
         config.coverageBpsForTier(4);
@@ -342,7 +342,7 @@ contract ProtocolConfigTest is Test {
 
     // ----------------------------------------------------------------- fuzz
 
-    /// @dev Invariant §33-15: no accepted fee can exceed the hard ceiling.
+    /// @dev Invariant sec. 33-15: no accepted fee can exceed the hard ceiling.
     function testFuzz_FeeNeverExceedsCeiling(uint16 feeBps) public {
         ProtocolConfig.Params memory p = BaselineParams.baseline();
         p.protocolFeeBps = feeBps;

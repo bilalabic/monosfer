@@ -59,11 +59,11 @@ legacy debt, not as new work:
 
 | Slither finding | Gap-analysis item |
 |---|---|
-| `low-level-calls` on `Delivera._releasePayment` (3 raw `.call` sends) | §2.3 push-payment settlement, reproduced as **[PoC-D]** |
-| `low-level-calls` on `DeliveryEscrow._safeTransfer` / `_safeTransferFrom` | §3.5 unhardened token calls (`data.length == 0` treated as success) |
-| `reentrancy-benign` / `reentrancy-events` | §3.4 no `ReentrancyGuard`, CEI violated in `_releasePayment` |
-| `immutable-states` on `Leaderboard.owner`, `ReputationBadge.owner`, `RewardDistributor.owner` | §3.7 single-EOA owners with no transfer path |
-| `divide-before-multiply` in score math | §2.7 unbounded, unversioned reputation score |
+| `low-level-calls` on `Delivera._releasePayment` (3 raw `.call` sends) | sec. 2.3 push-payment settlement, reproduced as **[PoC-D]** |
+| `low-level-calls` on `DeliveryEscrow._safeTransfer` / `_safeTransferFrom` | sec. 3.5 unhardened token calls (`data.length == 0` treated as success) |
+| `reentrancy-benign` / `reentrancy-events` | sec. 3.4 no `ReentrancyGuard`, CEI violated in `_releasePayment` |
+| `immutable-states` on `Leaderboard.owner`, `ReputationBadge.owner`, `RewardDistributor.owner` | sec. 3.7 single-EOA owners with no transfer path |
+| `divide-before-multiply` in score math | sec. 2.7 unbounded, unversioned reputation score |
 | `unused-return` | Return value of an external call ignored |
 
 ## `forge lint` (built-in)
@@ -75,13 +75,13 @@ items:
 
 | Warning | Count | Gap-analysis item |
 |---|---:|---|
-| `reentrancy-events` | 13 | §3.4 no `ReentrancyGuard`, CEI violated |
+| `reentrancy-events` | 13 | sec. 3.4 no `ReentrancyGuard`, CEI violated |
 | `unsafe-typecast` | 11 | Unchecked narrowing casts in stats/score math |
-| `arbitrary-send-eth` | 8 | §2.3 raw `.call` value sends, **[PoC-D]** |
+| `arbitrary-send-eth` | 8 | sec. 2.3 raw `.call` value sends, **[PoC-D]** |
 | `unused-return` | 6 | Ignored external call return values |
-| `missing-events-access-control` | 5 | §3.7 privileged setters without events |
-| `erc20-unchecked-transfer` | 3 | §3.5 unhardened token calls |
-| `divide-before-multiply` | 2 | §2.7 score math precision loss |
+| `missing-events-access-control` | 5 | sec. 3.7 privileged setters without events |
+| `erc20-unchecked-transfer` | 3 | sec. 3.5 unhardened token calls |
+| `divide-before-multiply` | 2 | sec. 2.7 score math precision loss |
 
 ## Regenerating
 

@@ -8,9 +8,9 @@ import {ProtocolAccessManager} from "../access/ProtocolAccessManager.sol";
 /**
  * @title ProtocolConfig
  * @notice Bounded, versioned, timelocked configuration for the MONOSFER V1 protocol.
- * @dev Baseline refs: §32.1 (configuration must be bounded and versioned),
- *      §48 (initial testnet parameters), §45 (delayed privileged configuration),
- *      §34 (configuration events), invariant §33-15 (admin actions stay in bounds).
+ * @dev Baseline refs: sec. 32.1 (configuration must be bounded and versioned),
+ *      sec. 48 (initial testnet parameters), sec. 45 (delayed privileged configuration),
+ *      sec. 34 (configuration events), invariant sec. 33-15 (admin actions stay in bounds).
  *
  *      Every numeric parameter has hard MIN/MAX constants. No role, and no
  *      sequence of calls, can move a parameter outside its band: validation runs
@@ -37,29 +37,29 @@ contract ProtocolConfig {
 
     struct Params {
         // --- economics ---
-        uint16 protocolFeeBps; // §48: 2% = 200
-        uint16 coverageBpsR1; // §6: 25% = 2500
-        uint16 coverageBpsR2; // §6: 60% = 6000
-        uint16 coverageBpsR3; // §6: 100% = 10000
+        uint16 protocolFeeBps; // sec. 48: 2% = 200
+        uint16 coverageBpsR1; // sec. 6: 25% = 2500
+        uint16 coverageBpsR2; // sec. 6: 60% = 6000
+        uint16 coverageBpsR3; // sec. 6: 100% = 10000
         // --- limits ---
-        uint8 maxActiveCustody; // §9: 1
-        uint8 customerMaxActiveListings; // §48: 5
-        uint8 juryFirstSize; // §48: 3
-        uint8 juryAppeal1Size; // §48: 5
-        uint8 juryAppeal2Size; // §48: 7
+        uint8 maxActiveCustody; // sec. 9: 1
+        uint8 customerMaxActiveListings; // sec. 48: 5
+        uint8 juryFirstSize; // sec. 48: 3
+        uint8 juryAppeal1Size; // sec. 48: 5
+        uint8 juryAppeal2Size; // sec. 48: 7
         // --- windows (seconds) ---
-        uint32 fundingWindow; // §48: 15 min
-        uint32 challengeWindow; // §48: 24 h
-        uint32 courierWithdrawalCooldown; // §48: 24 h
-        uint32 riskQuoteValidity; // §48: 5 min
-        uint32 podAttestationValidity; // §48: 10 min
-        uint32 rewardClaimWindow; // §48: 90 days
-        uint32 rewardReclaimDelay; // §48: 7 days
+        uint32 fundingWindow; // sec. 48: 15 min
+        uint32 challengeWindow; // sec. 48: 24 h
+        uint32 courierWithdrawalCooldown; // sec. 48: 24 h
+        uint32 riskQuoteValidity; // sec. 48: 5 min
+        uint32 podAttestationValidity; // sec. 48: 10 min
+        uint32 rewardClaimWindow; // sec. 48: 90 days
+        uint32 rewardReclaimDelay; // sec. 48: 7 days
         // --- stakes (wei) ---
-        uint128 courierBaseDeposit; // §48: 10 MON
-        uint128 minJurorStake; // §48: 10 MON
-        uint128 jurorLockPerCase; // §48: 2 MON
-        uint128 nonRevealSlash; // §48: 1 MON
+        uint128 courierBaseDeposit; // sec. 48: 10 MON
+        uint128 minJurorStake; // sec. 48: 10 MON
+        uint128 jurorLockPerCase; // sec. 48: 2 MON
+        uint128 nonRevealSlash; // sec. 48: 1 MON
     }
 
     // --------------------------------------------------------------------
@@ -142,7 +142,7 @@ contract ProtocolConfig {
     uint64 private _pendingRandomnessAdapterReadyAt;
 
     // --------------------------------------------------------------------
-    // Events (§34: configuration events are on-chain)
+    // Events (sec. 34: configuration events are on-chain)
     // --------------------------------------------------------------------
 
     event ParamsProposed(uint64 indexed forVersion, uint64 readyAt, Params params);
@@ -266,7 +266,7 @@ contract ProtocolConfig {
         return _params.courierWithdrawalCooldown;
     }
 
-    /// @notice Coverage basis points for a risk tier. Tier 4 (R4) is disabled per §49.
+    /// @notice Coverage basis points for a risk tier. Tier 4 (R4) is disabled per sec. 49.
     function coverageBpsForTier(uint8 tier) external view returns (uint16) {
         if (tier == 1) return _params.coverageBpsR1;
         if (tier == 2) return _params.coverageBpsR2;
@@ -391,7 +391,7 @@ contract ProtocolConfig {
         if (p.coverageBpsR1 > MAX_COVERAGE_BPS) revert OutOfBounds("coverageBpsR1");
         if (p.coverageBpsR2 > MAX_COVERAGE_BPS) revert OutOfBounds("coverageBpsR2");
         if (p.coverageBpsR3 > MAX_COVERAGE_BPS) revert OutOfBounds("coverageBpsR3");
-        // Higher risk tier must never require less coverage than a lower one (§6).
+        // Higher risk tier must never require less coverage than a lower one (sec. 6).
         if (p.coverageBpsR1 > p.coverageBpsR2 || p.coverageBpsR2 > p.coverageBpsR3) {
             revert InvalidCoverageOrdering();
         }
@@ -409,7 +409,7 @@ contract ProtocolConfig {
         _validateJurySize(p.juryFirstSize);
         _validateJurySize(p.juryAppeal1Size);
         _validateJurySize(p.juryAppeal2Size);
-        // Each appeal round must be strictly larger than the previous one (§28).
+        // Each appeal round must be strictly larger than the previous one (sec. 28).
         if (p.juryFirstSize >= p.juryAppeal1Size || p.juryAppeal1Size >= p.juryAppeal2Size) {
             revert InvalidJuryOrdering();
         }
@@ -447,14 +447,14 @@ contract ProtocolConfig {
             revert OutOfBounds("minJurorStake");
         }
         // A juror can never be asked to lock more than the minimum stake, and can
-        // never be slashed for more than is locked for the case (§27).
+        // never be slashed for more than is locked for the case (sec. 27).
         if (p.jurorLockPerCase > p.minJurorStake) revert InvalidJurorEconomics();
         if (p.nonRevealSlash > p.jurorLockPerCase) revert InvalidJurorEconomics();
     }
 
     function _validateJurySize(uint8 size) internal pure {
         if (size < MIN_JURY_SIZE || size > MAX_JURY_SIZE) revert OutOfBounds("jurySize");
-        // Even panels can deadlock; §28 uses 3/5/7 throughout.
+        // Even panels can deadlock; sec. 28 uses 3/5/7 throughout.
         if (size % 2 == 0) revert JurySizeMustBeOdd(size);
     }
 }

@@ -2,7 +2,7 @@
 
 > Kalıcı referans (sürümsüz, sistem geliştikçe güncellenir).
 > Kaynak: `src/v1/vault/SettlementVault.sol`, `src/v1/interfaces/ISettlementVault.sol`
-> Baseline: §32.2, §18.2, §45, invariant §33-1, §33-2, §33-3, §33-11
+> Baseline: sec. 32.2, sec. 18.2, sec. 45, invariant sec. 33-1, sec. 33-2, sec. 33-3, sec. 33-11
 > Faz: P0.3
 
 ---
@@ -82,7 +82,7 @@ reddediliyor, ve saldırgan tam olarak kendi bakiyesini **bir kez** alıyor.
 
 ## 5. Pause davranışı
 
-§45 "duraklatma sırasında güvenli kullanıcı çıkışı" şart koşuyor:
+sec. 45 "duraklatma sırasında güvenli kullanıcı çıkışı" şart koşuyor:
 
 | İşlem | Pause'da | Gerekçe |
 |---|---|---|
@@ -103,7 +103,7 @@ kullanıcıya parayı itebilir ama yönünü değiştiremez.
 
 ---
 
-## 7. §32.12 rail soyutlaması
+## 7. sec. 32.12 rail soyutlaması
 
 Teslimat yaşam döngüsü `ISettlementVault` arayüzüne bağımlıdır, somut kontrata
 değil. V1 native MON ile uzlaşan tek bir uygulama sunar; ileride farklı bir ödeme
@@ -121,8 +121,8 @@ fonksiyon yoktur.
 
 | Invariant | Garanti |
 |---|---|
-| `invariant_VaultIsSolvent` | §33-1 — bakiye ≥ yükümlülük |
-| `invariant_ValueIsConserved` | §33-3 — (yatırılan − çekilen) = yükümlülük |
+| `invariant_VaultIsSolvent` | sec. 33-1 — bakiye ≥ yükümlülük |
+| `invariant_ValueIsConserved` | sec. 33-3 — (yatırılan − çekilen) = yükümlülük |
 | `invariant_NeverOwesMoreThanDeposited` | Vault aldığından fazlasını borçlanamaz |
 | `invariant_LockedMatchesActiveLocks` | Uzlaşmış kilit tekrar değer tutamaz |
 

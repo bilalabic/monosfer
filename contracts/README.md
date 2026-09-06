@@ -3,7 +3,7 @@
 Monad Testnet (`chainId 10143`) üzerinde çalışan MONOSFER akıllı kontratları.
 
 Kapsam ve şartname: depo kökündeki
-`MONOSFER_Initial_Release_Base_Documentation_v1.0.md`. Bu README'deki `§` atıfları
+`MONOSFER_Initial_Release_Base_Documentation_v1.0.md`. Bu README'deki `sec. ` atıfları
 o dokümana yapılır.
 
 ---
@@ -12,7 +12,7 @@ o dokümana yapılır.
 
 | | Konum | Durum |
 |---|---|---|
-| **V1** | `src/v1/` | **Aktif geliştirme.** Baseline §32'deki mimari. |
+| **V1** | `src/v1/` | **Aktif geliştirme.** Baseline sec. 32'deki mimari. |
 | **Legacy** | `src/*.sol` | **Dondurulmuş.** Hackathon MVP'si. Değiştirilmez, P5.3 cut-over'ında kaldırılır. |
 
 Legacy kontratlar (`Delivera`, `DeliveryEscrow`, `Leaderboard`, `MCRYToken`,
@@ -31,7 +31,7 @@ düzeltme yapılmaz.
 | Kontrat | Sorumluluk | Doküman |
 |---|---|---|
 | `ProtocolAccessManager` | Roller, acil durum pause, gecikmeli unpause | [governance](docs/governance.md) |
-| `ProtocolConfig` | §48 parametreleri, sınırlar, zaman kilidi, sürümleme | [governance](docs/governance.md) |
+| `ProtocolConfig` | sec. 48 parametreleri, sınırlar, zaman kilidi, sürümleme | [governance](docs/governance.md) |
 | `SettlementVault` | Custody, pull-payment uzlaşma, ödeme gücü | [settlement](docs/settlement.md) |
 | `CourierRegistry` | Stake, C0/C1/C2, askı, teminat, custody | [courier-registry](docs/courier-registry.md) |
 
@@ -52,10 +52,10 @@ Sıradaki fazlar (`DeliveryHub`, `ReputationRegistry`, `DisputeCourt`, …):
 `foundry.toml` içinde `monad_testnet` alias'ı tanımlıdır.
 
 **Deploy adresleri:** [`deployments/10143.json`](deployments/10143.json).
-Adresleri elle hiçbir yere kopyalamayın — §5'e bakın.
+Adresleri elle hiçbir yere kopyalamayın — sec. 5'e bakın.
 
 > **Monad'a özgü:** gas, harcanan miktar üzerinden değil
-> **`gasLimit × maxFeePerGas`** üzerinden peşin rezerve edilir (§43). Fazla büyük
+> **`gasLimit × maxFeePerGas`** üzerinden peşin rezerve edilir (sec. 43). Fazla büyük
 > gas limiti tamponu, bakiyesi yeterli bir hesabın işlemini bile
 > "insufficient balance" ile reddettirir. İşlem gönderirken `--gas-limit` verin.
 
@@ -170,7 +170,7 @@ roller multisig'in kendisi tarafından verilir, böylece deployer anahtarı hiç
 operasyonel rol taşımaz. Rol matrisi ve runbook:
 [`docs/governance.md`](docs/governance.md).
 
-Deploy sonrası manifest ve export'ları güncelleyin (§5).
+Deploy sonrası manifest ve export'ları güncelleyin (sec. 5).
 
 ---
 

@@ -1,7 +1,7 @@
 # Kurye Kaydı: Stake, Seviyeler, Custody
 
 > Kalıcı referans. Kaynak: `src/v1/registry/CourierRegistry.sol`
-> Baseline: §32.3, §4.3–4.5, §8.2, §8.3, §9, §48, invariant §33-4 ve §33-10
+> Baseline: sec. 32.3, sec. 4.3–4.5, sec. 8.2, sec. 8.3, sec. 9, sec. 48, invariant sec. 33-4 ve sec. 33-10
 > Faz: P0.4
 
 ---
@@ -19,9 +19,9 @@ stake = available + reserved + pendingWithdrawal
 | `pendingWithdrawal` | Çekim için ayrılmış, cooldown'da bekliyor |
 
 Çekim talebinin **ayrı bir kalem** olması kritik: aksi halde kurye çıkış talebi
-verip aynı MON'u bekleme süresince teminat olarak kullanabilirdi (§8.3).
+verip aynı MON'u bekleme süresince teminat olarak kullanabilirdi (sec. 8.3).
 Rezervasyonlar toplamalı ve `available` ile sınırlıdır — aynı MON iki teslimatı
-aynı anda koruyamaz (invariant §33-4).
+aynı anda koruyamaz (invariant sec. 33-4).
 
 ---
 
@@ -29,7 +29,7 @@ aynı anda koruyamaz (invariant §33-4).
 
 `CourierRegistry` **hiçbir zaman değer tutmaz**. Stake `SettlementVault`'ta,
 kurye başına bir kilitte durur. Böylece protokolün tamamı için **tek bir ödeme
-gücü invariant'ı** olur, kontrat başına bir tane değil (§32.2).
+gücü invariant'ı** olur, kontrat başına bir tane değil (sec. 32.2).
 
 Kilit id'si registry adresini içerir. K-1 kararıyla kontratlar immutable ve göç
 yolu "yeniden deploy" olduğu için, yeni bir registry eski vault'u paylaşır;
@@ -69,7 +69,7 @@ seviye otomatik olarak `None` olur (çekim ve slash sonrası).
 MON kabul etmeyen bir kurye hiçbir şeyi tıkayamaz.
 
 Talep ve uygulama **pause sırasında da** çalışır: kullanıcı duraklatılmış bir
-protokolden çıkabilmelidir (§45).
+protokolden çıkabilmelidir (sec. 45).
 
 ---
 
@@ -79,21 +79,21 @@ protokolden çıkabilmelidir (§45).
 |---|---|---|
 | `None` | Stake minimumun altında | Yok |
 | `C0` | Base deposit yatırınca **otomatik** | R1 |
-| `C1` | `VERIFIER_ROLE` atar (zincir dışı doğrulama, §4.4) | R1, R2 |
-| `C2` | `VERIFIER_ROLE` atar (§4.5) | R1, R2, R3 |
+| `C1` | `VERIFIER_ROLE` atar (zincir dışı doğrulama, sec. 4.4) | R1, R2 |
+| `C2` | `VERIFIER_ROLE` atar (sec. 4.5) | R1, R2, R3 |
 
-R4 devre dışıdır (§49). `isEligibleFor` ayrıca askıya alınmış kuryeyi ve custody
+R4 devre dışıdır (sec. 49). `isEligibleFor` ayrıca askıya alınmış kuryeyi ve custody
 limitindeki kuryeyi eler.
 
 **Rozet teminatın yerine geçmez:** C0 üzerindeki her seviye base deposit'in yerinde
-olmasını şart koşar (§3.3, §24).
+olmasını şart koşar (sec. 3.3, sec. 24).
 
 ---
 
 ## 5. Fiziksel custody
 
-`MAX_ACTIVE_CUSTODY` (§48: **1**) `ProtocolConfig`'den okunur ve `openCustody`
-tarafından uygulanır (invariant §33-10). Limitteki kurye yeni işe uygun değildir.
+`MAX_ACTIVE_CUSTODY` (sec. 48: **1**) `ProtocolConfig`'den okunur ve `openCustody`
+tarafından uygulanır (invariant sec. 33-10). Limitteki kurye yeni işe uygun değildir.
 
 `openCustody` / `closeCustody` / `reserveCollateral` / `releaseCollateral` /
 `slashCollateral` yalnızca `REGISTRY_CONTROLLER_ROLE` ile çağrılır. Bu rol

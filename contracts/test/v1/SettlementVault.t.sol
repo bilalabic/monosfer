@@ -158,7 +158,7 @@ contract SettlementVaultTest is Test {
         assertEq(vault.totalClaimable(), 1 ether);
     }
 
-    /// @dev Invariant §33-3: a short payout would strand the remainder.
+    /// @dev Invariant sec. 33-3: a short payout would strand the remainder.
     function test_Release_RejectsPayoutMismatch() public {
         _lock(LOCK_A, customer, 1 ether);
 
@@ -171,7 +171,7 @@ contract SettlementVaultTest is Test {
         vault.releaseLock(LOCK_A, _payouts(courier, 1.1 ether));
     }
 
-    /// @dev Invariant §33-2: a delivery settles only once.
+    /// @dev Invariant sec. 33-2: a delivery settles only once.
     function test_Release_CannotSettleTwice() public {
         _lock(LOCK_A, customer, 1 ether);
         vm.prank(controller);
@@ -333,7 +333,7 @@ contract SettlementVaultTest is Test {
 
     // --------------------------------------------------------------- pause
 
-    /// @dev §45: taking new custody stops, but users can always exit.
+    /// @dev sec. 45: taking new custody stops, but users can always exit.
     function test_Pause_BlocksLockButAllowsClaim() public {
         _lock(LOCK_A, customer, 1 ether);
         vm.prank(controller);

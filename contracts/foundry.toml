@@ -9,6 +9,18 @@ optimizer = true
 optimizer_runs = 200
 via_ir = true
 
+# Reproducible builds across machines.
+#
+# By default solc embeds a metadata hash in the bytecode, and that metadata
+# includes absolute source paths. A Windows checkout and a Linux CI runner
+# therefore produce different bytecode, different CREATE addresses, and — where
+# address bytes reach calldata — slightly different gas. That surfaced as a
+# gas-snapshot failure in CI that could not be reproduced locally.
+#
+# Dropping the hash makes the output path-independent. The CBOR trailer is kept
+# so the compiler version is still discoverable for source verification (§45).
+bytecode_hash = "none"
+
 [profile.default.fuzz]
 runs = 256
 

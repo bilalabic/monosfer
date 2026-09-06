@@ -2,7 +2,7 @@
 
 > Kalıcı referans (sürümsüz, sistem geliştikçe güncellenir).
 > Kaynak kontratlar: `src/v1/access/ProtocolAccessManager.sol`, `src/v1/config/ProtocolConfig.sol`
-> Baseline: §32.11, §45, §32.1, §48, invariant §33-15
+> Baseline: sec. 32.11, sec. 45, sec. 32.1, sec. 48, invariant sec. 33-15
 > Faz: P0.2
 
 ---
@@ -20,7 +20,7 @@
 **Ayrılık kuralı:** deploy script'i şu çiftlerin aynı adres olmasını **reddeder** —
 `DEFAULT_ADMIN`/`CONFIG_ADMIN`, `CONFIG_ADMIN`/`EMERGENCY`, `CONFIG_ADMIN`/`SIGNER_ADMIN`,
 `DEFAULT_ADMIN`/`EMERGENCY`, ve iki imzacı birbirinden. Legacy script'lerde hazine,
-ödül havuzu ve tüm sahiplikler tek deployer EOA'sıydı (§32.11 ihlali); burada bu
+ödül havuzu ve tüm sahiplikler tek deployer EOA'sıydı (sec. 32.11 ihlali); burada bu
 yapısal olarak imkânsız.
 
 Deploy script'i rolleri **vermez**. Sadece `DEFAULT_ADMIN`'i atar; diğer roller
@@ -52,7 +52,7 @@ Her sayısal parametrenin derleme-zamanı MIN/MAX sabiti vardır. Doğrulama hem
 hem de **uygulama** anında çalışır, böylece daha önce yapılmış bir öneri sonradan
 sınır dışına kaçamaz.
 
-| Parametre | Sınır | §48 değeri |
+| Parametre | Sınır | sec. 48 değeri |
 |---|---|---|
 | `protocolFeeBps` | ≤ 1.000 (%10 tavan) | 200 (%2) |
 | `coverageBps` R1/R2/R3 | ≤ 10.000 ve **R1 ≤ R2 ≤ R3** | 2.500 / 6.000 / 10.000 |
@@ -134,9 +134,9 @@ Script şu durumlarda **deploy etmeden** durur: eksik rol adresi
 ## 6. Bilinen açık kararlar
 
 - **Yükseltilebilirlik:** kontratlar şu an **immutable**. Baseline bu konuda sessiz;
-  §32 proxy listelemiyor. Testnet'te yeniden deploy ucuz. UUPS isteniyorsa şimdi
+  sec. 32 proxy listelemiyor. Testnet'te yeniden deploy ucuz. UUPS isteniyorsa şimdi
   karar verilmeli — sonradan geçmek depolama düzeni kısıtları getirir.
-- **Multisig:** roller şu an EOA olabilir. §45 kritik kontrol için multisig şart
+- **Multisig:** roller şu an EOA olabilir. sec. 45 kritik kontrol için multisig şart
   koşuyor; testnet deploy'undan önce Safe kurulmalı (plan kararı **D5**).
 - **CI kapsamı:** `contracts.yml` henüz V1 deploy script'inin dry-run'ını
   içermiyor; CI'a dokunulmaması istendiği için eklenmedi.

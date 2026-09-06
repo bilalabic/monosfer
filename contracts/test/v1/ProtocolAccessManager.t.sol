@@ -217,7 +217,7 @@ contract ProtocolAccessManagerTest is Test {
         manager.requireNotPaused();
     }
 
-    /// @dev Invariant §33-15: a role holder must not be able to widen their own authority.
+    /// @dev Invariant sec. 33-15: a role holder must not be able to widen their own authority.
     function test_RoleHolderCannotGrantThemselvesAnotherRole() public {
         bytes32 emergencyRole = manager.EMERGENCY_ROLE();
         bytes32 configRole = manager.CONFIG_ADMIN_ROLE();

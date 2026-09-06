@@ -181,14 +181,14 @@ contract SettlementVaultInvariantTest is StdInvariant, Test {
         targetContract(address(handler));
     }
 
-    /// @dev Invariant §33-1: the vault is solvent. Its balance must always cover
+    /// @dev Invariant sec. 33-1: the vault is solvent. Its balance must always cover
     ///      every liability it has recorded.
     function invariant_VaultIsSolvent() public view {
         assertGe(address(vault).balance, vault.totalLiabilities(), "vault balance below recorded liabilities");
     }
 
     /**
-     * @dev Invariant §33-3: accounting conserves value. Measured against flow
+     * @dev Invariant sec. 33-3: accounting conserves value. Measured against flow
      *      observed outside the vault, so the vault cannot satisfy this by being
      *      internally consistent about wrong numbers.
      */
@@ -203,7 +203,7 @@ contract SettlementVaultInvariantTest is StdInvariant, Test {
         assertLe(vault.totalLiabilities(), handler.totalDeposited(), "liabilities exceed all value ever deposited");
     }
 
-    /// @dev A settled lock can never hold value again (invariant §33-2, §33-6).
+    /// @dev A settled lock can never hold value again (invariant sec. 33-2, sec. 33-6).
     function invariant_LockedMatchesActiveLocks() public view {
         if (handler.activeLockCount() == 0) {
             assertEq(vault.totalLocked(), 0, "no active locks but totalLocked is non-zero");

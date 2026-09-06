@@ -11,10 +11,10 @@ import {ISettlementVault} from "../interfaces/ISettlementVault.sol";
 /**
  * @title CourierRegistry
  * @notice Courier stake, verification level, suspension and physical custody.
- * @dev Baseline refs: §32.3 (registry responsibilities), §4.3–4.5 (C0/C1/C2),
- *      §8.2 (base security deposit), §8.3 (the same base collateral cannot
- *      protect two deliveries), §9 (MAX_ACTIVE_CUSTODY), §48 (24h withdrawal
- *      cooldown), invariants §33-4 and §33-10.
+ * @dev Baseline refs: sec. 32.3 (registry responsibilities), sec. 4.3–4.5 (C0/C1/C2),
+ *      sec. 8.2 (base security deposit), sec. 8.3 (the same base collateral cannot
+ *      protect two deliveries), sec. 9 (MAX_ACTIVE_CUSTODY), sec. 48 (24h withdrawal
+ *      cooldown), invariants sec. 33-4 and sec. 33-10.
  *
  *      ## Every courier can always leave
  *
@@ -32,7 +32,7 @@ import {ISettlementVault} from "../interfaces/ISettlementVault.sol";
  *
  *      This contract holds no value. Stake is custodied by SettlementVault under
  *      one lock per courier, so there is a single solvency invariant for the
- *      whole protocol instead of one per contract (§32.2).
+ *      whole protocol instead of one per contract (sec. 32.2).
  *
  *      ## Three-way split of a courier's stake
  *
@@ -42,10 +42,10 @@ import {ISettlementVault} from "../interfaces/ISettlementVault.sol";
  *      `reserved` is committed to deliveries in flight; `pendingWithdrawal` is
  *      earmarked and in cooldown. Keeping the withdrawal earmark separate is
  *      what stops a courier from requesting an exit and then using the same MON
- *      as collateral while it waits (§8.3).
+ *      as collateral while it waits (sec. 8.3).
  */
 contract CourierRegistry is ReentrancyGuard {
-    /// @notice §4.3–4.5. `None` means not an active courier.
+    /// @notice sec. 4.3–4.5. `None` means not an active courier.
     enum VerificationLevel {
         None,
         C0,
@@ -153,7 +153,7 @@ contract CourierRegistry is ReentrancyGuard {
     /**
      * @notice Stake MON to become, or stay, an active courier.
      * @dev Reaching the configured base deposit promotes an unregistered wallet
-     *      to C0 (§4.3). Higher levels are set by the verifier, never by staking.
+     *      to C0 (sec. 4.3). Higher levels are set by the verifier, never by staking.
      */
     function depositStake() external payable nonReentrant whenNotPaused {
         if (msg.value == 0) revert ZeroAmount();
@@ -191,7 +191,7 @@ contract CourierRegistry is ReentrancyGuard {
      * @notice Begin the cooldown before withdrawing part of the stake.
      * @dev The amount is earmarked immediately so it cannot also back a delivery
      *      while it waits. Deliberately callable while paused: a courier must be
-     *      able to start leaving a paused protocol (§45).
+     *      able to start leaving a paused protocol (sec. 45).
      */
     function requestWithdrawal(uint256 amount) external nonReentrant {
         if (amount == 0) revert ZeroAmount();
@@ -280,7 +280,7 @@ contract CourierRegistry is ReentrancyGuard {
 
     /**
      * @notice Commit part of a courier's stake to a delivery.
-     * @dev Invariant §33-4: reservations are additive and bounded by available
+     * @dev Invariant sec. 33-4: reservations are additive and bounded by available
      *      stake, so the same MON can never back two deliveries at once.
      */
     function reserveCollateral(address courier, uint256 amount) external onlyRegistryController {
@@ -346,7 +346,7 @@ contract CourierRegistry is ReentrancyGuard {
     // Physical custody — controller only
     // --------------------------------------------------------------------
 
-    /// @dev Invariant §33-10: a courier may hold at most `maxActiveCustody` packages.
+    /// @dev Invariant sec. 33-10: a courier may hold at most `maxActiveCustody` packages.
     function openCustody(address courier) external onlyRegistryController {
         Courier storage c = _couriers[courier];
         if (c.level == VerificationLevel.None) revert NotActiveCourier(courier);
@@ -377,9 +377,9 @@ contract CourierRegistry is ReentrancyGuard {
     // --------------------------------------------------------------------
 
     /**
-     * @notice Record an off-chain verification decision (§4.4, §4.5).
+     * @notice Record an off-chain verification decision (sec. 4.4, sec. 4.5).
      * @dev Promotion above C0 still requires the base deposit to be in place, so
-     *      a verification badge can never stand in for collateral (§24, §3.3).
+     *      a verification badge can never stand in for collateral (sec. 24, sec. 3.3).
      */
     function setVerificationLevel(address courier, VerificationLevel level) external onlyVerifier {
         if (courier == address(0)) revert ZeroAddress();
@@ -418,7 +418,7 @@ contract CourierRegistry is ReentrancyGuard {
 
     /**
      * @notice Whether a courier may currently bid on a delivery of `riskTier`.
-     * @dev §6: R1 needs C0+, R2 needs C1+, R3 needs C2. R4 is disabled (§49).
+     * @dev sec. 6: R1 needs C0+, R2 needs C1+, R3 needs C2. R4 is disabled (sec. 49).
      */
     function isEligibleFor(address courier, uint8 riskTier) external view returns (bool) {
         Courier storage c = _couriers[courier];

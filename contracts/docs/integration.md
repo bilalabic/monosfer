@@ -1,7 +1,7 @@
 # Frontend / Backend Entegrasyonu: Adresler, ABI'lar, Tipler
 
 > Kalıcı referans. Kaynak: `contracts/deployments/`, `contracts/tools/build-exports.mjs`, `contracts/exports/`
-> Baseline: §34 (on-chain/off-chain sınırı), §40 (işlem UX ve hata ayrımı), plan kararı **D3**
+> Baseline: sec. 34 (on-chain/off-chain sınırı), sec. 40 (işlem UX ve hata ayrımı), plan kararı **D3**
 
 ---
 
@@ -13,7 +13,7 @@ Adresler üç ayrı yerde elle tutuluyordu ve **birbirinden kaymıştı**:
 |---|---|
 | `frontend/app/config/chain.ts` | Modüler sistemin 5 adresi (sabit kodlanmış) |
 | `frontend/.env` | `VITE_DELIVERA_ADDRESS` — **farklı** bir kontratın adresi |
-| `contracts/README.md` §9 | Üçüncü bir kopya |
+| `contracts/README.md` sec. 9 | Üçüncü bir kopya |
 
 Üstelik hiçbir yerde ABI yoktu; frontend ve backend hiçbir kontrat çağrısını
 çözemiyordu.
@@ -86,7 +86,7 @@ import { getAddress, ABIS, explorerTxUrl } from '../../contracts/exports/index.j
 Paket ESM + `.d.ts` yayınlar: TypeScript frontend tip denetimi alır, JavaScript
 backend editör tamamlaması alır.
 
-### Hata ayrımı (§40)
+### Hata ayrımı (sec. 40)
 
 `ABIS.<Kontrat>` custom error tanımlarını içerir, böylece viem'in
 `decodeErrorResult`'ı revert'i isimlendirebilir:
@@ -96,7 +96,7 @@ backend editör tamamlaması alır.
 //        ProtocolConfig.ProposalNotReady, ProtocolAccessManager.EnforcedPause
 ```
 
-Bu, §40'ın "yanlış ağ / bayat teklif / yetersiz teminat" ayrımını yapabilmesi
+Bu, sec. 40'ın "yanlış ağ / bayat teklif / yetersiz teminat" ayrımını yapabilmesi
 için gereken temeldir.
 
 ---

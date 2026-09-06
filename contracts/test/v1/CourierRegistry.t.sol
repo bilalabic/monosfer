@@ -216,7 +216,7 @@ contract CourierRegistryTest is Test {
 
     // ----------------------------------------------------------- collateral
 
-    /// @dev Invariant §33-4: the same stake cannot back two deliveries.
+    /// @dev Invariant sec. 33-4: the same stake cannot back two deliveries.
     function test_Collateral_CannotBeReservedTwice() public {
         _stake(courier, DEPOSIT);
 
@@ -288,7 +288,7 @@ contract CourierRegistryTest is Test {
 
     // -------------------------------------------------------------- custody
 
-    /// @dev Invariant §33-10: MAX_ACTIVE_CUSTODY cannot be exceeded.
+    /// @dev Invariant sec. 33-10: MAX_ACTIVE_CUSTODY cannot be exceeded.
     function test_Custody_LimitEnforced() public {
         _stake(courier, DEPOSIT);
         uint32 limit = config.maxActiveCustody();
@@ -358,14 +358,14 @@ contract CourierRegistryTest is Test {
         assertEq(uint8(registry.courierOf(courier).level), uint8(CourierRegistry.VerificationLevel.C2));
     }
 
-    /// @dev §24/§3.3: a verification level can never stand in for collateral.
+    /// @dev sec. 24/sec. 3.3: a verification level can never stand in for collateral.
     function test_Verification_RequiresBaseDeposit() public {
         vm.expectRevert(abi.encodeWithSelector(CourierRegistry.StakeBelowMinimum.selector, 0, DEPOSIT));
         vm.prank(verifier);
         registry.setVerificationLevel(courier, CourierRegistry.VerificationLevel.C2);
     }
 
-    /// @dev §6 tier gating: R1 needs C0+, R2 needs C1+, R3 needs C2, R4 disabled.
+    /// @dev sec. 6 tier gating: R1 needs C0+, R2 needs C1+, R3 needs C2, R4 disabled.
     function test_Eligibility_MatchesRiskTiers() public {
         _stake(courier, DEPOSIT);
 
@@ -412,7 +412,7 @@ contract CourierRegistryTest is Test {
 
     // ---------------------------------------------------------------- pause
 
-    /// @dev §45: new stake stops during pause, but leaving must stay possible.
+    /// @dev sec. 45: new stake stops during pause, but leaving must stay possible.
     function test_Pause_BlocksDepositButAllowsExit() public {
         _stake(courier, DEPOSIT);
 

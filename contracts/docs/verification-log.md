@@ -44,7 +44,7 @@ kaldı, taşımanın davranışsal olarak nötr olduğunun kanıtı).
 formatsız dosya, reentrancy'li kontrat, kurcalanmış gas değeri. Dördü de kırmızı
 yandı. Hiç kırmızıya dönmeyen kapı, kapı değildir.
 
-**Toolchain yükseltmesi:** Foundry 1.5.1 → 1.8.1 (baseline §53 `>= 1.8.0` öneriyor).
+**Toolchain yükseltmesi:** Foundry 1.5.1 → 1.8.1 (baseline sec. 53 `>= 1.8.0` öneriyor).
 Gas ölçümleri kontrat değişmeden %25–61 arttı — bu regresyon değil, Foundry'nin
 ölçüm yöntemi değişikliği; canlı zincirde davranış birebir aynı kaldı. Sonuç:
 `.gas-snapshot` yalnızca **pinlenmiş sürüm içinde** anlamlıdır.
@@ -57,7 +57,7 @@ Gas ölçümleri kontrat değişmeden %25–61 arttı — bu regresyon değil, F
 
 ## P0.2 — ProtocolAccessManager + ProtocolConfig
 
-Dört ayrık rol, **anında pause / 6 saat gecikmeli unpause**, §48'in 20
+Dört ayrık rol, **anında pause / 6 saat gecikmeli unpause**, sec. 48'in 20
 parametresi derleme-zamanı MIN/MAX sınırlarıyla, zaman kilidi ve monotonik
 sürümleme. Doğrulama hem öneri hem **uygulama** anında çalışır, böylece daha önce
 verilmiş bir öneri sonradan sınır dışına kaçamaz.
@@ -97,7 +97,7 @@ karşı ölçülüyor — böylece vault kendi yanlış rakamlarıyla tutarlı o
 geçemez.
 
 Ayrıca doğrulandı: reentrancy reddediliyor, gas yakan alıcı krediyi engelleyemiyor,
-pause'da `claim` her zaman açık (§45 güvenli çıkış), zorla gönderilen değer
+pause'da `claim` her zaman açık (sec. 45 güvenli çıkış), zorla gönderilen değer
 muhasebeyi bozmuyor.
 
 ---
@@ -110,7 +110,7 @@ kilitte durur — protokolün tamamı için tek ödeme gücü invariant'ı.
 
 `stake = available + reserved + pendingWithdrawal`. Çekim talebinin ayrı kalem
 olması, kuryenin çıkış talebi verip aynı MON'u bekleme süresince teminat olarak
-kullanmasını engeller (§8.3).
+kullanmasını engeller (sec. 8.3).
 
 **`[PoC-B]` kapandı:** legacy `Delivera`'da `withdrawStake` hiç yoktu ve
 `DeliveryEscrow`'da `isRegisteredCourier` tek yönlü bayraktı. Artık teminatı ve
@@ -144,8 +144,8 @@ Koşulan senaryolar (hepsi geçti):
 | S9 | İmzacı döndürme | `SIGNER_ADMIN` anında döndürdü; `CONFIG_ADMIN` döndüremedi |
 | S10 | Pause | `CONFIG_ADMIN` pause edemedi; `EMERGENCY` etti; `lock` bloke, **`claim` açık**; erken unpause reddedildi (6 saat ölçüldü) |
 | S11 | Stake ve C0 | 10.1 MON → C0; **registry bakiyesi 0**, vault 10.1 MON |
-| S12 | §33-4 teminat | Fazla rezerve reddedildi; rezerveli stake çekilemedi |
-| S13 | §33-10 custody | 2. paket reddedildi; paket varken `deregister` reddedildi |
+| S12 | sec. 33-4 teminat | Fazla rezerve reddedildi; rezerveli stake çekilemedi |
+| S13 | sec. 33-10 custody | 2. paket reddedildi; paket varken `deregister` reddedildi |
 | S14 | Seviyeler / askı | C2 → R3 uygun; R4 devre dışı; askıdayken rezervasyon reddedildi |
 | S15 | Çekim cooldown | Beklemeden çekim reddedildi; **bekleyen çekim teminat olarak kullanılamadı** |
 
@@ -161,7 +161,7 @@ yolları yerelde `vm.warp` ile test edildi.
 ### Monad'a özgü operasyonel bulgu
 
 `depositStake` önce "Signer had insufficient balance" ile reddedildi: kuryede
-32 MON, işlem 10 MON. Sebep baseline **§43** — Monad gası harcanan değil,
+32 MON, işlem 10 MON. Sebep baseline **sec. 43** — Monad gası harcanan değil,
 **`gasLimit × maxFeePerGas`** üzerinden peşin rezerve ediyor ve aracın otomatik
 tamponu fazla büyüktü. Açık `--gas-limit` ile çözüldü. Aynı kök sebep rol
 hesaplarını da işlem gönderemez hale getirmişti.

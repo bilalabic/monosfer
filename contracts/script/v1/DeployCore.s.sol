@@ -12,8 +12,8 @@ import {CourierRegistry} from "../../src/v1/registry/CourierRegistry.sol";
 /**
  * @title DeployCore
  * @notice Deploys the V1 governance core: ProtocolAccessManager + ProtocolConfig.
- * @dev Baseline refs: §32.11 (no single EOA controls critical permissions),
- *      §45 (multisig for critical control), §48 (initial testnet parameters).
+ * @dev Baseline refs: sec. 32.11 (no single EOA controls critical permissions),
+ *      sec. 45 (multisig for critical control), sec. 48 (initial testnet parameters).
  *
  *      Role holders are supplied per-role through the environment rather than
  *      defaulting to the deployer. The legacy scripts assign treasury, reward
@@ -104,7 +104,7 @@ contract DeployCoreScript is Script {
      *      - defaultAdmin vs configAdmin: the admin that grants roles must not
      *        also be the day-to-day config operator.
      *      - configAdmin vs emergency: pausing and unpausing are deliberately
-     *        split (§45). One key holding both collapses that split.
+     *        split (sec. 45). One key holding both collapses that split.
      *      - signerAdmin vs configAdmin: signer rotation is immediate while
      *        config is timelocked; sharing a key would give the timelock a
      *        bypass-shaped neighbour.

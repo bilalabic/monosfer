@@ -176,7 +176,7 @@ contract CourierRegistryInvariantTest is StdInvariant, Test {
     }
 
     /**
-     * @dev Invariant §33-4: courier collateral cannot be reused. Commitments —
+     * @dev Invariant sec. 33-4: courier collateral cannot be reused. Commitments —
      *      collateral reserved against deliveries plus any earmarked withdrawal —
      *      can never exceed the stake actually held.
      */
@@ -194,7 +194,7 @@ contract CourierRegistryInvariantTest is StdInvariant, Test {
         }
     }
 
-    /// @dev Invariant §33-10: a courier can never hold more than the configured limit.
+    /// @dev Invariant sec. 33-10: a courier can never hold more than the configured limit.
     function invariant_CustodyLimitNeverExceeded() public view {
         uint32 limit = config.maxActiveCustody();
         uint256 n = handler.courierCount();

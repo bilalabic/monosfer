@@ -10,10 +10,10 @@ import {ISettlementVault} from "../interfaces/ISettlementVault.sol";
  * @title SettlementVault
  * @notice Native-MON custody for the MONOSFER protocol. The most security-critical
  *         contract in the system.
- * @dev Baseline refs: §32.2 (vault responsibilities and the solvency property),
- *      §18.2 (pull-payment model), §45 (reentrancy protection, CEI, safe user
- *      exits during pause), invariants §33-1 (vault is solvent),
- *      §33-3 (accounting conserves value), §33-11 (a reverting payout receiver
+ * @dev Baseline refs: sec. 32.2 (vault responsibilities and the solvency property),
+ *      sec. 18.2 (pull-payment model), sec. 45 (reentrancy protection, CEI, safe user
+ *      exits during pause), invariants sec. 33-1 (vault is solvent),
+ *      sec. 33-3 (accounting conserves value), sec. 33-11 (a reverting payout receiver
  *      cannot block settlement).
  *
  *      ## Why settlement never sends value
@@ -41,7 +41,7 @@ import {ISettlementVault} from "../interfaces/ISettlementVault.sol";
  *
  *      ## Pause semantics
  *
- *      §45 requires safe user exits during pause. Taking new custody is blocked
+ *      sec. 45 requires safe user exits during pause. Taking new custody is blocked
  *      while paused; releasing and refunding stay open because they only move
  *      internal balances toward users; `claim` is never blocked, so a paused
  *      protocol can always be exited.
@@ -154,7 +154,7 @@ contract SettlementVault is ISettlementVault, ReentrancyGuard {
      * @inheritdoc ISettlementVault
      * @dev Payouts must sum to the lock exactly. Not "at most": a short payout
      *      would strand the remainder with no owner, which is the legacy failure
-     *      mode this contract exists to remove (invariant §33-3).
+     *      mode this contract exists to remove (invariant sec. 33-3).
      */
     function releaseLock(bytes32 lockId, Payout[] calldata payouts) external onlyController solvent {
         Lock storage l = _locks[lockId];
@@ -246,7 +246,7 @@ contract SettlementVault is ISettlementVault, ReentrancyGuard {
 
     /**
      * @inheritdoc ISettlementVault
-     * @dev Deliberately callable while paused: §45 requires users to be able to
+     * @dev Deliberately callable while paused: sec. 45 requires users to be able to
      *      exit a paused protocol.
      */
     function claim() external nonReentrant solvent returns (uint256 amount) {

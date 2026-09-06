@@ -9,9 +9,9 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /**
  * @title ProtocolAccessManager
  * @notice Central role and emergency-pause authority for the MONOSFER V1 contracts.
- * @dev Baseline refs: §32.11 (no single EOA controls critical permissions),
- *      §45 (multisig for critical control, delayed privileged configuration,
- *      emergency pause), invariant §33-15 (admin actions stay inside bounds).
+ * @dev Baseline refs: sec. 32.11 (no single EOA controls critical permissions),
+ *      sec. 45 (multisig for critical control, delayed privileged configuration,
+ *      emergency pause), invariant sec. 33-15 (admin actions stay inside bounds).
  *
  *      Built on OpenZeppelin `AccessControlDefaultAdminRules`, which supplies
  *      two-step, delayed transfer of the default admin and guarantees there is
