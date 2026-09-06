@@ -15,7 +15,15 @@
 | `CONFIG_ADMIN_ROLE` | Parametre önerir/uygular, hazine ve randomness adapter önerir/uygular, unpause planlar ve uygular. | **Pause edemez.** |
 | `EMERGENCY_ROLE` | **Anında** pause eder. | **Unpause edemez**, config değiştiremez. |
 | `SIGNER_ADMIN_ROLE` | Risk-quote ve PoD attestation imzacılarını **anında** döndürür. | Config veya pause'a dokunamaz. |
-| `TREASURER_ROLE` | Hazine operasyonları (tüketici kontratlar P0.3+'ta gelecek). | Config veya pause'a dokunamaz. |
+| `TREASURER_ROLE` | Hazine operasyonları. **Henüz hiçbir kontrat tarafından okunmuyor**; ödül dağıtımıyla (P3) devreye girecek. | Config veya pause'a dokunamaz. |
+| `VAULT_CONTROLLER_ROLE` | `SettlementVault`'ta kilitler, serbest bırakır, iade eder. | Kimseye ödeme itemez — vault push-free. |
+| `REGISTRY_CONTROLLER_ROLE` | `CourierRegistry`'de teminat rezerve eder, custody açar/kapatır. | Stake yaratamaz, seviye değiştiremez. |
+| `VERIFIER_ROLE` | Kurye doğrulama seviyesini (C0/C1/C2) belirler, askıya alır. | Stake veya teminata dokunamaz. |
+
+Son üç rol **kontratlara** verilir, asla bir EOA'ya: `VAULT_CONTROLLER_ROLE`
+→ `CourierRegistry` ve `DeliveryHub`, `REGISTRY_CONTROLLER_ROLE` → `DeliveryHub`.
+Bir EOA'ya verilmeleri, o anahtarı tüm kullanıcı fonlarının üzerinde yetkili
+kılardı. `VERIFIER_ROLE` operasyonel bir roldür ve doğrulama servisinde durur.
 
 **Ayrılık kuralı:** deploy script'i şu çiftlerin aynı adres olmasını **reddeder** —
 `DEFAULT_ADMIN`/`CONFIG_ADMIN`, `CONFIG_ADMIN`/`EMERGENCY`, `CONFIG_ADMIN`/`SIGNER_ADMIN`,
@@ -61,7 +69,9 @@ sınır dışına kaçamaz.
 | `maxActiveCustody` | 1–10 | 1 |
 | `customerMaxActiveListings` | 1–50 | 5 |
 | Jüri boyutları | 3–15, **tek sayı**, ve **kesin artan** | 3 / 5 / 7 |
+| `coverageMultiplier` Min/Max | 5.000–20.000 bps (0,5x–2x) ve **Min ≤ Max** | 7.500 / 15.000 (0,75x / 1,5x) |
 | `fundingWindow` | 5 dk – 24 sa | 15 dk |
+| Yaşam döngüsü pencereleri | 10 dk – 30 gün (ortak sınır) | bidding 24 sa, pickup 24 sa, transit 72 sa, return 72 sa |
 | `challengeWindow` | 1 sa – 7 gün | 24 sa |
 | `courierWithdrawalCooldown` | ≤ 30 gün | 24 sa |
 | `riskQuoteValidity` | 1 dk – 1 sa | 5 dk |
@@ -70,6 +80,12 @@ sınır dışına kaçamaz.
 | `rewardReclaimDelay` | 1 – 90 gün | 7 gün |
 | `courierBaseDeposit` | 0.001 – 1.000 MON | 10 MON |
 | Jüri ekonomisi | **`nonRevealSlash` ≤ `jurorLockPerCase` ≤ `minJurorStake`** | 1 / 2 / 10 MON |
+
+Son sütun sec. 48'in tablosudur. İki grup oradan gelmez ve bu kasıtlıdır:
+**kapsam çarpanı bandı** (sec. 8.3'ün itibar indirimini sayısallaştırır, bkz.
+[`risk-quote.md`](risk-quote.md)) ve **yaşam döngüsü pencereleri** (sec. 11'in
+durum makinesinin çalışması için gerekli, ama sec. 48 süre vermiyor). İkisi de
+aynı sınır ve zaman kilidi mekanizmasından geçer.
 
 Çapraz-alan kuralları (kapsam sıralaması, jüri sıralaması, jüri ekonomisi) tek tek
 setter'larla garanti edilemeyeceği için parametreler **atomik bir küme** olarak

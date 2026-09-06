@@ -22,8 +22,9 @@ edilir, yetkiler tek bir rol yöneticisinden gelir.
 | `CourierRegistry` | Stake, C0/C1/C2, askı, teminat, custody | [courier-registry](docs/courier-registry.md) |
 | `DeliveryHub` | Teslimat yaşam döngüsü, teklif, fonlama, uzlaşma | [delivery-lifecycle](docs/delivery-lifecycle.md) |
 | `RiskQuoteVerifier` | İmzalı kapsam teklifi, zincirde kapsam bandı | [risk-quote](docs/risk-quote.md) |
+| `PickupProofVerifier` | Gönderenin imzalı devir kabulü, nonce, ERC-1271 | [proofs](docs/proofs.md) |
 
-Sıradaki fazlar (`ReputationRegistry`, `DisputeCourt`, PoD attestation, …):
+Sıradaki fazlar (PoD attestation, `ReputationRegistry`, `DisputeCourt`, …):
 [`docs/implementation-plan-v1.0.md`](docs/implementation-plan-v1.0.md).
 
 ---
@@ -83,7 +84,12 @@ test etmez**.
 | Test | `forge test -vvv` |
 | Gas | `forge snapshot --check --no-match-test "testFuzz\|invariant_"` |
 | Statik analiz | `slither .` (`fail_on: medium`) |
-| Deploy dry-run | Deploy script'leri simüle edilir |
+| Deploy dry-run | Devralınan iki deploy script'i simüle edilir |
+
+**Kapı olmayan iki şey.** `script/v1/DeployCore.s.sol` CI'da simüle edilmiyor ve
+`npm run contracts:exports:check` bir kapı değil — ikisi de yerelde koşuluyor.
+Yani bozuk bir V1 deploy script'i veya bayat bir `exports/` paketi CI'dan sessizce
+geçer. Bilinçli bir boşluk değil, kapatılmayı bekleyen bir eksik.
 
 ### Arac surumu (pinlenmistir)
 
@@ -100,6 +106,19 @@ Snapshot **yalnızca deterministik testleri** kapsar. Fuzz ve invariant testleri
 raporladığı gas, rastgele girdiler üzerinden bir ortalamadır ve fuzz seed'iyle
 değişir; snapshot'a dahil edilseler kapı dalgalı olurdu. Kapıya anlamını veren şey
 determinizmdir.
+
+Determinizm testin **kendi başına** ölçülebilmesi demektir: bir girdinin gası,
+ondan önce hangi testlerin koştuğuna bağlı olmamalı. Test fixture'larında artan
+sayaçtan üretilip calldata'ya ulaşan değerler tam olarak bu bağımlılığı yaratır
+ve kapıyı kodun değil test filtresinin fonksiyonu haline getirir. Fixture'lar bu
+yüzden nonce/salt gibi değerleri argümanlardan türetir.
+
+Aynı gerekçeyle `test/v1/invariant/` altındaki **erişilebilirlik probları** da
+kapının dışındadır. Bunlar fuzzer'ın yetkili yolu gerçekten kat edebildiğini
+kanıtlayan vacuity guard'larıdır; ölçtükleri gas handler'ın defter tutmasının
+özelliğidir, protokolün değil, ve platformlar arasında birkaç on gas oynar.
+`test_invariant_` önekini taşırlar, böylece kapının `testFuzz|invariant_`
+filtresine takılırlar — testler olarak koşmaya devam ederler.
 
 ### Tekrarlanabilir derleme
 
@@ -210,6 +229,7 @@ contracts/
 │   │   ├── registry/           CourierRegistry
 │   │   ├── hub/                DeliveryHub
 │   │   ├── risk/               CoverageQuote, RiskQuoteVerifier
+│   │   ├── proof/              PickupProof, PickupProofVerifier
 │   │   └── interfaces/         ISettlementVault
 │   └── *.sol                   devralinan (dondurulmus, bkz. sec. 8)
 ├── script/

@@ -10,7 +10,9 @@ import {SettlementVault} from "../../../src/v1/vault/SettlementVault.sol";
 import {CourierRegistry} from "../../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../../src/v1/hub/DeliveryHub.sol";
 import {CoverageQuote} from "../../../src/v1/risk/CoverageQuote.sol";
+import {PickupProof} from "../../../src/v1/proof/PickupProof.sol";
 import {QuoteFixture} from "../helpers/QuoteFixture.sol";
+import {PickupFixture} from "../helpers/PickupFixture.sol";
 
 /**
  * @notice Drives DeliveryHub through random lifecycles from random callers,
@@ -18,7 +20,7 @@ import {QuoteFixture} from "../helpers/QuoteFixture.sol";
  * @dev Reverts are swallowed. The point is that no ordering of calls, authorised
  *      or not, can break the invariants asserted by the test contract.
  */
-contract HubHandler is QuoteFixture {
+contract HubHandler is QuoteFixture, PickupFixture {
     DeliveryHub public immutable hub;
     CourierRegistry public immutable registry;
     ProtocolConfig public immutable config;
@@ -28,8 +30,20 @@ contract HubHandler is QuoteFixture {
     address[] public couriers;
     uint256[] public deliveries;
 
+    mapping(uint256 => PickupProof.Acceptance) internal lastAcceptance;
+    mapping(uint256 => bytes) internal lastSignature;
+    mapping(uint256 => bool) internal hasAcceptance;
+    /// @dev Nonces this sender has already spent, so reuse can be attacked.
+    mapping(address => uint256[]) internal spentNonces;
+
     uint256 public created;
     uint256 public forgedAccepted;
+    uint256 public pickedUp;
+    uint256 public forgedPickupAccepted;
+    uint256 public replayedPickupAccepted;
+    uint256 public replayAttempts;
+    uint256 public courierFunded;
+    uint256 public forgeAttempts;
     uint256 public selected;
     uint256 public funded;
     uint256 public settled;
@@ -40,8 +54,9 @@ contract HubHandler is QuoteFixture {
         config = config_;
         vault = vault_;
 
-        customers.push(address(0xC05701));
-        customers.push(address(0xC05702));
+        // Key-derived: customers sign pickup acceptances (sec. 12).
+        customers.push(senderAddress(0));
+        customers.push(senderAddress(1));
         couriers.push(address(0xC0DE01));
         couriers.push(address(0xC0DE02));
         couriers.push(address(0xC0DE03));
@@ -49,6 +64,10 @@ contract HubHandler is QuoteFixture {
 
     function _customer(uint256 s) internal view returns (address) {
         return customers[s % customers.length];
+    }
+
+    function _customerKey(address who) internal pure returns (uint256) {
+        return who == senderAddress(0) ? senderKey(0) : senderKey(1);
     }
 
     function _courier(uint256 s) internal view returns (address) {
@@ -141,14 +160,151 @@ contract HubHandler is QuoteFixture {
         topUp = uint96(bound(topUp, 0, 5 ether));
         vm.deal(d.courier, uint256(topUp) + 1 ether);
         vm.prank(d.courier);
-        try hub.fundAsCourier{value: topUp}(id) {} catch {}
+        try hub.fundAsCourier{value: topUp}(id) {
+            courierFunded++;
+        } catch {}
     }
 
+    /**
+     * @dev Assembles one delivery all the way to `ReadyForPickup` in a single
+     *      action.
+     *
+     *      Random sequences essentially never line up create -> bid -> select ->
+     *      fund -> fund on the same delivery, so without this the campaign never
+     *      produced a delivery the pickup handlers could act on, and every
+     *      invariant past `Bidding` held vacuously. Mutation-testing the six
+     *      sec. 12 checks confirmed it: unit tests failed, invariants did not
+     *      move. This gives the fuzzer live pickup-stage deliveries to attack.
+     *
+     *      Every step still goes through the real entry points with real
+     *      authorisation; nothing here bypasses a check.
+     */
+    function bootstrapReadyForPickup(uint256 custSeed, uint256 cSeed, uint8 tier, uint96 declaredValue) external {
+        tier = uint8(bound(tier, 1, 3));
+        declaredValue = uint96(bound(declaredValue, 1 ether, 20 ether));
+        address cust = _customer(custSeed);
+        address cour = _courier(cSeed);
+
+        CoverageQuote.Quote memory q = buildQuote(config, cust, tier, declaredValue);
+        bytes memory qsig = signQuote(hub, q);
+        vm.prank(cust);
+        uint256 id;
+        try hub.createDelivery(q, qsig) returns (uint256 newId) {
+            id = newId;
+            deliveries.push(id);
+            created++;
+        } catch {
+            return;
+        }
+
+        vm.prank(cour);
+        try hub.placeBid(id, 2 ether, 1 ether, 30, uint64(block.timestamp + 2 hours)) {}
+        catch {
+            return;
+        }
+
+        uint32 version = hub.bidOf(id, cour).termsVersion;
+        vm.prank(cust);
+        try hub.selectCourier(id, cour, version) {
+            selected++;
+        } catch {
+            return;
+        }
+
+        uint256 amount = hub.customerFundingAmount(id);
+        vm.deal(cust, amount + 1 ether);
+        vm.prank(cust);
+        try hub.fundAsCustomer{value: amount}(id) {
+            funded++;
+        } catch {
+            return;
+        }
+
+        // No public view for the bond due, and none is needed: any surplus is
+        // deposited to the courier's stake rather than lost, so overshooting is
+        // safe and keeps the funding step from failing on arithmetic.
+        uint256 topUp = 20 ether;
+        vm.deal(cour, topUp + 1 ether);
+        vm.prank(cour);
+        try hub.fundAsCourier{value: topUp}(id) {
+            courierFunded++;
+        } catch {}
+    }
+
+    /**
+     * @dev Signs with the delivery's real sender so the authorised path stays
+     *      reachable. `pickupForged` below exercises rejection, and
+     *      `pickupReplay` re-submits a spent acceptance.
+     */
     function pickup(uint256 dSeed) external {
         (uint256 id, bool ok) = _delivery(dSeed);
         if (!ok) return;
-        vm.prank(hub.deliveryOf(id).courier);
-        try hub.confirmPickup(id) {} catch {}
+        DeliveryHub.Delivery memory d = hub.deliveryOf(id);
+        if (d.courier == address(0)) return;
+
+        PickupProof.Acceptance memory a = buildAcceptance(id, d.courier);
+        bytes memory sig = signAcceptance(hub, a, _customerKey(d.customer));
+
+        vm.prank(d.courier);
+        try hub.confirmPickup(id, a, sig) {
+            lastAcceptance[id] = a;
+            lastSignature[id] = sig;
+            hasAcceptance[id] = true;
+            spentNonces[d.customer].push(a.nonce);
+            pickedUp++;
+        } catch {}
+    }
+
+    /// @dev A pickup authorised by a key that is not the sender's must never pass.
+    function pickupForged(uint256 dSeed, uint256 wrongKey) external {
+        (uint256 id, bool ok) = _delivery(dSeed);
+        if (!ok) return;
+        DeliveryHub.Delivery memory d = hub.deliveryOf(id);
+        if (d.courier == address(0)) return;
+
+        wrongKey = bound(wrongKey, 1, type(uint128).max);
+        if (wrongKey == senderKey(0) || wrongKey == senderKey(1)) return;
+
+        // A distinct tag: sharing the authorised attempt's nonce would make this
+        // fail on the nonce check instead of on the signature, which is the check
+        // it exists to exercise.
+        PickupProof.Acceptance memory a = buildAcceptanceWithExpiry(id, d.courier, uint64(block.timestamp) + 1 hours, 1);
+        bytes memory sig = signAcceptance(hub, a, wrongKey);
+
+        forgeAttempts++;
+        vm.prank(d.courier);
+        try hub.confirmPickup(id, a, sig) {
+            forgedPickupAccepted++;
+        } catch {}
+    }
+
+    /**
+     * @dev Invariant sec. 33-7. Resubmitting the identical acceptance is stopped
+     *      by the state machine long before the nonce is looked at, so it proves
+     *      nothing about the nonce guard. The attack that actually reaches it is
+     *      this one: take a nonce the sender has already spent, build a *fresh,
+     *      correctly signed* acceptance for a delivery still awaiting pickup, and
+     *      submit that. Every other check passes; only the burned nonce stands in
+     *      the way.
+     */
+    function pickupNonceReuse(uint256 dSeed, uint256 nSeed) external {
+        (uint256 id, bool ok) = _delivery(dSeed);
+        if (!ok) return;
+        DeliveryHub.Delivery memory d = hub.deliveryOf(id);
+        if (d.courier == address(0)) return;
+
+        uint256[] storage spent = spentNonces[d.customer];
+        if (spent.length == 0) return;
+
+        PickupProof.Acceptance memory a = buildAcceptance(id, d.courier);
+        a.nonce = spent[nSeed % spent.length];
+        bytes memory sig = signAcceptance(hub, a, _customerKey(d.customer));
+
+        replayAttempts++;
+        vm.prank(d.courier);
+        try hub.confirmPickup(id, a, sig) {
+            replayedPickupAccepted++;
+        } catch {}
     }
 
     function deliverProof(uint256 dSeed) external {
@@ -224,6 +380,7 @@ contract DeliveryHubInvariantTest is StdInvariant, QuoteFixture {
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(registry));
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(hub));
         manager.grantRole(manager.REGISTRY_CONTROLLER_ROLE(), address(hub));
+        manager.grantRole(manager.VERIFIER_ROLE(), address(this));
         vm.stopPrank();
 
         handler = new HubHandler(hub, registry, config, vault);
@@ -237,6 +394,14 @@ contract DeliveryHubInvariantTest is StdInvariant, QuoteFixture {
             vm.deal(c, 200 ether);
             vm.prank(c);
             registry.depositStake{value: stakeAmount}();
+        }
+
+        // Verify them to C2. Stake alone caps a courier at C1, which is only
+        // eligible for tier-1 deliveries; without this the fuzzer can never bid
+        // on the tier-2 and tier-3 deliveries it generates, selection never
+        // happens, and every invariant past `Bidding` holds vacuously.
+        for (uint256 i = 0; i < 3; i++) {
+            registry.setVerificationLevel(handler.couriers(i), CourierRegistry.VerificationLevel.C2);
         }
 
         targetContract(address(handler));
@@ -348,8 +513,18 @@ contract DeliveryHubInvariantTest is StdInvariant, QuoteFixture {
         assertEq(handler.forgedAccepted(), 0, "a delivery was opened with a forged coverage quote");
     }
 
+    /// @dev Invariant sec. 33-7: a pickup acceptance can be spent exactly once.
+    function invariant_PickupAcceptanceNeverReplayed() public view {
+        assertEq(handler.replayedPickupAccepted(), 0, "a pickup was accepted on an already-spent nonce");
+    }
+
+    /// @dev sec. 12: only the sender's own signature authorises a handover.
+    function invariant_ForgedPickupNeverAccepted() public view {
+        assertEq(handler.forgedPickupAccepted(), 0, "a pickup was accepted on a signature the sender never made");
+    }
+
     /// @dev Guards against vacuity: the authorised lifecycle must be reachable.
-    function test_HandlerReachesFullLifecycle() public {
+    function test_invariant_HandlerReachesFullLifecycle() public {
         handler.createDelivery(0, 1, 20 ether);
         assertGt(handler.created(), 0, "creation reachable");
 
@@ -362,6 +537,17 @@ contract DeliveryHubInvariantTest is StdInvariant, QuoteFixture {
         handler.fundCourier(0, 0);
 
         handler.pickup(0);
+        assertGt(handler.pickedUp(), 0, "signed pickup reachable");
+
+        // The two pickup invariants are "counter stayed at zero" assertions, so
+        // they hold trivially unless the adversarial handlers actually run. Both
+        // are driven here and their attempt counters checked, which is what makes
+        // the zero meaningful rather than merely unreached.
+        handler.pickupNonceReuse(0, 0);
+        assertGt(handler.replayAttempts(), 0, "nonce-reuse path reachable");
+        handler.pickupForged(0, 0xBADBADBAD);
+        assertGt(handler.forgeAttempts(), 0, "forged-pickup path reachable");
+
         handler.deliverProof(0);
         handler.confirmDelivery(0);
         assertGt(handler.settled(), 0, "settlement reachable");

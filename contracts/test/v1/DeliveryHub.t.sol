@@ -10,9 +10,12 @@ import {CourierRegistry} from "../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../src/v1/hub/DeliveryHub.sol";
 import {CoverageQuote} from "../../src/v1/risk/CoverageQuote.sol";
 import {RiskQuoteVerifier} from "../../src/v1/risk/RiskQuoteVerifier.sol";
+import {PickupProof} from "../../src/v1/proof/PickupProof.sol";
+import {PickupProofVerifier} from "../../src/v1/proof/PickupProofVerifier.sol";
 import {QuoteFixture} from "./helpers/QuoteFixture.sol";
+import {PickupFixture} from "./helpers/PickupFixture.sol";
 
-contract DeliveryHubTest is QuoteFixture {
+contract DeliveryHubTest is QuoteFixture, PickupFixture {
     ProtocolAccessManager internal manager;
     ProtocolConfig internal config;
     SettlementVault internal vault;
@@ -24,7 +27,8 @@ contract DeliveryHubTest is QuoteFixture {
     address internal verifier = address(0x7E71F1);
     address internal treasury = address(0x7EA5);
 
-    address internal customer = address(0xC057);
+    /// @dev Key-derived: the sender signs the pickup acceptance (sec. 12).
+    address internal customer;
     address internal courier = address(0xC0DE);
     address internal courier2 = address(0xC0DE2);
     address internal stranger = address(0xBAD);
@@ -38,6 +42,8 @@ contract DeliveryHubTest is QuoteFixture {
     uint256 internal DEPOSIT;
 
     function setUp() public {
+        customer = senderAddress(0);
+
         manager = new ProtocolAccessManager(3 days, admin);
         config = new ProtocolConfig(
             manager, 2 days, BaselineParams.baseline(), treasury, quoteSignerAddress(), address(0x2)
@@ -99,6 +105,27 @@ contract DeliveryHubTest is QuoteFixture {
         hub.fundAsCustomer{value: amount}(id);
         vm.prank(courier);
         hub.fundAsCourier(id);
+    }
+
+    /**
+     * @dev Builds and signs the sender's acceptance. Kept separate from the call
+     *      so tests can prepare the arguments before arming `vm.expectRevert` or
+     *      `vm.prank`; signing reads the domain separator from the hub, and a
+     *      view call placed after a cheatcode would consume it.
+     */
+    function _acceptance(uint256 id, address forCourier)
+        internal
+        returns (PickupProof.Acceptance memory acceptance, bytes memory signature)
+    {
+        acceptance = buildAcceptance(id, forCourier);
+        signature = signAcceptance(hub, acceptance, senderKey(0));
+    }
+
+    /// @notice The authorised pickup: courier sends, sender's signature authorises.
+    function _pickup(uint256 id) internal {
+        (PickupProof.Acceptance memory a, bytes memory sig) = _acceptance(id, courier);
+        vm.prank(courier);
+        hub.confirmPickup(id, a, sig);
     }
 
     function _toReadyForPickup() internal returns (uint256 id) {
@@ -189,8 +216,7 @@ contract DeliveryHubTest is QuoteFixture {
      */
     function test_EveryStalledStateReachesTerminalByTimeoutAlone() public {
         uint256 id = _toReadyForPickup();
-        vm.prank(courier);
-        hub.confirmPickup(id);
+        _pickup(id);
         assertEq(uint8(hub.deliveryOf(id).state), uint8(DeliveryHub.State.InTransit));
 
         vm.warp(block.timestamp + config.transitWindow() + 1);
@@ -386,8 +412,7 @@ contract DeliveryHubTest is QuoteFixture {
     function test_HappyPath_SettlesPerBaseline() public {
         uint256 id = _toReadyForPickup();
 
-        vm.prank(courier);
-        hub.confirmPickup(id);
+        _pickup(id);
         assertEq(registry.courierOf(courier).activeCustody, 1);
 
         vm.prank(courier);
@@ -412,8 +437,7 @@ contract DeliveryHubTest is QuoteFixture {
     /// @dev sec. 16: after the window anyone may finalize, not just the customer.
     function test_ChallengeWindow_PermissionlessFinalizer() public {
         uint256 id = _toReadyForPickup();
-        vm.prank(courier);
-        hub.confirmPickup(id);
+        _pickup(id);
         vm.prank(courier);
         hub.submitDeliveryProof(id);
 
@@ -428,8 +452,7 @@ contract DeliveryHubTest is QuoteFixture {
     /// @dev sec. 17: a confirmed return pays the return fee; the rest goes back.
     function test_ConfirmedReturn_PaysReturnFee() public {
         uint256 id = _toReadyForPickup();
-        vm.prank(courier);
-        hub.confirmPickup(id);
+        _pickup(id);
         vm.prank(courier);
         hub.requestReturn(id);
         vm.prank(courier);
@@ -447,8 +470,7 @@ contract DeliveryHubTest is QuoteFixture {
     /// @dev Invariant sec. 33-2 / sec. 33-6: a settled delivery can never move again.
     function test_TerminalStateCannotReopen() public {
         uint256 id = _toReadyForPickup();
-        vm.prank(courier);
-        hub.confirmPickup(id);
+        _pickup(id);
         vm.prank(courier);
         hub.submitDeliveryProof(id);
         vm.prank(customer);
@@ -464,9 +486,10 @@ contract DeliveryHubTest is QuoteFixture {
         vm.expectRevert();
         hub.poke(id);
 
+        (PickupProof.Acceptance memory a, bytes memory sig) = _acceptance(id, courier);
         vm.expectRevert();
         vm.prank(courier);
-        hub.confirmPickup(id);
+        hub.confirmPickup(id, a, sig);
     }
 
     function test_Poke_RejectsBeforeDeadline() public {
@@ -478,18 +501,20 @@ contract DeliveryHubTest is QuoteFixture {
 
     function test_Pickup_OnlySelectedCourier() public {
         uint256 id = _toReadyForPickup();
+        (PickupProof.Acceptance memory a, bytes memory sig) = _acceptance(id, courier);
         vm.expectRevert(abi.encodeWithSelector(DeliveryHub.NotCourier.selector, stranger));
         vm.prank(stranger);
-        hub.confirmPickup(id);
+        hub.confirmPickup(id, a, sig);
     }
 
     function test_IllegalTransitionsRevert() public {
         uint256 id = _create();
 
         // Cannot pick up before funding.
+        (PickupProof.Acceptance memory a, bytes memory sig) = _acceptance(id, courier);
         vm.expectRevert();
         vm.prank(courier);
-        hub.confirmPickup(id);
+        hub.confirmPickup(id, a, sig);
 
         // Cannot fund before selection.
         vm.expectRevert();

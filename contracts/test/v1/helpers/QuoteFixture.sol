@@ -17,6 +17,11 @@ abstract contract QuoteFixture is Test {
     uint256 internal constant QUOTE_SIGNER_KEY = 0xA11CE5;
 
     /// @dev Incremented per quote so two quotes in one test never collide.
+    /// @dev Counter-derived values that reach calldata can make a test's measured
+    ///      gas depend on how many were built before it, and so on which other
+    ///      tests ran — see the note in PickupFixture, where exactly that broke
+    ///      the gas gate. Every snapshot entry is currently context-independent,
+    ///      but prefer deriving from arguments if this fixture grows.
     uint256 private _saltCounter;
 
     function quoteSignerAddress() internal pure returns (address) {

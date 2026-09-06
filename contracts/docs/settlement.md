@@ -72,7 +72,7 @@ sec. 45 duraklatma sırasında güvenli kullanıcı çıkışı şart koşar:
 | İşlem | Pause'da | Gerekçe |
 |---|---|---|
 | `lock`, `topUpLock` | **Bloke** | Yeni emanet alınmaz |
-| `releaseLock`, `refundLock` | **Açık** | Yalnızca iç bakiyeyi kullanıcıya doğru taşır |
+| `releaseLock`, `releasePartial`, `refundLock` | **Açık** | Yalnızca iç bakiyeyi kullanıcıya doğru taşır |
 | `claim`, `claimFor` | **Açık** | Duraklatılmış bir protokolden çıkılabilmeli |
 
 ---

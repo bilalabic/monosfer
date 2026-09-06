@@ -14,6 +14,7 @@ Sistem geliştikçe güncellenir; sürüm/tarih taşımazlar.
 | [`courier-registry.md`](courier-registry.md) | Stake bölünmesi, çıkış yolu, C0/C1/C2, custody limiti |
 | [`delivery-lifecycle.md`](delivery-lifecycle.md) | 11 durumlu makine, her durumun çıkışı, teklifler, fonlama, uzlaşma |
 | [`risk-quote.md`](risk-quote.md) | İmzalı kapsam teklifi, kapsam bandı, tekrar koruması, teminat bölünmesi |
+| [`proofs.md`](proofs.md) | Teslim alma kanıtı: EIP-712 kabul, altı kontrol, nonce, ERC-1271 |
 | [`integration.md`](integration.md) | Frontend/backend için adres + ABI + tip paylaşımı |
 | [`static-analysis-baseline.md`](static-analysis-baseline.md) | Devralınan kontratların kabul edilen Slither bulguları ve `forge lint` dağılımı |
 
@@ -41,8 +42,12 @@ Sürümlü belgeler; içerik revize edilirse sürüm numarası artar.
 | P0.3 | `SettlementVault` | **Tamamlandı** |
 | P0.4 | `CourierRegistry` | **Tamamlandı** |
 | P1.1 | `DeliveryHub` — yaşam döngüsü, iptal/timeout, self-dealing engeli | **Tamamlandı** |
+| P1.2 | İki taraflı fonlama oturumu | **Tamamlandı** (P1.1 içinde) |
 | P1.3 | İmzalı risk teklifi ve kapsam matematiği | **Tamamlandı** |
-| P2 | Pickup/PoD kanıtları (EIP-712 / ERC-1271) | Sırada |
+| P2.1 | Teslim alma kanıtı (EIP-712 / ERC-1271) | **Tamamlandı** |
+| P2.2 | PoD attestation (cüzdansız alıcı) | Sırada |
+| P2.3 | İtiraz penceresi ve izinsiz finalize | Mekanizma **tamamlandı** (P1.1 içinde); ihtilaf girişi P4'e bağlı |
+| P2.4 | İade akışı | Durumlar ve rezerv ödemesi **tamamlandı** (P1.1 içinde); iade kanıtı P2.2'ye bağlı |
 | P3 | İtibar, rozet, ödül, referans | Bekliyor |
 | P4 | İhtilaf, jüri, randomness | Bekliyor |
 | P5 | Invariant/failure suite, deploy sertleştirme, cut-over | Bekliyor |

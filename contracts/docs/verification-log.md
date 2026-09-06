@@ -131,7 +131,7 @@ değil **stake'ten türetiliyor**.
 
 ## P1.1 — DeliveryHub
 
-12 durumlu yaşam döngüsü, teklif yönetimi, iki taraflı fonlama ve uzlaşma.
+11 durumlu yaşam döngüsü, teklif yönetimi, iki taraflı fonlama ve uzlaşma.
 Ayrıntı: [`delivery-lifecycle.md`](delivery-lifecycle.md).
 
 **`[PoC-A]` yapısal olarak kapandı.** Legacy bütçeyi oluşturma anında escrow'a
@@ -177,6 +177,87 @@ Ayrıntı: [`risk-quote.md`](risk-quote.md).
 içinde **argüman** olarak `vm.expectRevert`'i yutuyordu. Tarama deseni bu biçimi de
 yakalayacak şekilde genişletildi; tüm test dosyaları yeniden tarandı, başka örnek yok.
 
+## P2.1 — Teslim alma kanıtı
+
+`confirmPickup` tek taraflı bir iddiaydı: kurye kendi teslim almasını beyan
+ediyordu. Artık kurye işlemi gönderiyor, **gönderen imzalıyor** (sec. 12).
+
+sec. 12'nin altı kontrolü ayrı ayrı zorunlu: teslimat, aksiyon, kurye, süre,
+nonce, imzacı. `SignatureChecker` ile ERC-1271 gönderen EOA gibi çalışıyor.
+
+**Testlerin gerçekten ısırdığı mutasyonla ölçüldü.** Altı kontrolün her biri tek
+tek koddan çıkarıldı:
+
+| Kaldırılan kontrol | Kırılan unit test |
+|---|---|
+| Nonce yakma | 6 |
+| İmza doğrulama | 16 |
+| Aksiyon | 2 |
+| Teslimat kimliği | 4 |
+
+### Bu sırada yakalanan iki boş invariant
+
+1. **Fuzzer hiçbir teslimatı `Bidding`'den ileri götüremiyormuş.** Handler
+   kuryeleri yalnızca C1'di; tier-2 ve tier-3 teslimatlara teklif veremiyorlardı,
+   dolayısıyla seçim hiç gerçekleşmiyordu. Seçim sonrasındaki tüm invariant'lar
+   **boş yere yeşildi**. Kurulumda kuryeler C2'ye yükseltildi.
+
+2. **Rastgele diziler tam yaşam döngüsünü kurmuyor.** create → bid → select →
+   fund → fund zincirinin aynı teslimatta hizalanma olasılığı pratikte sıfır.
+   Handler'a `bootstrapReadyForPickup` eklendi; her adım gerçek giriş
+   noktalarından ve gerçek yetkiyle geçiyor, hiçbir kontrol atlanmıyor.
+
+3. **Tekrar saldırısı yanlış kurgulanmıştı.** Aynı kabulü ikinci kez göndermek
+   durum makinesinde takılır, nonce kontrolüne hiç varmaz. Nonce korumasına
+   gerçekten ulaşan saldırı, **harcanmış bir nonce ile yeni ve doğru imzalanmış**
+   bir kabul üretmektir. Düzeltildikten sonra nonce yakma satırı kaldırıldığında
+   invariant kırmızıya dönüyor — öncesinde dönmüyordu.
+
+### Gas kapısında yakalanan gerçek hata
+
+PR CI'da gas kapısı iki testte düştü (+87 ve −36), yerelde geçiyordu. Sebep
+platform değil **çalıştırma bağlamıydı**: `PickupFixture` nonce'u artan bir
+sayaçtan üretiyordu, nonce calldata'ya ulaşıyordu, dolayısıyla bir testin ölçülen
+gası ondan önce kaç kabul üretildiğine — yani hangi testlerin koştuğuna —
+bağlıydı. Snapshot tam suite ile üretilmiş, kapı ise `--no-match-test` filtresiyle
+kontrol ediyordu; iki farklı küme, iki farklı sayaç değeri.
+
+Nonce artık argümanlardan türetiliyor. Sonuç, snapshot'taki **181 girdinin
+tamamı** için doğrulandı: her test kontratı tek başına koşturulduğunda ölçülen gas
+tam suite'tekiyle birebir aynı, ve kapı hem `default` hem `ci` profilinde geçiyor.
+
+Bu düzeltmeden sonra CI'da **tek bir** girdi kaldı: fuzz handler'ının
+erişilebilirlik probu, platformlar arasında 36 gas oynuyordu. Aynı forge sürümü,
+aynı commit SHA, farklı platform binary'si; diğer 180 girdi CI ile birebir
+aynıydı, yani sapma protokol kodunda değil test iskelesindeydi.
+
+Problar artık kapının dışında. Ölçtükleri şey handler'ın defter tutması, protokol
+değil; ve zaten var oluş sebepleri gasları değil, fuzzer'ın yetkili yolu
+katedebildiğini kanıtlamaları. `test_invariant_` önekini taşıyorlar, böylece
+kapının mevcut `testFuzz|invariant_` filtresine takılıyorlar ve test olarak
+koşmaya devam ediyorlar.
+
+Ders: gas kapısı yalnızca **kodun fonksiyonu olan** ölçümleri içermeli. Fuzz ve
+invariant testlerini dışarıda bırakmak yetmiyor — kalan testlerin birbirinden
+bağımsız olması, ve test iskelesini ölçen girdilerin hiç bulunmaması gerekiyor.
+
+---
+
+### Doğrulama araçlarında yakalanan hata
+
+İlk zincir-üstü koşuda geçerli kabul de reddedildi. Sebep kontrat değil, benim
+doğrulama script'imdi: **Solidity'de `memory` struct ataması referans kopyalar**,
+dolayısıyla `variant = good; variant.x = y;` yazmak `good`'un kendisini bozuyordu.
+Her varyant sıfırdan kurulacak şekilde düzeltildi.
+
+Ayrıca `forge script` bu iş için uygun değil: senaryoların çoğu kasten revert
+eder, forge ise revert eden bir işlem içeren yığını ne simüle eder ne yayınlar
+(`--skip-simulation` ile bile gas tahmininde patlar). Kurulum script'e, negatif
+senaryolar açık `--gas-limit` ile `cast send`'e ayrıldı; tek güvenilir sinyal
+receipt'teki `status` alanı.
+
+---
+
 ## Testnet doğrulaması
 
 Adresler: [`../deployments/10143.json`](../deployments/10143.json)
@@ -205,6 +286,21 @@ Koşulan senaryolar (hepsi geçti):
 | S20 | Poke koruması | Süresi gelmeden `poke` reddedildi; müşteri iptali çalıştı |
 
 **Son durum:** vault bakiye = yükümlülük, surplus 0, **fark 0**.
+
+### P2.1 senaryoları (yeni deploy, 12/12 geçti)
+
+| # | Senaryo | Sonuç |
+|---|---|---|
+| T1 | Bozuk imza baytı | Reddedildi |
+| T2 | **Kuryenin kendi imzası** | Reddedildi — sec. 12'nin kapattığı tek taraflı iddia |
+| T3 | Doğru imzalı, yanlış aksiyon | Reddedildi |
+| T4 | Doğru imzalı, yanlış kurye | Reddedildi |
+| T5 | Doğru imzalı, süresi dolmuş | Reddedildi |
+| — | Beş retten sonra durum ve nonce | **Değişmedi**, nonce yanmadı |
+| T6 | Gönderenin geçerli kabulü | Kabul edildi; `InTransit`, nonce yandı, custody açıldı |
+| T7 | Aynı kabulün tekrarı | Reddedildi |
+
+Kapanış: vault bakiye 32.44 MON = yükümlülük 32.44 MON, surplus 0, **fark 0**.
 
 ### Testnet'te doğrulanamayanlar (dürüst sınır)
 
