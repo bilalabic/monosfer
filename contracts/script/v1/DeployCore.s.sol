@@ -6,6 +6,7 @@ import {console2} from "forge-std/console2.sol";
 import {ProtocolAccessManager} from "../../src/v1/access/ProtocolAccessManager.sol";
 import {ProtocolConfig} from "../../src/v1/config/ProtocolConfig.sol";
 import {SettlementVault} from "../../src/v1/vault/SettlementVault.sol";
+import {BaselineParams} from "../../src/v1/config/BaselineParams.sol";
 
 /**
  * @title DeployCore
@@ -60,7 +61,7 @@ contract DeployCoreScript is Script {
         ProtocolConfig config = new ProtocolConfig(
             accessManager,
             configTimelock,
-            _baselineParams(),
+            BaselineParams.baseline(),
             roles.treasury,
             roles.riskQuoteSigner,
             roles.podAttestationSigner
@@ -120,32 +121,6 @@ contract DeployCoreScript is Script {
         if (roles.riskQuoteSigner == roles.podAttestationSigner) {
             revert CriticalRolesShareAnAddress("RISK_QUOTE_SIGNER", "POD_ATTESTATION_SIGNER");
         }
-    }
-
-    /// @notice The §48 initial testnet parameter table.
-    function _baselineParams() internal pure returns (ProtocolConfig.Params memory) {
-        return ProtocolConfig.Params({
-            protocolFeeBps: 200,
-            coverageBpsR1: 2_500,
-            coverageBpsR2: 6_000,
-            coverageBpsR3: 10_000,
-            maxActiveCustody: 1,
-            customerMaxActiveListings: 5,
-            juryFirstSize: 3,
-            juryAppeal1Size: 5,
-            juryAppeal2Size: 7,
-            fundingWindow: 15 minutes,
-            challengeWindow: 24 hours,
-            courierWithdrawalCooldown: 24 hours,
-            riskQuoteValidity: 5 minutes,
-            podAttestationValidity: 10 minutes,
-            rewardClaimWindow: 90 days,
-            rewardReclaimDelay: 7 days,
-            courierBaseDeposit: 10 ether,
-            minJurorStake: 10 ether,
-            jurorLockPerCase: 2 ether,
-            nonRevealSlash: 1 ether
-        });
     }
 
     function _report(

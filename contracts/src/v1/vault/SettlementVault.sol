@@ -70,7 +70,6 @@ contract SettlementVault is ISettlementVault, ReentrancyGuard {
     uint256 public totalLocked;
     uint256 public totalClaimable;
 
-    error NotController(address caller);
     error ZeroAddress();
     error ZeroAmount();
     error LockAlreadyExists(bytes32 lockId);

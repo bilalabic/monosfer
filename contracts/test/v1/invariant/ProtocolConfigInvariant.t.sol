@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {StdInvariant} from "forge-std/StdInvariant.sol";
 import {ProtocolAccessManager} from "../../../src/v1/access/ProtocolAccessManager.sol";
 import {ProtocolConfig} from "../../../src/v1/config/ProtocolConfig.sol";
-import {BaselineParams} from "../helpers/BaselineParams.sol";
+import {BaselineParams} from "../../../src/v1/config/BaselineParams.sol";
 
 /**
  * @notice Drives ProtocolConfig and ProtocolAccessManager with randomised callers

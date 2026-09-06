@@ -4,7 +4,7 @@ pragma solidity 0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {ProtocolAccessManager} from "../../src/v1/access/ProtocolAccessManager.sol";
 import {ProtocolConfig} from "../../src/v1/config/ProtocolConfig.sol";
-import {BaselineParams} from "./helpers/BaselineParams.sol";
+import {BaselineParams} from "../../src/v1/config/BaselineParams.sol";
 
 contract ProtocolConfigTest is Test {
     ProtocolAccessManager internal manager;

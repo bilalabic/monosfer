@@ -68,10 +68,11 @@ contract ProtocolConfig {
 
     uint16 public constant BPS_DENOMINATOR = 10_000;
 
-    uint16 public constant MIN_PROTOCOL_FEE_BPS = 0;
+    // Lower bounds that are zero are omitted deliberately: the unsigned type
+    // already enforces them, and a MIN_ constant that no check reads would
+    // suggest a validation that does not exist.
     uint16 public constant MAX_PROTOCOL_FEE_BPS = 1_000; // 10% hard ceiling
 
-    uint16 public constant MIN_COVERAGE_BPS = 0;
     uint16 public constant MAX_COVERAGE_BPS = BPS_DENOMINATOR;
 
     uint8 public constant MIN_ACTIVE_CUSTODY = 1;
@@ -89,8 +90,7 @@ contract ProtocolConfig {
     uint32 public constant MIN_CHALLENGE_WINDOW = 1 hours;
     uint32 public constant MAX_CHALLENGE_WINDOW = 7 days;
 
-    uint32 public constant MIN_WITHDRAWAL_COOLDOWN = 0;
-    uint32 public constant MAX_WITHDRAWAL_COOLDOWN = 30 days;
+    uint32 public constant MAX_WITHDRAWAL_COOLDOWN = 30 days; // zero cooldown is allowed
 
     uint32 public constant MIN_QUOTE_VALIDITY = 1 minutes;
     uint32 public constant MAX_QUOTE_VALIDITY = 1 hours;
