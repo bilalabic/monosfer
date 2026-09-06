@@ -5,18 +5,11 @@
 
 ---
 
-## 1. Çözülen sorun
+## 1. Tek gerçek kaynak
 
-Adresler üç ayrı yerde elle tutuluyordu ve **birbirinden kaymıştı**:
-
-| Yer | Ne tutuyordu |
-|---|---|
-| `frontend/app/config/chain.ts` | Modüler sistemin 5 adresi (sabit kodlanmış) |
-| `frontend/.env` | `VITE_DELIVERA_ADDRESS` — **farklı** bir kontratın adresi |
-| `contracts/README.md` sec. 9 | Üçüncü bir kopya |
-
-Üstelik hiçbir yerde ABI yoktu; frontend ve backend hiçbir kontrat çağrısını
-çözemiyordu.
+Adresler ve ABI'lar **üretilir**, elle yazılmaz. Elle tutulan her kopya zamanla
+diğerlerinden ayrışır; bu katman kopyayı ortadan kaldırarak sorunu kaynağında
+çözer.
 
 ---
 
@@ -37,7 +30,7 @@ contracts/exports/                       tuketilen paket (commit'li)
 ```
 
 **Neden üretilen dosyalar commit'li:** depoda henüz paket derleme hattı yok.
-Commit'lemek, tüketicilerin ek bir kurulum adımı olmadan çalışmasını sağlar ve
+Commit'lemek hem tüketicilerin ek kurulum adımı olmadan çalışmasını sağlar hem de
 her adres değişikliğini **incelenebilir bir diff** haline getirir.
 
 **Neden event topic'leri ve error selector'ları üretilmiyor:** viem, wagmi ve

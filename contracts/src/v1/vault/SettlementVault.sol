@@ -8,43 +8,45 @@ import {ISettlementVault} from "../interfaces/ISettlementVault.sol";
 
 /**
  * @title SettlementVault
- * @notice Native-MON custody for the MONOSFER protocol. The most security-critical
- *         contract in the system.
- * @dev Baseline refs: sec. 32.2 (vault responsibilities and the solvency property),
- *      sec. 18.2 (pull-payment model), sec. 45 (reentrancy protection, CEI, safe user
- *      exits during pause), invariants sec. 33-1 (vault is solvent),
- *      sec. 33-3 (accounting conserves value), sec. 33-11 (a reverting payout receiver
- *      cannot block settlement).
+ * @notice Native-MON custody for the MONOSFER protocol.
+ * @dev Baseline refs: sec. 32.2 (vault responsibilities and the solvency
+ *      property), sec. 18.2 (pull-payment model), sec. 45 (reentrancy protection,
+ *      CEI, safe user exits during pause), invariants sec. 33-1, sec. 33-3 and
+ *      sec. 33-11.
  *
- *      ## Why settlement never sends value
+ *      ## Settlement is bookkeeping; only the owner moves value
  *
- *      The legacy contracts pay out with `x.call{value: ...}` guarded by
- *      `require(ok)`. One reverting receiver — treasury, reward pool or courier —
- *      permanently bricks that delivery. This was not theoretical: it was
- *      reproduced on a live chain, and the legacy Delivera deployment still holds
- *      MON that no function can release.
+ *      `releaseLock` and `refundLock` make no external call. They move an
+ *      internal balance from a lock into `claimable`, and that is all. Value
+ *      leaves this contract in exactly one place — `_payOut` — reached only when
+ *      an account pulls its own funds.
  *
- *      Here settlement is bookkeeping only. `releaseLock` moves an internal
- *      balance from a lock into `claimable`. No external call happens, so no
- *      third party can make it fail. Value leaves the contract in exactly one
- *      place, `_payOut`, reached only when someone pulls their own funds; if that
- *      transfer fails it reverts that caller's transaction alone and their
- *      balance stays intact.
+ *      The property this buys: **no payee can affect any other payee.** A wallet
+ *      that reverts on receive, burns all its gas, or simply never calls `claim`
+ *      still gets credited, and everyone else settles and withdraws normally. A
+ *      failed pull reverts that one caller's transaction and leaves their balance
+ *      untouched, ready to be pulled again later.
  *
  *      ## Solvency
  *
- *      `address(this).balance >= totalLocked + totalClaimable` holds after every
- *      state-changing call. It is asserted in code, not only in tests, because a
- *      violation means user funds are already gone. Balance may exceed
- *      liabilities (force-sent value is simply unaccounted for and unclaimable);
- *      it may never fall below.
+ *      After every state-changing call:
  *
- *      ## Pause semantics
+ *          address(this).balance >= totalLocked + totalClaimable
  *
- *      sec. 45 requires safe user exits during pause. Taking new custody is blocked
- *      while paused; releasing and refunding stay open because they only move
- *      internal balances toward users; `claim` is never blocked, so a paused
- *      protocol can always be exited.
+ *      This is asserted in code rather than only in tests, because a violation
+ *      means user funds are already gone. Balance may exceed liabilities — value
+ *      force-sent via `selfdestruct` is unaccounted for and is reported by
+ *      `surplus()` — but it may never fall below.
+ *
+ *      Payouts must sum to the lock exactly, not "at most". A short payout would
+ *      leave a remainder with no owner, which is a slow leak rather than a loud
+ *      failure (invariant sec. 33-3).
+ *
+ *      ## Pause
+ *
+ *      Taking new custody stops while paused. Releasing and refunding stay open,
+ *      because they only move internal balances toward users, and `claim` is
+ *      never blocked: a paused protocol must still be exitable (sec. 45).
  */
 contract SettlementVault is ISettlementVault, ReentrancyGuard {
     enum LockStatus {
@@ -152,9 +154,8 @@ contract SettlementVault is ISettlementVault, ReentrancyGuard {
 
     /**
      * @inheritdoc ISettlementVault
-     * @dev Payouts must sum to the lock exactly. Not "at most": a short payout
-     *      would strand the remainder with no owner, which is the legacy failure
-     *      mode this contract exists to remove (invariant sec. 33-3).
+     * @dev Payouts must sum to the lock exactly, not "at most" — see the
+     *      contract note on why a remainder with no owner is unacceptable.
      */
     function releaseLock(bytes32 lockId, Payout[] calldata payouts) external onlyController solvent {
         Lock storage l = _locks[lockId];

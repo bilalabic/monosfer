@@ -8,44 +8,50 @@ import {ProtocolAccessManager} from "../access/ProtocolAccessManager.sol";
 import {ProtocolConfig} from "../config/ProtocolConfig.sol";
 import {CourierRegistry} from "../registry/CourierRegistry.sol";
 import {ISettlementVault} from "../interfaces/ISettlementVault.sol";
+import {CoverageQuote} from "../risk/CoverageQuote.sol";
+import {RiskQuoteVerifier} from "../risk/RiskQuoteVerifier.sol";
 
 /**
  * @title DeliveryHub
  * @notice The delivery lifecycle: creation, bidding, selection, funding,
  *         custody transitions and settlement.
- * @dev Baseline refs: sec. 7 (bidding), sec. 10 (funding session), sec. 11 (state machine),
- *      sec. 16 (challenge window), sec. 17 (return), sec. 18 (settlement), sec. 48 (windows),
- *      invariants sec. 33-2, sec. 33-6, sec. 33-16, sec. 33-17.
+ * @dev Baseline refs: sec. 7 (bidding), sec. 10 (funding session), sec. 11 (state
+ *      machine), sec. 16 (challenge window), sec. 17 (return), sec. 18
+ *      (settlement), sec. 48 (windows), invariants sec. 33-2, sec. 33-6,
+ *      sec. 33-16 and sec. 33-17.
  *
- *      ## Creating a delivery takes no money
+ *      ## Nothing is escrowed until both sides commit
  *
- *      The legacy contract escrowed the budget at creation. If nobody bid, the
- *      money had no way out — reproduced on a live chain, and the deployed
- *      legacy contract still holds MON no function can release.
+ *      Creating a delivery costs nothing and locks nothing. Money enters only
+ *      after a bid is selected and both parties fund the session (sec. 10), so an
+ *      unbid or abandoned listing has no value to strand: it simply expires.
  *
- *      Here funding happens only after a bid is selected (sec. 10). A delivery that
- *      nobody bids on simply expires with nothing at stake. The whole class of
- *      "created but abandoned" stranded escrow is removed structurally rather
- *      than patched.
+ *      ## Every live state has a deadline
  *
- *      ## Every non-terminal state has a deadline
- *
- *      Each live state carries `stateDeadline`. Once it passes, **anyone** may
- *      call `poke`, which advances the delivery toward a terminal state and
- *      releases whatever is held. No delivery can sit forever, and no party
- *      needs the other's cooperation to get their money back.
+ *      Each non-terminal state carries `stateDeadline`. Once it passes, anyone
+ *      may call `poke`, which advances the delivery toward a terminal state and
+ *      releases whatever is held. The guarantee is that no participant ever needs
+ *      the other's cooperation to recover their funds, and no delivery can sit
+ *      indefinitely holding value.
  *
  *      Timeouts resolve deterministically and never open a jury case (sec. 26).
- *      Loss and damage claims are dispute matters and arrive with P4.
+ *      Fault-based outcomes need evidence and belong to the dispute court.
  *
- *      ## Bid deposits are reservations, not a second escrow
+ *      ## Selection cost does not grow with the number of bids
  *
- *      Bidding reserves collateral in CourierRegistry. Losing couriers release
- *      their own reservation by calling `withdrawBid`; nothing iterates over a
- *      bidder list, so `selectCourier` costs the same with three bidders or
- *      three thousand (sec. 45).
+ *      Placing a bid reserves collateral in CourierRegistry; a courier who is not
+ *      selected releases their own reservation with `withdrawBid`. Nothing
+ *      iterates a bidder list, so `selectCourier` costs the same whether three
+ *      couriers bid or three thousand (sec. 45).
+ *
+ *      ## Terms are fixed by a signed quote and by the selected bid
+ *
+ *      The risk tier and required coverage come from a coverage quote signed by
+ *      the risk service and re-bounded on-chain (sec. 6, sec. 8.3). Price and ETA
+ *      come from the bid version the customer explicitly selects, so a courier
+ *      cannot re-price between being read and being chosen.
  */
-contract DeliveryHub is ReentrancyGuard {
+contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier {
     // --------------------------------------------------------------------
     // State machine (sec. 11)
     // --------------------------------------------------------------------
@@ -67,8 +73,6 @@ contract DeliveryHub is ReentrancyGuard {
 
     /// @dev First terminal state. Everything at or after it can never transition.
     State private constant FIRST_TERMINAL = State.Completed;
-
-    uint256 private constant BPS_DENOMINATOR = 10_000;
 
     struct Delivery {
         address customer;
@@ -117,7 +121,12 @@ contract DeliveryHub is ReentrancyGuard {
     // --------------------------------------------------------------------
 
     event DeliveryCreated(
-        uint256 indexed deliveryId, address indexed customer, uint8 riskTier, uint96 requiredCollateral, uint64 deadline
+        uint256 indexed deliveryId,
+        address indexed customer,
+        uint8 riskTier,
+        uint96 requiredCollateral,
+        uint64 deadline,
+        bytes32 quoteDigest
     );
     event BidPlaced(
         uint256 indexed deliveryId,
@@ -131,7 +140,11 @@ contract DeliveryHub is ReentrancyGuard {
     event BidWithdrawn(uint256 indexed deliveryId, address indexed courier);
     event CourierSelected(uint256 indexed deliveryId, address indexed courier, uint96 courierAsk, uint96 protocolFee);
     event CustomerFunded(uint256 indexed deliveryId, uint256 amount);
-    event CourierFunded(uint256 indexed deliveryId, uint256 collateral);
+    /// @param reservedBase Coverage met from stake the courier already held.
+    /// @param additionalBond Coverage the courier had to post for this delivery.
+    event CourierFunded(
+        uint256 indexed deliveryId, address indexed courier, uint256 reservedBase, uint256 additionalBond
+    );
     event StateChanged(uint256 indexed deliveryId, State from, State to, uint64 deadline);
     event PickupConfirmed(uint256 indexed deliveryId, address indexed courier);
     event DeliveryProofSubmitted(uint256 indexed deliveryId, address indexed courier);
@@ -158,6 +171,7 @@ contract DeliveryHub is ReentrancyGuard {
     error IncorrectFundingAmount(uint256 expected, uint256 provided);
     error AlreadyFunded();
     error DeadlineNotReached(uint64 deadline);
+    error InsufficientBond(uint256 required, uint256 provided);
 
     // --------------------------------------------------------------------
     // Modifiers
@@ -198,16 +212,23 @@ contract DeliveryHub is ReentrancyGuard {
 
     /**
      * @notice Publish a delivery for bidding. Takes no payment (sec. 10).
-     * @param riskTier 1..3. Tier 4 is disabled (sec. 49) and rejected by the registry.
-     * @param requiredCollateral Coverage the selected courier must lock.
+     * @dev The risk tier and required coverage come from the signed quote, never
+     *      from the caller, so a customer cannot choose their own coverage
+     *      (sec. 6, sec. 8.3).
+     * @param quote Signed coverage quote, issued to `msg.sender`.
+     * @param signature EOA or ERC-1271 signature over the quote digest.
+     * @return deliveryId Identifier of the published delivery.
      */
-    function createDelivery(uint8 riskTier, uint96 requiredCollateral)
+    function createDelivery(CoverageQuote.Quote calldata quote, bytes calldata signature)
         external
+        nonReentrant
         whenNotPaused
         returns (uint256 deliveryId)
     {
+        bytes32 quoteDigest = _redeemQuote(config, quote, signature);
+        uint8 riskTier = quote.riskTier;
+        uint96 requiredCollateral = quote.requiredCoverage;
         if (requiredCollateral == 0) revert ZeroAmount();
-        if (riskTier == 0 || riskTier > 3) revert CourierNotEligible(address(0), riskTier);
 
         uint32 limit = config.customerMaxActiveListings();
         if (activeListings[msg.sender] >= limit) revert TooManyActiveListings(limit);
@@ -231,7 +252,7 @@ contract DeliveryHub is ReentrancyGuard {
         });
         activeListings[msg.sender] += 1;
 
-        emit DeliveryCreated(deliveryId, msg.sender, riskTier, requiredCollateral, deadline);
+        emit DeliveryCreated(deliveryId, msg.sender, riskTier, requiredCollateral, deadline, quoteDigest);
         emit StateChanged(deliveryId, State.None, State.Bidding, deadline);
     }
 
@@ -370,15 +391,24 @@ contract DeliveryHub is ReentrancyGuard {
         if (msg.sender != d.courier) revert NotCourier(msg.sender);
         if (d.courierFunded) revert AlreadyFunded();
 
+        // sec. 8.3 splits coverage into what the courier already had and what
+        // they must add. The bid reservation counts toward the first part, so it
+        // is folded in rather than released and re-taken.
+        uint256 coverage = d.requiredCollateral;
+        uint256 availableBefore = registry.availableStake(msg.sender) + bidDeposit;
+        uint256 reservedBase = availableBefore < coverage ? availableBefore : coverage;
+        uint256 additionalBond = coverage - reservedBase;
+
+        if (additionalBond > 0 && msg.value < additionalBond) {
+            revert InsufficientBond(additionalBond, msg.value);
+        }
         if (msg.value > 0) registry.depositStakeFor{value: msg.value}(msg.sender);
 
         d.courierFunded = true;
-        // The bid reservation becomes part of the delivery coverage rather than
-        // being released and re-taken.
         _bids[deliveryId][msg.sender].active = false;
-        emit CourierFunded(deliveryId, d.requiredCollateral);
+        emit CourierFunded(deliveryId, msg.sender, reservedBase, additionalBond);
 
-        uint256 extra = uint256(d.requiredCollateral) > bidDeposit ? d.requiredCollateral - bidDeposit : 0;
+        uint256 extra = coverage > bidDeposit ? coverage - bidDeposit : 0;
         if (extra > 0) registry.reserveCollateral(msg.sender, extra);
         _maybeReady(deliveryId, d);
     }
@@ -395,8 +425,8 @@ contract DeliveryHub is ReentrancyGuard {
 
     /**
      * @notice Courier takes custody. Moves straight to IN_TRANSIT (sec. 11).
-     * @dev P2 replaces the caller check with an EIP-712 PickupAcceptance signature
-     *      from the sender; the state transition itself is unchanged.
+     * @dev Authorisation is currently the caller check; P2 replaces it with an
+     *      EIP-712 PickupAcceptance signature. The state transition is unchanged.
      */
     function confirmPickup(uint256 deliveryId) external nonReentrant whenNotPaused {
         Delivery storage d = _requireDelivery(deliveryId);
@@ -410,7 +440,8 @@ contract DeliveryHub is ReentrancyGuard {
 
     /**
      * @notice Courier submits delivery proof, opening the challenge window (sec. 16).
-     * @dev P2 replaces the caller check with a signed PoD attestation.
+     * @dev Authorisation is currently the caller check; P2 replaces it with a
+     *      signed proof-of-delivery attestation.
      */
     function submitDeliveryProof(uint256 deliveryId) external nonReentrant whenNotPaused {
         Delivery storage d = _requireDelivery(deliveryId);
@@ -486,8 +517,8 @@ contract DeliveryHub is ReentrancyGuard {
         } else if (s == State.ReturnRequired) {
             // The window elapsed without a confirmed return. Resolve
             // deterministically: the customer is made whole and the courier's
-            // coverage is released. Fault-based slashing needs evidence and
-            // belongs to the dispute court (sec. 13, sec. 26).
+            // coverage is released. Slashing requires evidence and belongs to
+            // the dispute court (sec. 13, sec. 26).
             registry.closeCustody(d.courier);
             _settleReturn(deliveryId, d, false);
         } else {
@@ -551,18 +582,29 @@ contract DeliveryHub is ReentrancyGuard {
         vault.releaseLock(escrowLockId(deliveryId), payouts);
     }
 
-    /// @dev Refunds whichever side funded and releases the other's commitment (sec. 10).
+    /**
+     * @dev Refunds whichever side funded and releases the other's commitment
+     *      (sec. 10). The delivery is moved to its terminal state before any
+     *      external call, so the accounting is already final when the registry
+     *      and the vault are told about it.
+     */
     function _cancelWithRefunds(uint256 deliveryId, Delivery storage d) internal {
         bool hadEscrow = d.customerFunded;
-        if (d.courierFunded) {
-            _releaseCourierCollateral(d);
-        } else if (d.courier != address(0) && _bids[deliveryId][d.courier].active) {
-            _bids[deliveryId][d.courier].active = false;
-            registry.releaseCollateral(d.courier, bidDeposit);
-        }
+        bool releaseCoverage = d.courierFunded;
+        address courier = d.courier;
+        uint96 coverage = d.requiredCollateral;
+
+        bool releaseBid = !releaseCoverage && courier != address(0) && _bids[deliveryId][courier].active;
+        if (releaseBid) _bids[deliveryId][courier].active = false;
 
         _finish(deliveryId, d, State.Cancelled);
         emit Settled(deliveryId, State.Cancelled);
+
+        if (releaseCoverage) {
+            registry.releaseCollateral(courier, coverage);
+        } else if (releaseBid) {
+            registry.releaseCollateral(courier, bidDeposit);
+        }
         if (hadEscrow) vault.refundLock(escrowLockId(deliveryId));
     }
 

@@ -38,6 +38,16 @@
             "internalType": "uint16"
           },
           {
+            "name": "coverageMultiplierMinBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "coverageMultiplierMaxBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
             "name": "maxActiveCustody",
             "type": "uint8",
             "internalType": "uint8"
@@ -225,6 +235,19 @@
   {
     "type": "function",
     "name": "MAX_COVERAGE_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_COVERAGE_MULTIPLIER_BPS",
     "inputs": [],
     "outputs": [
       {
@@ -426,6 +449,19 @@
         "name": "",
         "type": "uint128",
         "internalType": "uint128"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIN_COVERAGE_MULTIPLIER_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
       }
     ],
     "stateMutability": "view"
@@ -666,6 +702,32 @@
   },
   {
     "type": "function",
+    "name": "coverageMultiplierMaxBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "coverageMultiplierMinBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "customerMaxActiveListings",
     "inputs": [],
     "outputs": [
@@ -751,6 +813,16 @@
           },
           {
             "name": "coverageBpsR3",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "coverageMultiplierMinBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "coverageMultiplierMaxBps",
             "type": "uint16",
             "internalType": "uint16"
           },
@@ -886,6 +958,16 @@
           },
           {
             "name": "coverageBpsR3",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "coverageMultiplierMinBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "coverageMultiplierMaxBps",
             "type": "uint16",
             "internalType": "uint16"
           },
@@ -1051,6 +1133,16 @@
           },
           {
             "name": "coverageBpsR3",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "coverageMultiplierMinBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "coverageMultiplierMaxBps",
             "type": "uint16",
             "internalType": "uint16"
           },
@@ -1240,6 +1332,19 @@
   },
   {
     "type": "function",
+    "name": "riskQuoteValidity",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "rotatePodAttestationSigner",
     "inputs": [
       {
@@ -1342,6 +1447,16 @@
           },
           {
             "name": "coverageBpsR3",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "coverageMultiplierMinBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "coverageMultiplierMaxBps",
             "type": "uint16",
             "internalType": "uint16"
           },
@@ -1483,6 +1598,16 @@
           },
           {
             "name": "coverageBpsR3",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "coverageMultiplierMinBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "coverageMultiplierMaxBps",
             "type": "uint16",
             "internalType": "uint16"
           },

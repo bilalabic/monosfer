@@ -23,6 +23,8 @@ library BaselineParams {
             coverageBpsR1: 2_500, // sec. 6: 25%
             coverageBpsR2: 6_000, // sec. 6: 60%
             coverageBpsR3: 10_000, // sec. 6: 100%
+            coverageMultiplierMinBps: 7_500, // 0.75x — reputation discount floor
+            coverageMultiplierMaxBps: 15_000, // 1.5x — risk surcharge ceiling
             maxActiveCustody: 1, // sec. 9
             customerMaxActiveListings: 5, // sec. 48
             juryFirstSize: 3, // sec. 48

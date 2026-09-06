@@ -9,6 +9,8 @@ import {BaselineParams} from "../../../src/v1/config/BaselineParams.sol";
 import {SettlementVault} from "../../../src/v1/vault/SettlementVault.sol";
 import {CourierRegistry} from "../../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../../src/v1/hub/DeliveryHub.sol";
+import {CoverageQuote} from "../../../src/v1/risk/CoverageQuote.sol";
+import {QuoteFixture} from "../helpers/QuoteFixture.sol";
 
 /**
  * @notice Drives DeliveryHub through random lifecycles from random callers,
@@ -16,7 +18,7 @@ import {DeliveryHub} from "../../../src/v1/hub/DeliveryHub.sol";
  * @dev Reverts are swallowed. The point is that no ordering of calls, authorised
  *      or not, can break the invariants asserted by the test contract.
  */
-contract HubHandler is Test {
+contract HubHandler is QuoteFixture {
     DeliveryHub public immutable hub;
     CourierRegistry public immutable registry;
     ProtocolConfig public immutable config;
@@ -27,6 +29,7 @@ contract HubHandler is Test {
     uint256[] public deliveries;
 
     uint256 public created;
+    uint256 public forgedAccepted;
     uint256 public selected;
     uint256 public funded;
     uint256 public settled;
@@ -57,13 +60,38 @@ contract HubHandler is Test {
         return (deliveries[s % deliveries.length], true);
     }
 
-    function createDelivery(uint256 custSeed, uint8 tier, uint96 collateral) external {
+    /**
+     * @dev Quotes are signed with the configured risk key so the authorised path
+     *      stays reachable. `createDeliveryForged` below exercises rejection.
+     */
+    function createDelivery(uint256 custSeed, uint8 tier, uint96 declaredValue) external {
         tier = uint8(bound(tier, 1, 3));
-        collateral = uint96(bound(collateral, 1 ether, 5 ether));
-        vm.prank(_customer(custSeed));
-        try hub.createDelivery(tier, collateral) returns (uint256 id) {
+        declaredValue = uint96(bound(declaredValue, 1 ether, 40 ether));
+        address cust = _customer(custSeed);
+
+        CoverageQuote.Quote memory q = buildQuote(config, cust, tier, declaredValue);
+        bytes memory sig = signQuote(hub, q);
+        vm.prank(cust);
+        try hub.createDelivery(q, sig) returns (uint256 id) {
             deliveries.push(id);
             created++;
+        } catch {}
+    }
+
+    /// @notice A quote signed by the wrong key must never open a delivery.
+    function createDeliveryForged(uint256 custSeed, uint8 tier, uint96 declaredValue, uint256 wrongKey) external {
+        tier = uint8(bound(tier, 1, 3));
+        declaredValue = uint96(bound(declaredValue, 1 ether, 40 ether));
+        wrongKey = bound(wrongKey, 1, type(uint128).max);
+        if (wrongKey == QUOTE_SIGNER_KEY) return;
+        address cust = _customer(custSeed);
+
+        CoverageQuote.Quote memory q = buildQuote(config, cust, tier, declaredValue);
+        bytes memory sig = signQuoteAs(hub, q, wrongKey);
+        vm.prank(cust);
+        try hub.createDelivery(q, sig) returns (uint256 id) {
+            deliveries.push(id);
+            forgedAccepted++;
         } catch {}
     }
 
@@ -172,7 +200,7 @@ contract HubHandler is Test {
     }
 }
 
-contract DeliveryHubInvariantTest is StdInvariant, Test {
+contract DeliveryHubInvariantTest is StdInvariant, QuoteFixture {
     ProtocolAccessManager internal manager;
     ProtocolConfig internal config;
     SettlementVault internal vault;
@@ -185,7 +213,9 @@ contract DeliveryHubInvariantTest is StdInvariant, Test {
 
     function setUp() public {
         manager = new ProtocolAccessManager(3 days, admin);
-        config = new ProtocolConfig(manager, 2 days, BaselineParams.baseline(), treasury, address(0x1), address(0x2));
+        config = new ProtocolConfig(
+            manager, 2 days, BaselineParams.baseline(), treasury, quoteSignerAddress(), address(0x2)
+        );
         vault = new SettlementVault(manager);
         registry = new CourierRegistry(manager, config, vault);
         hub = new DeliveryHub(manager, config, registry, vault, 1 ether);
@@ -313,9 +343,14 @@ contract DeliveryHubInvariantTest is StdInvariant, Test {
         vm.revertToState(snapshot);
     }
 
+    /// @dev Invariant sec. 33-8: a forged quote can never open a delivery.
+    function invariant_ForgedQuoteNeverAccepted() public view {
+        assertEq(handler.forgedAccepted(), 0, "a delivery was opened with a forged coverage quote");
+    }
+
     /// @dev Guards against vacuity: the authorised lifecycle must be reachable.
     function test_HandlerReachesFullLifecycle() public {
-        handler.createDelivery(0, 1, 2 ether);
+        handler.createDelivery(0, 1, 20 ether);
         assertGt(handler.created(), 0, "creation reachable");
 
         handler.placeBid(0, 0, 5 ether);
