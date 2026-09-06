@@ -1,0 +1,115 @@
+name: Contracts CI
+
+# Gates every change to contracts/. Introduced in P0.1 as the safety net that
+# all later phases (P0.2 onward) depend on. Deliberately separate from
+# deploy.yml, which only ships the app on push to main and never builds or
+# tests the contracts.
+on:
+  pull_request:
+    paths:
+      - "contracts/**"
+      - ".github/workflows/contracts.yml"
+      - ".gitattributes"
+  push:
+    branches:
+      - Monosfer-V2
+    paths:
+      - "contracts/**"
+      - ".github/workflows/contracts.yml"
+      - ".gitattributes"
+  workflow_dispatch:
+
+concurrency:
+  group: contracts-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: contracts
+
+env:
+  # Heavier fuzz/invariant workload than the local default profile.
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  build-test:
+    name: Build, format, test, gas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # forge-std is vendored under contracts/lib/, not a submodule, so no
+        # submodule checkout is required.
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          # Pinned per baseline §44 ("tool versions must be pinned by
+          # repository configuration rather than silently following a
+          # development branch"). This is the version the committed
+          # .gas-snapshot and formatting were produced with; an unpinned
+          # toolchain would produce spurious gas/format diffs.
+          version: v1.8.1
+
+      - name: Report toolchain version
+        run: forge --version
+
+      - name: Build
+        # No --offline here (unlike the root `contracts:test` npm script), so
+        # dependency resolution problems surface in CI rather than staying
+        # hidden behind a vendored lib directory.
+        run: forge build
+
+      - name: Check formatting
+        # Legacy sources are excluded via [fmt].ignore in foundry.toml; all V1
+        # code added from P0.2 onward is enforced.
+        run: forge fmt --check
+
+      - name: Test
+        run: forge test -vvv
+
+      - name: Check gas snapshot
+        # Fails if any committed gas number moved. Intentional gas changes
+        # require regenerating .gas-snapshot in the same pull request so the
+        # delta is reviewable.
+        #
+        # Fuzz and invariant tests are excluded: their reported gas is a mean
+        # over randomly drawn inputs, so it changes with the fuzz seed and would
+        # make this gate flaky. Determinism is what gives it meaning.
+        run: forge snapshot --check --no-match-test "testFuzz|invariant_"
+
+      - name: Deploy dry-run (legacy Delivera)
+        env:
+          # Well-known public anvil test key. Simulation only: no --broadcast,
+          # no RPC URL, no funds, never used on any live network.
+          PRIVATE_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+        run: forge script script/Deploy.s.sol:DeployScript
+
+      - name: Deploy dry-run (legacy modular system)
+        env:
+          PRIVATE_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+        run: forge script script/DeploySystem.s.sol:DeploySystemScript
+
+  static-analysis:
+    name: Slither
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Slither
+        run: pip install --quiet slither-analyzer==0.11.6
+
+      - name: Run Slither
+        # Config lives in contracts/slither.config.json: legacy paths are
+        # filtered (their accepted baseline is documented in
+        # docs/static-analysis-baseline.md) and fail_on is "medium", so this
+        # job fails only on new medium+ findings in V1 code.
+        run: slither .

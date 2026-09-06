@@ -1,0 +1,5 @@
+{
+  "filter_paths": "lib/|src/Delivera\\.sol|src/DeliveryEscrow\\.sol|src/Leaderboard\\.sol|src/MCRYToken\\.sol|src/ReputationBadge\\.sol|src/RewardDistributor\\.sol|script/Deploy\\.s\\.sol|script/DeploySystem\\.s\\.sol|test/legacy/",
+  "exclude_dependencies": true,
+  "fail_on": "medium"
+}

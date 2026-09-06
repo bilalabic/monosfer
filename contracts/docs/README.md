@@ -1,0 +1,46 @@
+# MONOSFER Kontrat Dokümantasyonu
+
+Şartname depo kökündedir: `MONOSFER_Initial_Release_Base_Documentation_v1.0.md`
+(kontrat + backend + frontend kapsar). Buradaki tüm dokümanlar ona referans verir.
+
+## Tasarım referansları
+
+Sistem geliştikçe güncellenir; sürüm/tarih taşımazlar.
+
+| Doküman | İçerik |
+|---|---|
+| [`governance.md`](governance.md) | Rol matrisi, zaman kilitleri, pause runbook, parametre sınırları |
+| [`settlement.md`](settlement.md) | Pull-payment modeli, ödeme gücü, reentrancy, pause davranışı |
+| [`courier-registry.md`](courier-registry.md) | Stake bölünmesi, çıkış yolu, C0/C1/C2, custody limiti |
+| [`integration.md`](integration.md) | Frontend/backend için adres + ABI + tip paylaşımı |
+| [`static-analysis-baseline.md`](static-analysis-baseline.md) | Kabul edilen legacy Slither bulguları ve `forge lint` dağılımı |
+
+## Analiz ve plan
+
+Sürümlü belgeler; içerik revize edilirse sürüm numarası artar.
+
+| Doküman | İçerik |
+|---|---|
+| [`contract-analysis-v1.0.md`](contract-analysis-v1.0.md) | Kontratların baseline'a karşı boşluk analizi: doğru olanlar, eksikler, iyileştirilecekler, dokunulmayacaklar |
+| [`implementation-plan-v1.0.md`](implementation-plan-v1.0.md) | P0–P5 fazlı uygulama planı, branch stratejisi, artefakt paylaşımı, onay gerektiren kararlar |
+
+## Kayıt
+
+| Doküman | İçerik |
+|---|---|
+| [`verification-log.md`](verification-log.md) | Faz faz doğrulama sonuçları, testnet senaryoları, yakalanan hatalar |
+
+## Faz durumu
+
+| Faz | Konu | Durum |
+|---|---|---|
+| P0.1 | CI, regresyon ağı, gas baseline | **Tamamlandı** |
+| P0.2 | `ProtocolAccessManager` + `ProtocolConfig` | **Tamamlandı** |
+| P0.3 | `SettlementVault` | **Tamamlandı** |
+| P0.4 | `CourierRegistry` | **Tamamlandı** |
+| P1.1 | `DeliveryHub` — yaşam döngüsü, iptal/timeout, self-dealing engeli | Sırada |
+| P1.2–P1.3 | Funding session, risk katmanı ve kapsam | Bekliyor |
+| P2 | Pickup/PoD kanıtları, challenge penceresi, iade akışı | Bekliyor |
+| P3 | İtibar, rozet, ödül, referans | Bekliyor |
+| P4 | İhtilaf, jüri, randomness | Bekliyor |
+| P5 | Invariant/failure suite, deploy sertleştirme, cut-over | Bekliyor |

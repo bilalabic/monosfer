@@ -10,6 +10,8 @@
     "test:deploy": "node --test scripts/deploy-record.test.mjs",
     "frontend": "cd frontend && npm run dev",
     "backend": "cd backend && npm run dev",
-    "start": "sh -c 'trap \"kill 0\" EXIT; (cd backend && npm run dev) & (cd frontend && npm run dev) & wait'"
+    "start": "sh -c 'trap \"kill 0\" EXIT; (cd backend && npm run dev) & (cd frontend && npm run dev) & wait'",
+    "contracts:exports": "cd contracts && forge build && node tools/build-exports.mjs",
+    "contracts:exports:check": "cd contracts && forge build && node tools/build-exports.mjs --check"
   }
 }
