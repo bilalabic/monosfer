@@ -27,6 +27,7 @@ gün, sürüm ise içeriğin revizyonu. Kronolojik sıralanır, en yenisi en alt
 | [`2026-09-06-p0.2-verification-report-v1.0.md`](2026-09-06-p0.2-verification-report-v1.0.md) | P0.2 (ProtocolAccessManager + ProtocolConfig) doğrulaması, 59/59 test, kapatılan bulgular |
 | [`2026-09-06-p0.3-verification-report-v1.0.md`](2026-09-06-p0.3-verification-report-v1.0.md) | P0.3 (SettlementVault) doğrulaması, 86/86 test, 65.536 çağrılık ödeme gücü invariant'ı, verilen kararlar |
 | [`2026-09-06-v1-core-testnet-verification-v1.0.md`](2026-09-06-v1-core-testnet-verification-v1.0.md) | P0.1–P0.3 çekirdeğinin Monad testnet doğrulaması: 10 senaryo, tutarsızlık düzeltmeleri, deploy adresleri |
+| [`2026-09-06-p0.4-verification-report-v1.0.md`](2026-09-06-p0.4-verification-report-v1.0.md) | P0.4 (CourierRegistry) doğrulaması, 119/119 test, testnet senaryoları, Monad gas-limit bulgusu |
 
 ## Depo kökündeki ilgili doküman
 
@@ -41,6 +42,6 @@ için kökte bırakıldı; buradaki tüm dokümanlar ona referans verir.
 | P0.1 | CI, regresyon ağı, gas baseline | **Tamamlandı** — yerelde ve testnet'te doğrulandı |
 | P0.2 | `ProtocolAccessManager` + `ProtocolConfig` | **Tamamlandı** — 54 yeni test, 5 invariant |
 | P0.3 | `SettlementVault` (pull-payment, ödeme tıkanmasını çözer) | **Tamamlandı** — 27 test, 4 invariant, 65.536 çağrı |
-| P0.4 | `CourierRegistry` (stake çekme, custody limiti) | Bekliyor |
+| P0.4 | `CourierRegistry` (stake çekme, custody limiti) | **Tamamlandı** — 30 test, 5 invariant, testnet doğrulandı |
 | P1.x | Yaşam döngüsü, iptal/timeout, self-dealing engeli, kapsam/teminat | Bekliyor |
 | P2–P5 | Kanıtlar, itibar, ödül, ihtilaf, sertleştirme | Bekliyor |
