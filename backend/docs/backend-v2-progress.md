@@ -1,5 +1,9 @@
 # Backend V2 İlerleme Kaydı
 
+## 2026-09-07 — Faz 4 commit teslim kaydı
+
+Uygulama commit'i `cd85a83` — `feat(backend): implement phase 4 finalized indexer and projections`. `Monosfer-V2` üzerinde yalnız backend altında 25 dosya içerir; staged diff/check doğrulandı. Bu hash kaydı ayrı docs commit'idir. Push/deploy yapılmadı; sonraki uygulama fazı Faz 5'tir.
+
 ## 2026-09-07 — Faz 4 / tamamlandı
 
 F4.1–F4.5: bekliyor → devam ediyor → doğrulanıyor → tamamlandı. Backend kapsamındaki indexer/projection teslimi doğrulandı. Salt okunur API ve worker hazır; worker varsayılan kapalıdır. `INDEXER_ENABLED=true`, `INDEXER_RPC_URL` ve doğru runtime config ile ayrı process başlatılır. Mevcut `.env` değiştirilmedi.
