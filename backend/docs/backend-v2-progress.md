@@ -1,5 +1,9 @@
 # Backend V2 İlerleme Kaydı
 
+## 2026-09-07 — Faz 2 commit teslim kaydı
+
+Uygulama commit'i: `02ca5d11cb8790ee5e65955d900173299f7bb05b` — `feat(backend): implement V2 phase 2 SIWE sessions and profiles`. `Monosfer-V2` üzerinde yalnız backend altında 37 dosya içerir. Bu hash kaydı ayrı docs commit'i olarak tutulur. Push/deploy yapılmadı; bir sonraki uygulama fazı Faz 3'tür.
+
 ## 2026-09-07 — Faz 2 / tamamlandı
 
 F2.1–F2.6 durum geçişi: bekliyor → devam ediyor → doğrulanıyor → tamamlandı. Backend kapsamındaki kabul koşulları doğrulandı; frontend/browser ve canlı contract-wallet smoke teslimleri aşağıda açıkça ayrıldı.
