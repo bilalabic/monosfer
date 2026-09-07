@@ -1,5 +1,41 @@
 # Backend V2 İlerleme Kaydı
 
+## 2026-09-07 — Faz 2 / tamamlandı
+
+F2.1–F2.6 durum geçişi: bekliyor → devam ediyor → doğrulanıyor → tamamlandı. Backend kapsamındaki kabul koşulları doğrulandı; frontend/browser ve canlı contract-wallet smoke teslimleri aşağıda açıkça ayrıldı.
+
+| Kontrol | Gerçek sonuç |
+| --- | --- |
+| `npm ci` | Temiz kurulum başarılı, Node v24.10.0; 295 paket audit edildi |
+| `npm run typecheck` | Başarılı |
+| `npm run build` | Başarılı; test ve OpenAPI komutlarında production TS build tekrar doğrulandı |
+| `npm test` | 52/52 geçti; SIWE/EOA, yerel ERC-1271 RPC fixture, replay yarışları, Origin/CSRF, rate limit, cookie, DTO, OpenAPI, health/log regresyonları |
+| `npm run test:integration` | 7/7 geçti; gerçek localhost PostgreSQL/Redis, migration tekrarı, gerçek imzalı giriş, atomic nonce, SQL profil ve kısmi PATCH/null davranışı, revoke, TTL, kesinti, startup ve shutdown |
+| `npm run test:legacy` | 13/13 geçti; legacy kaynak kodu değişmedi |
+| `npm run db:migrate` | Yerel Compose veritabanında başarılı; mevcut migration'lar tekrar uygulanmadı |
+| `npm run openapi:export` | Başarılı; 7 path / 9 işlem, auth/user request-response şemaları ve cookie/CSRF/Origin sözleşmesi |
+| `npm audit` | 0 güvenlik açığı |
+| `npm ls @signinwithethereum/siwe viem @fastify/cookie fastify` | SIWE 4.2.1, viem 2.56.3, cookie 11.1.2; Nest adaptörü ve root Fastify 5.12.3 dedupe, uyumsuz peer yok |
+| `git diff --check` ve kapsam kontrolü | Başarılı; yalnız `backend/` değişiklikleri |
+
+Son kontrolde CORS PATCH/DELETE preflight izinleri, nullable OpenAPI string tipleri ve DTO'nun undefined alanlarının PATCH sırasında mevcut SQL değerlerini koruması düzeltildi. Regresyonlar testlere eklendi. Auth/session/cookie/PII içerikleri HTTP loglarında veya standart hata yanıtlarında görünmedi. Session cache yazımı başarısızsa audit oturumu iptal edilir; stale Redis kaydı SQL revocation kontrolünü geçemez.
+
+İki shutdown testi Windows'ta Nest signal handler dispatch'ini çalıştırdı. Bu fazda ayrı Linux POSIX testi, gerçek tarayıcı wallet testi, canlı Testnet ERC-1271 testi ve down migration çalıştırılmadı. Contract-wallet adapter testi yalnız yerel RPC fixture kullanır; zincire işlem gönderilmedi.
+
+Değişiklikler yalnız backend altında; MongoDB ve kullanıcı verileri taşınmadı/silinmedi. Entegrasyonun rastgele test wallet fixture'ları temizlendi; yalnız testte yaratılan kayıtlar kaldırıldı. Yerel Compose servisleri açık bırakıldı; API test process'leri kapandı. Production deploy/push yapılmadı. Çalıştırmadan önce `.env` yeni zorunlu auth alanlarıyla tamamlanmalı ve SESSION_COOKIE_SECRET rastgele üretilmeli.
+
+Doğal devam görevleri: (1) frontend ekibiyle gerçek tarayıcı SIWE/CSRF/cookie smoke testi ve production origin/TTL/rate kararları; (2) Faz 3 private veri, şifreleme ve salt okunur MongoDB aktarım envanteri. Ayrıntılar `backend-v2-handoffs.md` içinde. Yerel uygulama commit kimliği sonraki teslim kaydına yazılacak.
+
+## 2026-09-07 — Faz 2 / doğrulanıyor
+
+- F2.1–F2.5: Auth/users/security modülleri, SQL migration, zorunlu config, SIWE + browser challenge, opaque session, CSRF, rate limit, profil validation ve OpenAPI eklendi. Çalışma tabanı `68aed6c`, dal `Monosfer-V2`.
+- F2.1: Onaylanan exact paketler kuruldu; ilk npm audit 0 açık. Docker Desktop kapalıydı, başlatıldı; backend Compose servisleri açıldı.
+- F2.6: İlk unit/inject çalışması UsersModule içindeki guard için Redis provider export eksikliğini buldu; export düzeltildi. Sonraki `npm test`: 47/47 geçti.
+- F2.6: Gerçek local servislerde auth migration/tekrar migration, replay yarışı, profil SQL, revoke, TTL ve Redis kesinti testi geçti; tüm suite sonuçları aşağıdaki teslim kaydına yazılacak.
+- HTTP development cookie adı `monosfer_sid_dev`; HTTPS/production `__Host-monosfer_sid`. Bu düzeltme `__Host-` + Secure tarayıcı kuralını korur. Kullanıcı rolü yalnız customer/courier tercihi; ayrıcalıklı rol atanamaz.
+- İlk legacy komutu yanlışlıkla repo kökünden çalıştırıldı ve script bulunamadı; backend dizininden tekrar çalıştırılacak. Bu deneme kaynak dosyası değiştirmedi.
+- Devam: tam entegrasyon/kapanış, ERC-1271 RPC bağlam testleri, legacy, temiz kurulum, typecheck/build/audit/OpenAPI ve backend-only diff; ardından yerel commit. Frontend tarayıcı smoke ve production politika kararları handoffs içinde.
+
 ## 2026-09-06–07 — Faz 1 / tamamlandı
 
 - Başlangıç: `origin/Monosfer-V2` fetch edildi; yerel tracking dalı oluşturuldu (`4df5d5c`). Başka dal birleştirilmedi.
@@ -27,7 +63,8 @@
 | Faz | Durum |
 | --- | --- |
 | 1 | tamamlandı |
-| 2–7 | bekliyor |
+| 2 | tamamlandı |
+| 3–7 | bekliyor |
 
 ## Devam notu
 

@@ -6,9 +6,10 @@ import { createApplication } from '../../dist/app.js';
 import { createLogger } from '../../dist/http/logger.js';
 import { DatabaseService } from '../../dist/infrastructure/database.module.js';
 import { RedisService } from '../../dist/infrastructure/redis.module.js';
+import { localAuthEnv } from '../support/env.mjs';
 
 const env = {
-  ...process.env, NODE_ENV: 'test',
+  ...process.env, ...localAuthEnv, NODE_ENV: 'test',
   DATABASE_URL: process.env.DATABASE_URL ?? 'postgresql://monosfer:local-development-only@127.0.0.1:55432/monosfer_v2',
   REDIS_URL: process.env.REDIS_URL ?? 'redis://:local-development-only@127.0.0.1:56379',
   CORS_ORIGINS: 'http://localhost:3000', CONNECTION_TIMEOUT_MS: '300',

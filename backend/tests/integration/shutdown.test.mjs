@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fork } from 'node:child_process';
 import { once } from 'node:events';
+import { localAuthEnv } from '../support/env.mjs';
 
 for (const signal of ['SIGTERM', 'SIGINT']) {
   test(`${signal} drains HTTP and closes real PostgreSQL/Redis before process exit`, { timeout: 90000 }, async t => {
@@ -9,7 +10,7 @@ for (const signal of ['SIGTERM', 'SIGINT']) {
     const child = fork(new URL('../support/shutdown-child.mjs', import.meta.url), [], {
       silent: true,
       env: {
-        ...process.env, NODE_ENV: 'test', CORS_ORIGINS: 'http://localhost:3000',
+        ...process.env, ...localAuthEnv, NODE_ENV: 'test', CORS_ORIGINS: 'http://localhost:3000',
         DATABASE_URL: process.env.DATABASE_URL ?? 'postgresql://monosfer:local-development-only@127.0.0.1:55432/monosfer_v2',
         REDIS_URL: process.env.REDIS_URL ?? 'redis://:local-development-only@127.0.0.1:56379',
       },

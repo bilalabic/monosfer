@@ -33,6 +33,27 @@ Veritabanı startup sırasında migrate edilmez. İlk migration sadece `monosfer
 Redis en fazla üç yeniden bağlantı denemesi yapar; tüketildiğinde readiness 503 kalır ve process yeniden başlatılır. PostgreSQL probe her istekte yeniden denenebilir.
 Config ve private connection error metinleri HTTP/loglara aktarılmaz.
 
+## Faz 2 — SIWE, oturum ve minimal profil (2026-09-07)
+
+Gerçek doğrulama sonuçları ve faz durumu `backend-v2-progress.md` içinde izlenir.
+
+- F2.1: Exact SIWE 4.2.1, viem 2.56.3, Fastify cookie 11.1.2; zorunlu auth config ve PostgreSQL migration.
+- F2.2: `POST /v1/auth/siwe/nonce`, `POST /v1/auth/siwe/verify`; server tarafından üretilmiş EIP-4361 mesajı, 300 saniyeye kadar nonce TTL, browser challenge cookie bağlamı ve atomik compare/delete.
+- F2.3: `GET/DELETE /v1/auth/session`, `DELETE /v1/auth/sessions`; opaque cookie, yalnız hash anahtarları, Redis TTL ve her istekte PostgreSQL expiry/revocation kontrolü. Login ve revoke-all user row lock ile sıralanır.
+- F2.4: `GET/PATCH /v1/users/me`; yalnız kendi profilini güncelleme. `customer/courier` kullanıcı tercihidir; yönetici/operasyon yetkisi sağlamaz. Courier profili yalnız `vehicleType` (`on_foot/bicycle/motorcycle/car`), onay belgesi içermez. Email/phone doğrulanmış sayılmaz.
+- F2.5: Origin allowlist, cookie mutasyonlarında session'a bağlı HMAC CSRF, Redis üzerinde ortak IP rate limit, hassas alan redaction, OpenAPI ve ekip sözleşmesi.
+- F2.6: Unit/inject, gerçek PostgreSQL/Redis migration/replay/TTL/revoke/kesinti, legacy ve shutdown regresyonları; typecheck/build/audit/diff kontrolü. Yalnız backend dosyalarıyla yerel commit; otomatik push yok.
+
+Cookie uygulama düzeltmesi: `__Host-` adı tarayıcıda `Secure` gerektirir. HTTPS ve production için `__Host-monosfer_sid`; development/test HTTP için `monosfer_sid_dev`. İkisi de HttpOnly, SameSite=Lax, Path=/; Domain verilmez. Login CSRF için ayrıca kısa ömürlü challenge cookie gerekir. `SESSION_COOKIE_SECRET` cookie değerini değiştirmeden session'a bağlı CSRF üretiminde kullanılır; en az 32 karakter, ortam başına rastgele üretilir.
+
+Zorunlu env: SIWE_DOMAIN, SIWE_URI, SIWE_CHAIN_ID, SIWE_STATEMENT, SIWE_RPC_URL, SESSION_COOKIE_SECRET, SESSION_TTL_SECONDS, NONCE_TTL_SECONDS, AUTH_RATE_LIMIT_WINDOW_SECONDS, AUTH_RATE_LIMIT_MAX. Örnek geliştirme TTL 86400 saniye, nonce 300, rate 60/60 saniye; bunlar production ürün politikası onayı değildir. SIWE URI origin'i CORS listesinde ve host'u SIWE_DOMAIN ile aynı olmalı. Production SIWE URI/RPC HTTPS olmalı.
+
+EOA imzaları yerel kriptografik doğrulanır; deployed ERC-1271 için RPC chain ID ve read-only signature çağrısı kullanılır. ERC-6492/counterfactual cüzdanlar bu teslimde desteklenmez. Gerçek zincire işlem gönderilmez.
+
+Kabul: impersonation/replay/domain-chain-URI/expiry, login CSRF ve protected CSRF reddi, logout/revoke-all sonrası 401, role escalation reddi, gerçek Redis rate/TTL ve hata 503 redaction, OpenAPI sözleşmesi, backend-only diff ve gerçek test kayıtları. Wallet/browser uyumu frontend smoke test devrine yazılır.
+
+Resmi kaynaklar: [SIWE kaynak ve adapter](https://github.com/signinwithethereum/siwe), [EIP-4361](https://eips.ethereum.org/EIPS/eip-4361), [Fastify cookie uyumluluğu](https://github.com/fastify/fastify-cookie), [Nest cookie](https://docs.nestjs.com/techniques/cookies), [viem](https://viem.sh/docs/getting-started).
+
 ## Sonraki fazlar
 
 | Faz | Kapsam | Kabul koşulları |
@@ -63,5 +84,5 @@ Legacy bağımlılıkların mevcut semver aralıklarındaki güvenlik düzeltmel
 
 ## Doğal devam görevleri
 
-1. Faz 2 SIWE: wallet sahipliğini doğrulayıp güvenli session temeli kurmak.
-2. Faz 3 private veri/aktarım: mevcut veriyi korurken PostgreSQL veri sahipliği sınırını oluşturmak.
+1. SIWE tarayıcı entegrasyonu: frontend ekibi cookie/CSRF ve gerçek wallet akışını smoke test etsin; production origin/TTL/rate kararları kesinleşsin.
+2. Faz 3 private veri/aktarım: şifreleme ve veri sahipliği sınırını kurup mevcut MongoDB için salt okunur envanter/dry-run hazırlamak.

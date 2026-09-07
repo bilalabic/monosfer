@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
+import { authEnv } from '../support/env.mjs';
 
 async function startup(env, t) {
   const child = spawn(process.execPath, [fileURLToPath(new URL('../../dist/main.js', import.meta.url))], { env, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -28,10 +29,10 @@ test('occupied HTTP port closes infrastructure and exits rather than hanging', {
   await once(listener, 'listening');
   t.after(() => listener.close());
   const { code, output } = await startup({
-    ...process.env, NODE_ENV: 'production', HOST: '127.0.0.1', PORT: String(listener.address().port),
+    ...process.env, ...authEnv, NODE_ENV: 'production', HOST: '127.0.0.1', PORT: String(listener.address().port),
     DATABASE_URL: process.env.DATABASE_URL ?? 'postgresql://monosfer:local-development-only@127.0.0.1:55432/monosfer_v2',
     REDIS_URL: process.env.REDIS_URL ?? 'redis://:local-development-only@127.0.0.1:56379',
-    CORS_ORIGINS: 'http://localhost:3000',
+    CORS_ORIGINS: 'https://app.example.com',
   }, t);
   assert.equal(code, 1);
   assert.match(output, /backend_start_failed/);

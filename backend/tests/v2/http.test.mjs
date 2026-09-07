@@ -32,7 +32,7 @@ test('health, request IDs, headers, public contract, and legacy isolation', asyn
   assert.equal((await app.inject('/api/health')).statusCode, 404);
   const missing = await app.inject('/missing');
   assert.deepEqual(missing.json(), { error: { code: 'NOT_FOUND', message: 'Resource not found', requestId: missing.headers['x-request-id'] } });
-  assert.deepEqual(Object.keys(document.paths).sort(), ['/v1/health/live', '/v1/health/ready']);
+  assert.deepEqual(Object.keys(document.paths).sort(), ['/v1/auth/session', '/v1/auth/sessions', '/v1/auth/siwe/nonce', '/v1/auth/siwe/verify', '/v1/health/live', '/v1/health/ready', '/v1/users/me']);
   assert.equal((await app.inject('/v1/openapi.json')).statusCode, 200);
   assert.equal((await app.inject('/v1/docs')).statusCode, 404);
 });

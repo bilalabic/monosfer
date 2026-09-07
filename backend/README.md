@@ -1,6 +1,6 @@
 # Monosfer V2 Backend
 
-Node.js 24 + NestJS 11/Fastify + TypeScript. Faz 1 API: health ve OpenAPI.
+Node.js 24 + NestJS 11/Fastify + TypeScript. Faz 2 API: health, SIWE cookie oturumu, minimal profil ve OpenAPI.
 
 ## Yerel çalışma
 
@@ -10,6 +10,8 @@ Backend dizininde:
 npm ci
 docker compose up -d --wait
 # .env.example içeriğini yerel .env dosyanıza aktarın.
+# SESSION_COOKIE_SECRET için rastgele değer üretip .env içine ekleyin:
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 npm run db:migrate
 npm run dev
 ```
@@ -29,6 +31,14 @@ Production: `npm run build`, ayrı migration job, ardından `npm start`. Migrasy
 | GET /v1/health/ready | PostgreSQL/Redis sağlıklıysa 200; değilse standart 503 |
 | GET /v1/openapi.json | OpenAPI JSON |
 | GET /v1/docs | Yalnız development Swagger UI |
+| POST /v1/auth/siwe/nonce | 200 SIWE mesajı + browser challenge cookie |
+| POST /v1/auth/siwe/verify | 200 user/session/csrfToken + HttpOnly session cookie |
+| GET /v1/auth/session | 200 oturum veya 401 |
+| DELETE /v1/auth/session | CSRF ile mevcut oturumu kapatır; 204 |
+| DELETE /v1/auth/sessions | CSRF ile kendi tüm oturumlarını iptal eder; 204 |
+| GET/PATCH /v1/users/me | Kendi minimal profili; PATCH için CSRF gerekir |
+
+Frontend akışı ve cookie/Origin gereksinimleri [handoffs](docs/backend-v2-handoffs.md) içinde. `.env.example` auth ayarları zorunludur; development HTTP cookie `monosfer_sid_dev`, production/HTTPS cookie `__Host-monosfer_sid` olarak üretilir. Production yalnız HTTPS SIWE URI/RPC kabul eder.
 
 Hatalar: `{error:{code,message,requestId}}`. Her request için sunucu UUID üretir; istemci request ID'sine güvenmez.
 Body, URL/query ve credential loglanmaz; request/status korelasyonu tutulur. Yanıtlarda `Cache-Control: no-store` bulunur.
@@ -45,7 +55,7 @@ npm run openapi:export
 npm audit
 ```
 
-Integration suite localhost Compose servisine ihtiyaç duyar, yoksa fail eder. `DATABASE_URL` verilmişse salt test veritabanı kullanın; suite migration uygular. Unit testler dış servislere bağlanmaz.
+Integration suite localhost Compose servisine ihtiyaç duyar, yoksa fail eder. `DATABASE_URL` verilmişse yerel `monosfer_v2` veya `monosfer_v2_test` veritabanı kullanın; suite migration uygular, yalnız kendi rastgele test cüzdanlarının fixture kayıtlarını temizler. Test dosyaları migration kilidi için sırayla çalışır. Unit testler dış servislere bağlanmaz; ERC-1271 testi yerel HTTP RPC fixture kullanır.
 OpenAPI export offline çalışır ve yalnız yok sayılan `artifacts/` dizinine yazar.
 Legacy testler ayrı tutulur; eski Express uygulaması V2 runtime'a dahil değildir.
 

@@ -20,3 +20,15 @@ for (const [key, value] of [
     assert.throws(() => parseSettings({ ...testEnv, [key]: value }), { message: `Invalid ${key}` });
   });
 }
+
+for (const key of ['SIWE_DOMAIN', 'SIWE_URI', 'SIWE_CHAIN_ID', 'SIWE_STATEMENT', 'SIWE_RPC_URL', 'SESSION_COOKIE_SECRET', 'SESSION_TTL_SECONDS', 'NONCE_TTL_SECONDS', 'AUTH_RATE_LIMIT_WINDOW_SECONDS', 'AUTH_RATE_LIMIT_MAX']) {
+  test(`auth configuration requires ${key}`, () => {
+    const env = { ...testEnv }; delete env[key];
+    assert.throws(() => parseSettings(env), { message: `Invalid ${key}` });
+  });
+}
+for (const [key, value] of [['SIWE_DOMAIN', 'evil.example.com'], ['SIWE_CHAIN_ID', '0'], ['SIWE_STATEMENT', 'invalid\nstatement'], ['SIWE_RPC_URL', 'file:///secret'], ['SESSION_COOKIE_SECRET', 'short'], ['SESSION_TTL_SECONDS', '0'], ['NONCE_TTL_SECONDS', '301'], ['AUTH_RATE_LIMIT_MAX', '0'], ['AUTH_RATE_LIMIT_WINDOW_SECONDS', '0']]) {
+  test(`auth configuration rejects invalid ${key}`, () => {
+    assert.throws(() => parseSettings({ ...testEnv, [key]: value }), { message: `Invalid ${key}` });
+  });
+}

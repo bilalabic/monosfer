@@ -1,5 +1,5 @@
 import { Injectable, Module, type OnApplicationShutdown } from '@nestjs/common';
-import { Pool, type QueryResultRow } from 'pg';
+import { Pool, type PoolClient, type QueryResultRow } from 'pg';
 import { ConfigService } from '../config/config.js';
 
 @Injectable()
@@ -22,6 +22,18 @@ export class DatabaseService implements OnApplicationShutdown {
   }
   async ping(): Promise<boolean> {
     try { await this.query('SELECT 1'); return true; } catch { return false; }
+  }
+  async transaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await work(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally { client.release(); }
   }
   async onApplicationShutdown(): Promise<void> { await this.pool.end(); }
 }
