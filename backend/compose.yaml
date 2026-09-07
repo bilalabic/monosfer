@@ -1,5 +1,20 @@
 name: monosfer-backend-v2
 services:
+  mongo-test:
+    image: mongo:8.0
+    profiles: ["private-tests"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: fixture_admin
+      MONGO_INITDB_ROOT_PASSWORD: local-fixtures-only
+    ports:
+      - "127.0.0.1:57017:27017"
+    volumes:
+      - ./scripts/local-mongo-init.js:/docker-entrypoint-initdb.d/reader.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
   postgres:
     image: postgres:17-alpine
     environment:

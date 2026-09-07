@@ -8,6 +8,7 @@ import helmet from '@fastify/helmet';
 import cookie from '@fastify/cookie';
 import { AuthModule } from './auth/auth.module.js';
 import { UsersModule } from './users/users.module.js';
+import { PrivateDataModule } from './private-data/private-data.module.js';
 import { cookieNames } from './security/tokens.js';
 import { LogController } from 'fastify';
 import type { Logger } from 'pino';
@@ -19,7 +20,7 @@ import { createLogger, FrameworkLogger } from './http/logger.js';
 @Module({})
 export class AppModule {
   static register(settings: Settings): DynamicModule {
-    return { module: AppModule, imports: [ConfigModule.register(settings), HealthModule, AuthModule, UsersModule] };
+    return { module: AppModule, imports: [ConfigModule.register(settings), HealthModule, AuthModule, UsersModule, PrivateDataModule] };
   }
 }
 

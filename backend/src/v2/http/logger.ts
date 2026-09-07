@@ -6,7 +6,8 @@ export function createLogger(destination?: DestinationStream): Logger {
     level: 'info',
     redact: {
       paths: ['req', 'res', 'body', 'headers', 'err', 'error', 'authorization', 'cookie', 'password', 'token', 'accessToken', 'privateKey', 'evidenceUrl', 'recipient', 'address', '*.password', '*.token', '*.authorization', '*.cookie',
-        ...['sessionId', 'sessionHash', 'nonce', 'csrfToken', 'signature', 'email', 'phone', 'message', 'browserToken', 'walletAddress', 'sessionCookieSecret'].flatMap(key => [key, `*.${key}`])],
+        ...['payload', 'encrypted_payload', 'pickup', 'dropoff', 'contactPhone', 'recipientPhone', 'deliveryCode', 'evidence', 'location', 'pushToken', 'privateDataMasterKeyB64', 'PRIVATE_DATA_MASTER_KEY_B64', 'privateData', 'notes', 'ciphertext',
+          'sessionId', 'sessionHash', 'nonce', 'csrfToken', 'signature', 'email', 'phone', 'message', 'browserToken', 'walletAddress', 'sessionCookieSecret'].flatMap(key => [key, `*.${key}`])],
       censor: '[REDACTED]',
     },
   };

@@ -1,6 +1,7 @@
 import { Global, Inject, Injectable, Module, type DynamicModule } from '@nestjs/common';
+import { parsePrivateKey, type PrivateKeySettings } from '../private-data/crypto.js';
 
-export interface Settings {
+export interface Settings extends PrivateKeySettings {
   environment: 'development' | 'test' | 'production';
   host: string;
   port: number;
@@ -76,6 +77,7 @@ export function parseSettings(env: NodeJS.ProcessEnv): Settings {
   const siweRpcUrl = endpoint('SIWE_RPC_URL', ['http:', 'https:']);
   if (environment === 'production' && new URL(siweRpcUrl).protocol !== 'https:') throw new Error('Invalid SIWE_RPC_URL');
   return {
+    ...parsePrivateKey(env),
     environment: environment as Settings['environment'], host,
     port: integer('PORT', 3001, 1, 65535),
     databaseUrl: endpoint('DATABASE_URL', ['postgres:', 'postgresql:']),

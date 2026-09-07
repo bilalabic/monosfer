@@ -1,5 +1,30 @@
 # Monosfer V2 Backend — Fazlı Uygulama Planı
 
+## Faz 3 — Model + import / 2026-09-07
+
+Onaylanan kapsam yalnız backend altında private PostgreSQL modeli, AES-256-GCM, internal erişim sınırı ve salt okunur Mongo envanter/dry-run/import araçlarıdır. Yeni delivery endpoint'i yoktur. Çalışma tabanı `0a6d76c`, dal `Monosfer-V2`.
+
+| Görev | Teslim ve kabul koşulu |
+| --- | --- |
+| F3.1 | `private-data/crypto.ts`: 32 bayt canonical base64 key, key ID, 12 bayt rastgele IV, 16 bayt tag; AAD kayıt UUID + schema version + domain + kaynak kimliği. Roundtrip ve key/AAD/ciphertext müdahale testleri geçer. |
+| F3.2 | SQL: `private_delivery_records`, `private_data_import_runs`, `private_data_import_items`; migration/re-run, kaynak unique constraint ve şifreli saklama gerçek PostgreSQL ile doğrulanır. |
+| F3.3 | `PrivateDataService` yalnız confirmed projection üzerinden customer/accepted courier erişimini çözer. Legacy metadata yetki vermez. Kurye yalnız Accepted/InTransit durumlarında pickup/dropoff/contact allowlist'ini alır; kod ve evidence alamaz. |
+| F3.4 | Envanter PostgreSQL'e bağlanmaz. Private alan dolulukları, collection sayıları, Mongo user-wallet eşleşme sayıları ve geçersiz kayıt nedenleri değer sızdırmadan raporlanır. |
+| F3.5 | CLI dry-run yalnız run/item raporu yazar. Apply item başına transaction, eşzamanlı duplicate koruması, run kilidi ve kesinti sonrası devam sağlar. Gerçek read-only Mongo hesabı ve PostgreSQL ile doğrulanır. |
+| F3.6 | Typecheck/build/unit/inject/integration/legacy/audit/diff; gerçek sonuçlar progress dosyasına; yalnız backend içeren yerel commit, otomatik push yok. |
+
+Payload pickup/dropoff dahil alıcı/kod/konum bilgileri, serbest metinler, dispute evidence ve courier location/push token içerir. Şifresiz metadata yalnız doğrulanan network, chain referansları, tx hash'leri, lifecycle status, tutarlar, zamanlar, package/urgency ve rating alanlarıdır. User email/phone aktarılmaz; mevcut Faz 2 alanları değişmez. Bilinmeyen kök alanlar aktarılmaz, kaynak korunur.
+
+Üç record kind aynı şifreli kayıt tablosundadır: `delivery`, `dispute`, `courier_location`. Dispute `parent_legacy_id` ile teslimata bağlıdır; kullanıcı konumu teslimat başına kopyalanmaz. `(source_namespace, source_collection, legacy_mongo_id)` unique'dir. Kaynaklar `legacy_mongo` / `legacy_unverified` kalır; schema bu aktarımın confirmed yazmasını kabul etmez. V2 kullanıcı kaydı veya zincir projection'ı oluşturulmaz.
+
+Ek çalışma kararları: `LEGACY_MONGODB_SOURCE_ID` sabit bir kaynak etiketi olarak zorunludur. Run kimliği `--run-id=<UUID>` ile sürdürülebilir. Başarılı dry-run item'ı `validated`, private alan içermeyen user `skipped_no_private` olur; diğer durumlar pending/imported/skipped_existing/invalid/failed'dır. Dry-run da audit yazdığı için uzak/production PostgreSQL hedefi her iki modda `--confirm-production-import` ister. Bu teslimde production import yapılmaz.
+
+Faz 4 confirmed projection provider'ı gelene kadar runtime erişim varsayılanı deny'dır. Retention, key rotation operasyonu, silme, support/admin ve evidence provider kararları handoffs içindedir. Anahtar kaybı şifreli veriyi okunamaz yapar; mevcut key ID yerinde farklı anahtarla değiştirilmez.
+
+Kaynaklar: [Node 24 crypto — GCM/AAD](https://nodejs.org/docs/latest-v24.x/api/crypto.html), [MongoDB Node cursor — batch/async iteration](https://www.mongodb.com/docs/drivers/node/current/crud/query/cursor/). Yeni npm bağımlılığı eklenmez; Node crypto ve mevcut MongoDB/pg paketleri kullanılır.
+
+Operatör adımları ve sınırlar: [private-data-operations.md](private-data-operations.md).
+
 Tarih: 2026-09-06. Kullanıcının onayladığı kapsam: ilk teslim Faz 1.
 
 ## Kararlar

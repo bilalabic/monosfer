@@ -1,5 +1,16 @@
 # V2 Backend Ekip Bağımlılıkları
 
+## Faz 3 teslimi — 2026-09-07
+
+- Frontend: yeni endpoint veya zorunlu akış yok. `/v1` SIWE/profil sözleşmesi sürer. Address/evidence/GPS için yeni API teslim edilmedi.
+- Indexer/kontrat ekibi: Faz 4'te private record UUID ↔ doğrulanmış chain delivery kimliği bağlanmalı; `PrivateDeliveryProjection.findConfirmed` customer, assigned courier, lifecycle ve confirmed bilgisini güvenilir projection'dan okumalı. Legacy status/tx hash bu bağ için kanıt değildir. Provider şu anda null döndürür; private erişim kapalıdır.
+- Ürün/güvenlik: customer saklama süresi, Accepted/InTransit dışındaki courier erişim ihtiyacı, dispute/evidence erişim matrisi, support/admin yetkileri, kişisel veri silme ve retention kararları bekleniyor. Mevcut kurye allowlist teslimat kodunu ve recipient wallet'ı içermez. Faz 2 user email/phone alanları mevcut saklama biçiminde kalır; bunların şifreleme/retention kapsamı ayrıca kararlaştırılmalı.
+- Altyapı: runtime için `PRIVATE_DATA_MASTER_KEY_B64` ve `PRIVATE_DATA_KEY_ID` kalıcı secret yönetimiyle sağlanmalı. Backup/key restore ve rotation prosedürü gerekli; tek key desteği varken eski key'i yerinde değiştirmeyin. DB backup tek başına decrypt için yeterli değildir.
+- Veri ekibi: production Mongo read rolü, sabit source ID, kaynak snapshot/yazma dondurma penceresi ve kayıt sayımı kabulü sağlanmalı. Envanter yalnız Mongo wallet varlığını raporlar; SIWE ya da chain doğrulaması üretmez. Import lokalde read-only kullanıcıyla test edildi; gerçek kullanıcı dataset'i envanterlenmedi/aktarılmadı. Hatalı ve kapsam dışı alanların ürün eşlemesi ayrı inceleme gerektirir.
+- Operasyon: `--confirm-production-import` iki modda uzak hedef audit yazısını da kapsar. Production import bu teslimde yapılmadı. Evidence storage provider, erişim URL politikası, retention ve RTO/RPO kararları bekliyor.
+
+Çalıştırma, resume, exit code ve kaynak tutarlılığı sınırları: [private-data-operations.md](private-data-operations.md).
+
 ## Frontend
 
 ### Faz 2 sözleşmesi — 2026-09-07

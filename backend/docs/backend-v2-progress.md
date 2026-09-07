@@ -1,5 +1,40 @@
 # Backend V2 İlerleme Kaydı
 
+## 2026-09-07 — Faz 3 / tamamlandı
+
+F3.1–F3.6: bekliyor → devam ediyor → doğrulanıyor → tamamlandı. Onaylanan Model + import teslimi gerçek yerel servislerle doğrulandı. Yeni public delivery API açılmadı; private okuma Faz 4 confirmed projection bağlantısını bekler.
+
+| Kontrol | Sonuç |
+| --- | --- |
+| `npm run typecheck` | Başarılı |
+| `npm run build` | Test/export script'lerinde production TypeScript build başarılı |
+| `npm test` | 60/60 unit/inject başarılı, skip yok |
+| `npm run test:integration` | 8/8 başarılı, skip yok; gerçek PostgreSQL/Redis ve read-only MongoDB |
+| `npm run test:legacy` | 13/13 başarılı |
+| `npm audit --json` | 0 bulgu; sandbox ağ kısıtı sonrası izinli çalıştırma |
+| `npm run openapi:export` | Başarılı; Faz 2 API yolları korundu |
+| `git diff --check` | Başarılı; değişiklikler yalnız backend altında |
+
+Gerçek servis senaryoları: migration/re-run, salt okunur Mongo rolü, alan/wallet sayımları, geçersiz kayıt raporu, dry-run domain yazmama, AES decrypt roundtrip, plaintext'in SQL/log çıktısında bulunmaması, source ID→UUID eşleme, parent link, duplicate ve eşzamanlı run, aynı-run lock, yarıda kesilme/resume, tekil failed item sonrası devam ve retry. Import öncesi/sonrası Mongo belgeleri aynı kaldı. Fixture admin yalnız bu testin ürettiği ObjectId'leri; PostgreSQL cleanup yalnız rastgele test namespace'ini temizledi.
+
+Yeni npm bağımlılığı yok; lockfile değişmedi. `PRIVATE_DATA_MASTER_KEY_B64` ve `PRIVATE_DATA_KEY_ID` runtime için zorunlu; mevcut yerel `.env` değiştirilmedi. Mongo ayarları eksikken runtime testleri başarılı, CLI güvenli hata verir. İzole `mongo-test` Compose profili localhost'a bağlı ve servis geliştirme için açık bırakıldı.
+
+Çalıştırılmayan işler: production/gerçek kullanıcı dataset'i envanteri ve import, down migration, key rotation/backup restore, retention/silme uygulaması, canlı chain/projection bağlantısı. Windows shutdown testleri Nest signal dispatch kullanır; bu fazda ayrıca Linux POSIX testi yapılmadı. Bunlar bu Model + import tesliminin dışında; ekip ihtiyaçları handoffs dosyasında. Production deploy/push yapılmadı.
+
+Sonraki iki iş: (1) kalıcı key yönetimi, backup/restore ve retention kararlarını doğrulamak; (2) Faz 4 indexer/confirmed projection ile private record kimlik bağını kurmak. Yerel uygulama commit kimliği takip kaydına eklenecek.
+
+## 2026-09-07 — Faz 3 / doğrulanıyor
+
+Başlangıç `0a6d76c`, `Monosfer-V2`; çalışma ağacı temizdi, dal önceki Faz 2 tesliminden origin'e göre 2 commit ilerideydi. F3.1–F3.6 durum geçişi: bekliyor → devam ediyor → doğrulanıyor.
+
+- F3.1: AES-256-GCM, zorunlu key/keyId config, kayıt/source/schema AAD bağı ve redaction eklendi. Yanlış key/context/tamper ve limit testleri geçti.
+- F3.2–F3.3: üç PostgreSQL tablo, kind ayrımı, private repository/service ve confirmed projection gerektiren erişim politikası eklendi. Courier kod/evidence/recipient wallet alamaz; Faz 4 provider'ı gelene kadar default deny.
+- F3.4–F3.5: streaming native Mongo reader, private mapping, sayım/alan/wallet envanteri, dry-run audit, item transaction, duplicate unique constraint, run lock/resume ve sabit hata kodları hazırlandı. Mongo read concern değiştirilmedi; yeni npm paketi eklenmedi.
+- F3.6 ilk kontrol: `npm run typecheck` başarılı; `npm test` 60/60; `npm run test:integration` 8/8; `npm run test:legacy` 13/13. Gerçek yerel Mongo read rolü, kaynak belge değişmezliği, PostgreSQL migration/re-run, dry-run, apply, concurrent run ve interruption/resume doğrulandı. Build her iki V2 test komutunda başarılı.
+- Docker ilk sandbox kontrolü erişim engeline takıldı; izinli tekrar kontrolde mevcut PostgreSQL/Redis healthy görüldü. Backend Compose `private-tests` profiline izole MongoDB eklendi ve read-only reader ile test edildi.
+- İlk `npm audit --json` sandbox ağ erişimi nedeniyle sonuç vermedi; izinli tekrar çalışmada 0 güvenlik bulgusu. `git diff --check` geçti.
+- Son kontrol için per-item failure/retry ve aynı run kilit yarışı testleri eklendi; doğrulaması ve yerel commit sırada. Production kaynaklarına erişilmedi; fixture belgeleri yalnız test namespace/ObjectId'leriyle temizlendi. Down migration, production aktarım, key rotation/restore, gerçek dataset incelemesi ve Faz 4 projection entegrasyonu çalıştırılmadı.
+
 ## 2026-09-07 — Faz 2 commit teslim kaydı
 
 Uygulama commit'i: `02ca5d11cb8790ee5e65955d900173299f7bb05b` — `feat(backend): implement V2 phase 2 SIWE sessions and profiles`. `Monosfer-V2` üzerinde yalnız backend altında 37 dosya içerir. Bu hash kaydı ayrı docs commit'i olarak tutulur. Push/deploy yapılmadı; bir sonraki uygulama fazı Faz 3'tür.
@@ -68,7 +103,8 @@ Doğal devam görevleri: (1) frontend ekibiyle gerçek tarayıcı SIWE/CSRF/cook
 | --- | --- |
 | 1 | tamamlandı |
 | 2 | tamamlandı |
-| 3–7 | bekliyor |
+| 3 | tamamlandı |
+| 4–7 | bekliyor |
 
 ## Devam notu
 
