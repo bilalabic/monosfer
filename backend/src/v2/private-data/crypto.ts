@@ -2,7 +2,7 @@ import { createCipheriv, createDecipheriv, createSecretKey, randomBytes, type Ke
 
 export interface PrivateKeySettings { privateDataMasterKeyB64: string; privateDataKeyId: string }
 export interface Envelope { alg: 'AES-256-GCM'; keyId: string; iv: string; tag: string; ciphertext: string; aad: string }
-export interface RecordContext { id: string; source_namespace: string; source_collection: string; legacy_mongo_id: string; kind: string; schema_version: number }
+export interface RecordContext { id: string; source_namespace: string; source_collection: string; legacy_mongo_id: string | null; kind: string; schema_version: number }
 
 export function parsePrivateKey(env: NodeJS.ProcessEnv): PrivateKeySettings {
   const key = env.PRIVATE_DATA_MASTER_KEY_B64 ?? '';

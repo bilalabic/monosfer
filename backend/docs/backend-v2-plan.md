@@ -1,5 +1,20 @@
 # Monosfer V2 Backend — Fazlı Uygulama Planı
 
+## Faz 5 — Quote, audit ve güvenilir private link / 2026-09-08
+
+Başlangıç `82cf5c9`, `Monosfer-V2`. F5.1–F5.6: bekliyor → devam ediyor → doğrulanıyor → tamamlandı. Sonuçlar `backend-v2-progress.md`, API/operasyon ayrıntıları `backend-v2-quotes.md` içindedir. Yalnız backend; otomatik push yok.
+
+| Görev | Uygulama ve kabul |
+| --- | --- |
+| F5.1 | Native `quote_api/pending_chain` private kayıt; legacy provenance korunur. `risk_quote_issuances`, `risk_quote_inputs`, `idempotency_keys`, `transactional_outbox` migration ve tekrar çalıştırma. |
+| F5.2 | Auth + CSRF + Origin + rate limit ile POST `/v1/quotes/delivery`; `{ declaredValue, metadata: { packageType, urgency }, privatePayload: { pickup, dropoff, notes? } }`. İç içe DTO allowlist, şifreleme, contract biriminde decimal uint96. |
+| F5.3 | EIP-712 `MONOSFER/1`, export chain/hub ve tam yedi Quote alanı. Finalized RPC'den signer, riskQuoteValidity ve coverage bandı; imza öncesi RPC `hashQuote` eşitliği. Deterministic dev/test tier 1 adapter; production API/worker kapalı. |
+| F5.4 | Wallet + route + deployment + Idempotency-Key kapsamı; HMAC request hash, canonical JSON, SQL advisory lock; private/audit/encrypted response/outbox tek transaction. Aynı body aynı geçerli response; değişen body veya süresi geçmiş key/quote 409. Expired key tombstone korunur, sessiz duplicate üretilmez. |
+| F5.5 | Owner-only GET `/v1/quotes/:quoteDigest`; signature/private veri dönmez. POST refresh yalnız finalized timestamp tüm önceki quote expiry'lerinden büyük ve hiçbiri redeemed/linked değilse; aynı record satır kilidi, tek refresh child. Yeni key şarttır. |
+| F5.6 | Ayrı `quote:worker -- once/watch`; SKIP LOCKED outbox, transaction, bounded batch/backoff, stale/error/integrity/fingerprint/customer kontrolleri. Sadece trusted finalized projection link yaratır; expired quote'un gecikmiş event'i işlenir. |
+
+Kabul: hash/signature/domain/tamper; gerçek SQL transaction rollback/concurrent idempotency/outbox retry; owner/CSRF/validation; refresh expiry/redeem; stale/projection drift; şifreleme ve redaction; tüm typecheck/build/unit/integration/legacy/audit/OpenAPI/diff kontrolleri. Canlı Testnet transaction, production signer/provider/KMS ve fiyat politikası handoff'tur. Monad concepts yönergesi gereği private erişim ve refresh kararları finalized veri kullanır.
+
 ## Faz 4 — Indexer ve projection / 2026-09-07
 
 Başlangıç `cd8d593`, `Monosfer-V2`. Backend-only teslim. Mevcut `contracts/exports` içindeki legacy olmayan DeliveryHub ABI/adres/deployment başlangıç bloğu build sırasında backend dist içine üretilmiş bundle olarak alınır; export fingerprint cursor'a bağlanır. Kontrat dosyaları değiştirilmez. `finalized` bloklar RPC üzerinden salt okunur tüketilir; zincire işlem gönderilmez.

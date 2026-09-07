@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { UsersModule } from './users/users.module.js';
 import { PrivateDataModule } from './private-data/private-data.module.js';
 import { IndexerReadModule } from './indexer/read.module.js';
+import { QuotesModule } from './quotes/quotes.module.js';
 import { cookieNames } from './security/tokens.js';
 import { LogController } from 'fastify';
 import type { Logger } from 'pino';
@@ -21,7 +22,7 @@ import { createLogger, FrameworkLogger } from './http/logger.js';
 @Module({})
 export class AppModule {
   static register(settings: Settings): DynamicModule {
-    return { module: AppModule, imports: [ConfigModule.register(settings), HealthModule, AuthModule, UsersModule, PrivateDataModule, IndexerReadModule] };
+    return { module: AppModule, imports: [ConfigModule.register(settings), HealthModule, AuthModule, UsersModule, PrivateDataModule, IndexerReadModule, QuotesModule] };
   }
 }
 
@@ -41,7 +42,7 @@ export async function configureApplication(app: NestFastifyApplication, settings
   await app.register(helmet);
   await app.register(cookie);
   app.enableCors({ origin: settings.corsOrigins, credentials: true, exposedHeaders: ['x-request-id', 'retry-after'],
-    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['content-type', 'x-csrf-token'] });
+    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['content-type', 'x-csrf-token', 'idempotency-key'] });
   const server = app.getHttpAdapter().getInstance();
   server.addHook('onRequest', async (request, reply) => {
     reply.header('x-request-id', request.id);
@@ -54,7 +55,8 @@ export async function configureApplication(app: NestFastifyApplication, settings
     .addCookieAuth(cookieNames(settings).session, { type: 'apiKey', in: 'cookie' }, 'session').build());
   document.components ??= {};
   document.components.schemas ??= {};
-  for (const name of ['NonceInputDto', 'VerifyInputDto', 'UpdateUserDto', 'CourierProfileDto', 'DeliveryQueryDto', 'DeliveryIdDto', 'BidQueryDto']) {
+  for (const name of ['NonceInputDto', 'VerifyInputDto', 'UpdateUserDto', 'CourierProfileDto', 'DeliveryQueryDto', 'DeliveryIdDto', 'BidQueryDto',
+    'CreateQuoteDto','QuoteMetadataDto','QuoteLocationDto','QuoteDropoffDto','QuotePrivatePayloadDto','QuoteDigestDto','RefreshQuoteDto']) {
     const schema = document.components.schemas[name];
     if (schema && !('$ref' in schema)) schema.additionalProperties = false;
   }
@@ -68,10 +70,10 @@ export async function configureApplication(app: NestFastifyApplication, settings
   const ready = document.paths['/v1/health/ready']?.get;
   if (ready) ready.responses['503'] = { description: 'Service unavailable', content: { 'application/json': { schema: { $ref: '#/components/schemas/ApiError' } } } };
   for (const [path, item] of Object.entries(document.paths)) {
-    if (!path.startsWith('/v1/auth') && !path.startsWith('/v1/users') && !path.startsWith('/v1/deliveries') && !path.startsWith('/v1/indexer')) continue;
+    if (!path.startsWith('/v1/auth') && !path.startsWith('/v1/users') && !path.startsWith('/v1/deliveries') && !path.startsWith('/v1/indexer') && !path.startsWith('/v1/quotes')) continue;
     for (const method of ['get', 'post', 'patch', 'delete'] as const) {
       const operation = item?.[method];
-      if (operation) for (const status of ['400', '401', '403', '429', '503']) {
+      if (operation) for (const status of ['400', '401', '403', '404', '409', '429', '503']) {
         operation.responses[status] = { description: 'Standard API error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ApiError' } } } };
       }
     }

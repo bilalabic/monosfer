@@ -5,11 +5,11 @@ import { encodeEventTopics, encodeAbiParameters, decodeFunctionData, encodeFunct
 import { loadBundle } from '../../dist/indexer/config.js';
 
 export const hashOf = value => `0x${createHash('sha256').update(String(value)).digest('hex')}`;
-export function hubFixture() {
+export function hubFixture(customerAddress) {
   const upstream = loadBundle();
   const address = `0x${randomBytes(20).toString('hex')}`;
   const bundle = { ...upstream, chains: { 10143: { chainId: 10143, address, block: 100 } } };
-  const customer = `0x${randomBytes(20).toString('hex')}`;
+  const customer = customerAddress?.toLowerCase() ?? `0x${randomBytes(20).toString('hex')}`;
   const courier = `0x${randomBytes(20).toString('hex')}`;
   const other = `0x${randomBytes(20).toString('hex')}`;
   const blocks = new Map(); const logs = new Map();

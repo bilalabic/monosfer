@@ -1,5 +1,13 @@
 # V2 Backend Ekip Bağımlılıkları
 
+## Faz 5 teslimi — 2026-09-08
+
+- Frontend: üç yeni `/v1/quotes` endpoint'i OpenAPI ve [quote sözleşmesinde](backend-v2-quotes.md) tanımlandı. SIWE cookie + Origin/CSRF + Idempotency-Key kullanın. Aynı ağ retry'ında aynı key/body; ayrı eylem/refresh için yeni key. Response quote/signature ile createDelivery çağrısını wallet yapar. Ardından indexer pending/confirmed akışını izleyin; privateRecordId veya tx hash tek başına confirmed değildir. Signature/private alanlar browser log/analytics/cache'e gitmemeli. Gas/fee gösterimi frontend sorumluluğundadır.
+- Kontrat: mevcut V2 export Hub + ProtocolConfig ABI/adresleri kullanıldı. Her issuance'da finalized riskQuoteSigner/riskQuoteValidity/coverage bandı ve hashQuote okunur. Production imzacı değişikliği mevcut quote'ları geçersiz kılabilir; rotation/quote retry ürün davranışı belirlenmeli. Backend kontrat dosyalarını değiştirmedi.
+- Ürün/risk: deterministic adapter yalnız dev/test tier 1 minimum contract bandıdır. Gerçek risk sınıflandırması, fiyat feed/provider, freshness ve retention süreleri belirlenmedi. declaredValue contract birimindedir, token/fiat dönüşümü yoktur. Production quote API ve worker fail-closed kalır.
+- Altyapı/güvenlik: signer KMS/HSM, provider hesabı, key rotation ve ciphertext/idempotency key lifecycle kararı gerekir. Retention/cleanup, worker alert/backlog hedefi ve reorg sonrası completed outbox recovery henüz production politikasına bağlanmadı. Quote worker ayrı process; varsayılan false, yerel once/watch CLI. Root/CI/deploy değişmedi.
+- Private link: Faz 4'te bekleyen yazıcı tamamlandı; yalnız native server issuance + trusted finalized quoteDigest/customer/projection eşleşmesi bağ kurar. Legacy imported kayıtlar otomatik bağlanmaz. ReturnRequired ve support/admin erişim politikaları hâlâ ayrı karardır.
+
 ## Faz 4 teslimi — 2026-09-07
 
 - Frontend: `/v1/indexer/status`, `/v1/deliveries`, `/v1/deliveries/:id` ve bids alt kaynağı hazır. `indexing` metadata zorunlu değerlendirilmelidir; missing delivery 202 iken yeniden sorgulanır, ready iken 404 gerçek yokluk anlamına gelir. Lifecycle adları gerçek DeliveryHub enum'udur; legacy Accepted/Delivered kullanılmaz. UI write işlemleri kontrata gider, backend projection'ını değiştiren endpoint yoktur. [Sözleşme/örnekler](indexer-operations.md) ve OpenAPI kullanın.

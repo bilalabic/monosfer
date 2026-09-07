@@ -1,5 +1,34 @@
 # Backend V2 İlerleme Kaydı
 
+## 2026-09-08 — Faz 5 / tamamlandı
+
+F5.1–F5.6 kod/test/sözleşme doğrulandı; `bekliyor → devam ediyor → doğrulanıyor → tamamlandı`. Quote issuance ve refresh, finalized RPC policy/hash doğrulaması, AES-GCM native private kayıt, HMAC idempotency, audit ve outbox tek transaction; ayrı worker güvenilir projection'dan link kuruyor. Production API/worker kapalı; gerçek risk/provider/KMS kararları handoffs'a yazıldı. İşlem gönderilmedi.
+
+| Komut | Gerçek sonuç |
+| --- | --- |
+| `npm.cmd run typecheck` | Başarılı, strict TypeScript |
+| `npm.cmd run build` | Başarılı; ayrı quote Hub/ProtocolConfig bundle üretildi, mevcut indexer fingerprint formatı korunur |
+| `npm.cmd test` | 72/72 unit/inject, skip yok |
+| `npm.cmd run test:integration` | 18/18, skip yok; gerçek PostgreSQL/Redis/Mongo, yerel salt okunur RPC fixture |
+| `npm.cmd run test:legacy` | 13/13 |
+| `npm.cmd audit --json` | 0 açık; ilk sandbox ağ hatası sonrası registry erişimiyle tekrar çalıştırıldı |
+| `npm.cmd run openapi:export` | Başarılı; 14 path, 3 quote path; request/response/typed-data/CSRF/idempotency sözleşmesi |
+| `git diff --check` | Başarılı; Windows LF/CRLF bildirimleri whitespace hatası değildir |
+
+Doğrulama kanıtı: bağımsız Solidity abi.encode + keccak fixture ile hash eşitliği; imza field/customer/chain/deployment müdahalesi reddi; signer rotation/coverage policy/expiry/RPC snapshot değişimi; üç eşzamanlı retry'da tek private/audit/outbox; private body değişiminde 409; idempotency tombstone; outbox INSERT ve link INSERT sonrası hata enjeksiyonunda rollback; concurrent worker duplicate koruması; indexer'ın gerçek DeliveryCreated log decode/projection akışına bağlanma; wallet/digest/fingerprint/stale/error/integrity/lag reddi; finalized inclusive expiry sonrasında tek refresh child; redeemed ama henüz linked olmayan quote reddi; expired quote için gecikmiş finalized link; gerçek Redis rate/outage; private contact/code sınırı ve hassas log redaction.
+
+İlk regresyon çalışmasında eski endpoint-listesi testi yeni path'ler nedeniyle 65/66 kaldı; sözleşme listesi güncellendi. Yeni inject testinde undefined header fixture'ı düzeltildi. Test-only ortak DB provider iki kez kapatıldığı için bir cleanup denemesi hata verdi; provider sahipliği düzeltildi, kalan tek rastgele test stream'inin 5 quote'u ve bağımlı fixture kayıtları hedef doğrulanarak temizlendi. Son salt okunur SQL kontrolü quote test kaydı sayısını 0 buldu. Gerçek kullanıcı/legacy verisi silinmedi. Yerel altyapı servisleri açık bırakıldı; test API/RPC/pool'ları kapandı.
+
+Test sınırı: RPC fixture EVM değildir; deployed contract bytecode attestation/canlı hash read smoke, Testnet transaction smoke, production provider/KMS, Linux worker POSIX sinyal testi, kapasite ve completed-outbox reorg recovery bu tur çalıştırılmadı. Mevcut API SIGTERM/SIGINT entegrasyonları Windows Nest dispatch ile geçti. Monad concepts yönergesi finalized blok ve fail-closed private erişim kararını yönlendirdi. Yeni npm dependency veya lockfile değişikliği yok; `.env` değiştirilmedi.
+
+Son contact allowlist düzeltmesi sonrası `npm.cmd run build` ve `node --test tests/v2/private-data.test.mjs tests/v2/quotes.test.mjs tests/integration/quotes.test.mjs` tekrar çalıştı: 23/23 geçti. Native dropoff contactPhone atanmış kurye için izinli; deliveryCode/recipientWallet kısıtı korunuyor. Yalnız backend içeren yerel commit kimliği takip kaydına yazılacak; otomatik push yok. Sonraki iki iş: production risk/signer/key lifecycle güvenlik tasarımı ve frontend quote → createDelivery → indexing pending akışının entegrasyonu/Faz 6 planı.
+
+## 2026-09-08 — Faz 5 / devam ediyor
+
+Başlangıç `82cf5c9`, `Monosfer-V2`, temiz çalışma ağacı; origin'e göre 6 commit ileride. F5.1–F5.6 bekliyor → devam ediyor. Native private kayıt migration'ı, quote modülü, finalized RPC policy/hash doğrulaması, atomic issuance/idempotency ve link worker hazırlanıyor. Plan backend altında kaydedildi. Legacy kayıtlara veri dönüşümü yapılmıyor.
+
+İlk `npm run typecheck` PowerShell unsigned npm.ps1 nedeniyle çalışmadı; `npm.cmd run typecheck` başarılı. Windows komutlarında `npm.cmd` kullanılacak. Docker sandbox kontrolü pipe erişimi vermedi; yükseltilmiş salt okunur kontrol PostgreSQL/Redis/Mongo'nun healthy olduğunu doğruladı. Test sonuçları doğrulama kaydına eklenecek; Faz 5 henüz tamamlanmadı.
+
 ## 2026-09-07 — Faz 4 commit teslim kaydı
 
 Uygulama commit'i `cd85a83` — `feat(backend): implement phase 4 finalized indexer and projections`. `Monosfer-V2` üzerinde yalnız backend altında 25 dosya içerir; staged diff/check doğrulandı. Bu hash kaydı ayrı docs commit'idir. Push/deploy yapılmadı; sonraki uygulama fazı Faz 5'tir.

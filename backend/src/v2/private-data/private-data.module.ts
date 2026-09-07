@@ -7,7 +7,7 @@ export interface TrustedDelivery {
   privateRecordId: string; customer: string; acceptedCourier: string | null;
   status: string; verification: 'confirmed';
 }
-// Links are established only by a future server-side quote issuance workflow, never legacy ID matching.
+// Links are established only by the server-side quote outbox worker, never legacy ID matching.
 @Injectable()
 export class PrivateDeliveryProjection {
   constructor(private readonly db: DatabaseService, private readonly config: ConfigService) {}
@@ -67,7 +67,7 @@ export class PrivateDataService {
       .map(key => [key, (value as Record<string, unknown>)[key]]));
     return {
       pickup: select(payload.pickup, ['address', 'lat', 'lng', 'contactPhone']),
-      dropoff: select(payload.dropoff, ['address', 'lat', 'lng', 'recipientType', 'recipientName', 'businessName', 'contactPerson', 'department', 'recipientNote', 'recipientPhone']),
+      dropoff: select(payload.dropoff, ['address', 'lat', 'lng', 'contactPhone', 'recipientType', 'recipientName', 'businessName', 'contactPerson', 'department', 'recipientNote', 'recipientPhone']),
     };
   }
 }

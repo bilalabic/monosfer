@@ -26,6 +26,7 @@ export async function testApplication(options = {}) {
     .overrideProvider(RedisService).useValue(redis);
   if (options.authRepository) builder.overrideProvider(AuthRepository).useValue(options.authRepository);
   if (options.usersRepository) builder.overrideProvider(UsersRepository).useValue(options.usersRepository);
+  for (const [provider,value] of options.providers??[]) builder.overrideProvider(provider).useValue(value);
   const module = await builder.compile();
   const app = module.createNestApplication(createAdapter(settings, logger), { logger: false });
   const document = await configureApplication(app, settings);
