@@ -1,5 +1,13 @@
 # V2 Backend Ekip Bağımlılıkları
 
+## Faz 4 teslimi — 2026-09-07
+
+- Frontend: `/v1/indexer/status`, `/v1/deliveries`, `/v1/deliveries/:id` ve bids alt kaynağı hazır. `indexing` metadata zorunlu değerlendirilmelidir; missing delivery 202 iken yeniden sorgulanır, ready iken 404 gerçek yokluk anlamına gelir. Lifecycle adları gerçek DeliveryHub enum'udur; legacy Accepted/Delivered kullanılmaz. UI write işlemleri kontrata gider, backend projection'ını değiştiren endpoint yoktur. [Sözleşme/örnekler](indexer-operations.md) ve OpenAPI kullanın.
+- Kontrat: backend build doğrudan mevcut exports paketini tüketir ve fingerprint üretir. Manifest başlangıç bloğu ve deployed code/ABI uyumluluğu ekip sorumluluğunda; backend yalnız chain ID ve code varlığı kontrolü yapar. Export güncellemesi mevcut cursor'ı durdurur; migration/backfill değerlendirilmelidir. Bu teslimde kontrat/root dosyası değiştirilmedi.
+- Altyapı: ayrı worker process, archive RPC ve gözlenen finalized/indexer lag için izleme gerekir. Default worker kapalıdır. `/health/ready` PostgreSQL/Redis sağlığını ölçer, indexer için ayrı status kullanın. Production worker/deploy/CI ve canlı Testnet smoke bu teslimde yapılmadı.
+- Ürün/Faz 5: private record ID'yi imzalı quote issuance kaydına bağlamak gerekir. Link okuyucusu hazır, uygulama yazıcısı henüz yoktur. Imported legacy kayıtlar otomatik olarak confirmed sayılmaz. Courier erişimi ReadyForPickup/InTransit ile sınırlıdır; ReturnRequired erişimi ürün/güvenlik kararı bekler.
+- Operasyon: deep-reorg/fingerprint uyuşmazlığı veya bozuk inbox otomatik geniş reset yapmaz. Projection için replay + reconcile vardır; veri boyutuna göre bakım süresi ve inbox backfill prosedürü ayrıca ölçülmelidir. Gözlenen RPC'nin tutarlılığı test edildi; bağımsız provider/chain proof doğrulaması eklenmedi.
+
 ## Faz 3 teslimi — 2026-09-07
 
 - Frontend: yeni endpoint veya zorunlu akış yok. `/v1` SIWE/profil sözleşmesi sürer. Address/evidence/GPS için yeni API teslim edilmedi.

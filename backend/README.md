@@ -1,5 +1,7 @@
 # Monosfer V2 Backend
 
+Faz 4 indexer/projection: ayrı worker ile finalized DeliveryHub event'leri, replay/reconciliation ve salt okunur delivery/bid API. Yapılandırma, indexer durumları, frontend sözleşmesi ve private bağ sınırı: [indexer-operations.md](docs/indexer-operations.md). Worker varsayılan kapalı; etkinleştirmek için INDEXER_ENABLED/INDEXER_RPC_URL ayarlarını sağlayıp `npm run indexer -- watch` çalıştırın.
+
 Node.js 24 + NestJS 11/Fastify + TypeScript. Faz 2 API: health, SIWE cookie oturumu, minimal profil ve OpenAPI.
 
 Faz 3: private veri şifreleme/erişim sınırı ve MongoDB salt okunur inventory/dry-run/import araçları eklendi. Runtime artık `PRIVATE_DATA_MASTER_KEY_B64` ve `PRIVATE_DATA_KEY_ID` gerektirir. Yeni delivery endpoint'i yoktur; confirmed projection bağlantısı Faz 4'e aittir. Yerel Mongo testi, import komutları ve key/resume kuralları: [private-data-operations.md](docs/private-data-operations.md).

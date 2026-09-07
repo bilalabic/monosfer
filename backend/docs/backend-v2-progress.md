@@ -1,5 +1,39 @@
 # Backend V2 İlerleme Kaydı
 
+## 2026-09-07 — Faz 4 / tamamlandı
+
+F4.1–F4.5: bekliyor → devam ediyor → doğrulanıyor → tamamlandı. Backend kapsamındaki indexer/projection teslimi doğrulandı. Salt okunur API ve worker hazır; worker varsayılan kapalıdır. `INDEXER_ENABLED=true`, `INDEXER_RPC_URL` ve doğru runtime config ile ayrı process başlatılır. Mevcut `.env` değiştirilmedi.
+
+| Kontrol | Sonuç |
+| --- | --- |
+| `npm run typecheck` | Başarılı |
+| `npm run build` | Test/export komutlarında TypeScript ve contract bundle üretimi başarılı |
+| `npm test` | 66/66, skip yok |
+| `npm run test:integration` | 9/9, skip yok; gerçek PostgreSQL/Redis/Mongo ve yerel JSON-RPC fixture |
+| `npm run test:legacy` | 13/13 |
+| `npm audit --json` | 0 bulgu |
+| `npm run openapi:export` | Başarılı; indexer/delivery/bid sözleşmeleri çıktı içinde |
+| `git diff --check` | Başarılı; bütün değişiklikler backend altında |
+
+Doğrulanan senaryolar: strict ABI ve uint256, duplicate/sırasız log, çelişkili/foreign/removed log reddi, malformed batch'te rollback, cursor restart/tekillik, worker lease yarışı, lifecycle funding/return/expiry/cancel/withdraw, bounded reorg ve orphan retention, deep-reorg fail closed, replay eşitliği, projection bozulması/eksik bid/fresh RPC event eksikliği reconciliation, integrity kilidi, stale/lag, private wallet/digest bağları, cross-chain SIWE config reddi, güvenli 503 ve RPC AbortSignal. JSON-RPC sunucusu yalnız read metodları gördü; gerçek zincir işlemi gönderilmedi.
+
+İlk integration denemesi Docker kapalıyken 6 bağlantı/health hatası verdi; Docker Desktop + backend Compose açıldıktan sonra suite 9/9 geçti. Testler yalnız kendi rastgele contract stream/private fixture/namespace kayıtlarını temizledi. Mongo kaynak belgeleri korunur; production veya gerçek kullanıcı dataset'i işlenmedi. Yeni npm bağımlılığı eklenmedi, lockfile değişmedi. monskill/concepts rehberi finalized blok politikası ve spekülatif veriyi dışarıda tutma kararını yönlendirdi.
+
+Çalıştırılmayan/sınırlı işler: canlı Testnet/archive RPC smoke, deployed bytecode birebir attestation, büyük dataset performansı, production worker deploy/CI, Linux POSIX worker shutdown ve inbox kaybını onaran ayrı backfill. Mevcut API shutdown integration Windows Nest signal dispatch kullanır; worker RPC abort birim testiyle doğrulandı. Private link okuyucusu hazırdır; gerçek bağ üretimi Faz 5 signed quote issuance kaydını bekler. Retention/RTO/RPO kararları üretilmedi. Bunlar handoffs/operations dosyalarına yazıldı.
+
+Sonraki iki iş: (1) archive RPC/deployment doğrulama ve backfill/restore operasyon smoke; (2) Faz 5 risk/price adapter, signed quote/audit, güvenilir private link ve transactional outbox. Yerel uygulama commit kimliği takip kaydına eklenecek; otomatik push yok.
+
+## 2026-09-07 — Faz 4 / doğrulanıyor
+
+Başlangıç `cd8d593`, `Monosfer-V2`, çalışma ağacı temizdi. F4.1–F4.5: bekliyor → devam ediyor → doğrulanıyor. Faz 4 API/kabul detayları plan dosyasına yazıldı. Monad concepts/block-states ve realtime-data rehberleri incelendi; finalized + uygulama kontratına filtreli bounded polling seçildi.
+
+- F4.1: backend build export bundle/fingerprint üretimi; stream/block/inbox/delivery/bid/private-link tabloları eklendi. Yeni npm bağımlılığı yok; contract dosyaları değişmedi.
+- F4.2–F4.4: strict decode, sıra/dedup, transactional cursor/projection, worker lease, restart, bounded reorg, orphan retention, replay, archive read + fresh log + inbox projection reconciliation hazırlandı. Integrity farkı private erişimi kapatır; replay sonrası reconcile gerekir.
+- F4.5: read-only HTTP, DTO/pagination/uint256 sınırı, OpenAPI, indexer status ve Faz 3 resolver gerçek V2 lifecycle'a bağlandı. Güvenilir private-link yazıcısı Faz 5 quote provenance bağımlılığı olarak kaydedildi.
+- İlk `npm test`: 64/64; `npm run typecheck` başarılı. İlk `npm run test:integration`: Docker kapalı olduğundan 6 bağlantı/health hatası, 3 geçti; PostgreSQL 127.0.0.1:55432 ECONNREFUSED. Docker Desktop ve yalnız backend Compose servisleri başlatıldı.
+- Sonraki integration: 9/9 geçti; gerçek SQL + yerel JSON-RPC fixture reorg/replay/reconcile/lag/ownership testleri dahil. RPC'ye tx gönderilmedi. Ek inbox omission, missing bid ve eşzamanlı worker lease testleri son doğrulama için eklendi.
+- Devam: son testler/audit/OpenAPI/diff, ardından yalnız backend yerel commit. Production indexleme, gerçek dataset, archive-provider smoke, büyük dataset benchmark ve deploy yapılmadı.
+
 ## 2026-09-07 — Faz 3 commit teslim kaydı
 
 Uygulama commit'i: `1fe02ca` — `feat(backend): implement phase 3 encrypted private data and legacy import`. `Monosfer-V2` üzerinde yalnız backend altında 24 dosya içerir. Staged `git diff --cached --check` başarılı ve tüm yollar backend altında doğrulandı. Bu kimlik kaydı ayrı docs commit'inde tutulur. Otomatik push yapılmadı; sonraki uygulama fazı Faz 4'tür.
@@ -108,7 +142,8 @@ Doğal devam görevleri: (1) frontend ekibiyle gerçek tarayıcı SIWE/CSRF/cook
 | 1 | tamamlandı |
 | 2 | tamamlandı |
 | 3 | tamamlandı |
-| 4–7 | bekliyor |
+| 4 | tamamlandı |
+| 5–7 | bekliyor |
 
 ## Devam notu
 

@@ -72,21 +72,21 @@ test('malformed/orphan documents are rejected with fixed reason codes only', () 
 
 test('lifecycle policy denies unconfirmed, unrelated and terminal courier access', async () => {
   const f = privateFixtures(); const id = randomUUID();
-  const state = { privateRecordId: id, customer: f.customer, acceptedCourier: f.courier, status: 'Accepted', verification: 'confirmed' };
+  const state = { privateRecordId: id, customer: f.customer, acceptedCourier: f.courier, status: 'ReadyForPickup', verification: 'confirmed' };
   assert.equal(deliveryAccess(f.customer, id, state), 'customer');
   assert.equal(deliveryAccess(f.courier.toUpperCase().replace('0X', '0x'), id, state), 'courier');
-  for (const status of ['OpenForBids', 'Delivered', 'Cancelled', 'unknown']) assert.equal(deliveryAccess(f.courier, id, { ...state, status }), null);
+  for (const status of ['Bidding', 'AwaitingFunding', 'DeliveredPending', 'ReturnRequired', 'Completed', 'Returned', 'Expired', 'Cancelled', 'unknown', 'Accepted']) assert.equal(deliveryAccess(f.courier, id, { ...state, status }), null);
   assert.equal(deliveryAccess(f.courier, id, { ...state, status: 'InTransit' }), 'courier');
   for (const invalid of [null, { ...state, privateRecordId: randomUUID() }, { ...state, verification: 'legacy_unverified' }]) assert.equal(deliveryAccess(f.customer, id, invalid), null);
   assert.equal(deliveryAccess(`0x${'f'.repeat(40)}`, id, state), null);
-  assert.equal(await new PrivateDeliveryProjection().findConfirmed(id), null);
+  assert.equal(await new PrivateDeliveryProjection({}, { settings: { indexer: { enabled: false } } }).findConfirmed(id), null);
 });
 
 test('service checks confirmed ownership before decrypt; courier never receives code/evidence/location', async () => {
   const f = privateFixtures(); const id = randomUUID();
   const record = { id, source_namespace: 'test', source_collection: 'deliveries', legacy_mongo_id: f.delivery._id.toHexString(), kind: 'delivery', schema_version: 1 };
   record.encrypted_payload = crypto.encrypt(mapLegacy('deliveries', f.delivery).payload, recordAad(record));
-  let state = { privateRecordId: id, customer: f.customer, acceptedCourier: f.courier, status: 'Accepted', verification: 'confirmed' };
+  let state = { privateRecordId: id, customer: f.customer, acceptedCourier: f.courier, status: 'ReadyForPickup', verification: 'confirmed' };
   let queries = 0;
   const service = new PrivateDataService({ find: async () => { queries++; return record; } }, crypto, { findConfirmed: async () => state });
   await assert.rejects(service.readDelivery(id, `0x${'f'.repeat(40)}`), error => error.getStatus() === 403);
@@ -127,5 +127,5 @@ test('private data errors and logs are sanitized; no new public private endpoint
   assert.equal(response.json().error.code, 'INTERNAL_ERROR');
   logger.info({ payload: privateFixtures().delivery, pickup: 'PRIVATE_ADDRESS', deliveryCode: 'PRIVATE_CODE', evidence: 'PRIVATE_EVIDENCE', nested: { pushToken: 'PRIVATE_PUSH' } });
   for (const secret of privateSecrets) assert.equal((logs.join('') + response.body).includes(secret), false);
-  assert.equal(Object.keys(document.paths).some(path => path.startsWith('/v1/deliveries')), false);
+  assert.equal(Object.entries(document.paths).some(([path, methods]) => path.startsWith('/v1/deliveries') && Object.keys(methods).some(method => method !== 'get')), false);
 });

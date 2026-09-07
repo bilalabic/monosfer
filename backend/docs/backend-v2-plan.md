@@ -1,5 +1,15 @@
 # Monosfer V2 Backend — Fazlı Uygulama Planı
 
+## Faz 4 — Indexer ve projection / 2026-09-07
+
+Başlangıç `cd8d593`, `Monosfer-V2`. Backend-only teslim. Mevcut `contracts/exports` içindeki legacy olmayan DeliveryHub ABI/adres/deployment başlangıç bloğu build sırasında backend dist içine üretilmiş bundle olarak alınır; export fingerprint cursor'a bağlanır. Kontrat dosyaları değiştirilmez. `finalized` bloklar RPC üzerinden salt okunur tüketilir; zincire işlem gönderilmez.
+
+F4.1: SQL event inbox, canonical bloklar, cursor, Delivery/Bid projection ve private link sınırı. F4.2: strict ABI decode, chain/code kontrolü, sıralama/dedup, blok ve cursor atomik commit, bounded batch/retry. F4.3: canonical hash uyuşmazlığında bounded ancestor arama, orphan event koruma ve etkilenen projection rebuild; derin uyuşmazlıkta fail closed. F4.4: aynı inbox'tan replay ve aynı blokta deliveryOf/bidOf/nextDeliveryId reconciliation; fark varsa servis stale/error verir. F4.5: salt okunur `/v1/indexer/status`, `/v1/deliveries`, `/v1/deliveries/:id`, `/v1/deliveries/:id/bids`; bounded pagination, decimal string ID/tutarlar, indexing-pending/stale ayrımı ve OpenAPI. Chain-state yazan HTTP endpoint yoktur.
+
+Worker API process'inden ayrı CLI'dır: once/watch/replay/reconcile. Varsayılan kapalı; açıkken zorunlu RPC/config doğrulanır. Restart DB cursor'dan sürer. Worker hatası, geride kalma veya eski heartbeat confirmed private erişimini kapatır. Faz 3 private service gerçek V2 lifecycle adlarına geçirilir; kurye yalnız ReadyForPickup/InTransit erişir. Legacy source ile projection ID/wallet benzerliği otomatik bağ oluşturmaz. Güvenilir quote digest → private record bağı Faz 5 issuance kaydını gerektirir; bu faz link okuyucusu hazırlar, keyfi link HTTP endpoint'i açmaz.
+
+Kabul: gerçek PostgreSQL ve yerel JSON-RPC fixture üzerinde duplicate/sırasız event, atomic rollback, restart, reorg/deep-reorg, lag/outage, replay eşitliği, reconciliation farkı ve read-only HTTP testleri. Typecheck/build/unit/integration/legacy/audit/OpenAPI/diff çalıştırılır; sonuç ve yerel commit progress'e kaydedilir. Canlı Testnet smoke Faz 7'ye aittir; gerçek dataset indexleme/deploy bu teslimde yapılmaz.
+
 ## Faz 3 — Model + import / 2026-09-07
 
 Onaylanan kapsam yalnız backend altında private PostgreSQL modeli, AES-256-GCM, internal erişim sınırı ve salt okunur Mongo envanter/dry-run/import araçlarıdır. Yeni delivery endpoint'i yoktur. Çalışma tabanı `0a6d76c`, dal `Monosfer-V2`.

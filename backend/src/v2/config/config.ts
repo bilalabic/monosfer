@@ -1,7 +1,9 @@
 import { Global, Inject, Injectable, Module, type DynamicModule } from '@nestjs/common';
 import { parsePrivateKey, type PrivateKeySettings } from '../private-data/crypto.js';
+import { parseIndexerSettings, type IndexerSettings } from '../indexer/config.js';
 
 export interface Settings extends PrivateKeySettings {
+  indexer: IndexerSettings;
   environment: 'development' | 'test' | 'production';
   host: string;
   port: number;
@@ -76,8 +78,12 @@ export function parseSettings(env: NodeJS.ProcessEnv): Settings {
   if (sessionCookieSecret.length < 32 || sessionCookieSecret.length > 256) throw new Error('Invalid SESSION_COOKIE_SECRET');
   const siweRpcUrl = endpoint('SIWE_RPC_URL', ['http:', 'https:']);
   if (environment === 'production' && new URL(siweRpcUrl).protocol !== 'https:') throw new Error('Invalid SIWE_RPC_URL');
+  const siweChainId = requiredInteger('SIWE_CHAIN_ID', 1, 2147483647);
+  const indexer = parseIndexerSettings(env);
+  if (indexer.enabled && indexer.chainId !== siweChainId) throw new Error('Invalid INDEXER_CHAIN_ID');
   return {
     ...parsePrivateKey(env),
+    indexer,
     environment: environment as Settings['environment'], host,
     port: integer('PORT', 3001, 1, 65535),
     databaseUrl: endpoint('DATABASE_URL', ['postgres:', 'postgresql:']),
@@ -86,7 +92,7 @@ export function parseSettings(env: NodeJS.ProcessEnv): Settings {
     bodyLimit: integer('BODY_LIMIT_BYTES', 65536, 1024, 1048576),
     connectionTimeoutMs: integer('CONNECTION_TIMEOUT_MS', 2000, 100, 10000),
     siweDomain, siweUri, siweStatement, siweRpcUrl, sessionCookieSecret,
-    siweChainId: requiredInteger('SIWE_CHAIN_ID', 1, 2147483647),
+    siweChainId,
     sessionTtlSeconds: requiredInteger('SESSION_TTL_SECONDS', 1, 2592000),
     nonceTtlSeconds: requiredInteger('NONCE_TTL_SECONDS', 1, 300),
     authRateLimitWindowSeconds: requiredInteger('AUTH_RATE_LIMIT_WINDOW_SECONDS', 1, 3600),

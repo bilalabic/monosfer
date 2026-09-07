@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon --config nodemon.v2.json",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/prepare-contracts.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node --env-file-if-exists=.env dist/main.js",
     "dev:legacy": "nodemon src/server.js",
@@ -15,7 +15,8 @@
     "db:migrate": "node --env-file-if-exists=.env scripts/migrate.mjs",
     "openapi:export": "npm run build && node scripts/export-openapi.mjs",
     "private:inventory": "npm run build && node --env-file-if-exists=.env scripts/private-inventory.mjs",
-    "private:migrate": "npm run build && node --env-file-if-exists=.env scripts/private-migrate.mjs"
+    "private:migrate": "npm run build && node --env-file-if-exists=.env scripts/private-migrate.mjs",
+    "indexer": "npm run build && node --env-file-if-exists=.env scripts/indexer.mjs"
   },
   "engines": {
     "node": ">=24.0.0 <25"

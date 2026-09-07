@@ -9,6 +9,7 @@ import cookie from '@fastify/cookie';
 import { AuthModule } from './auth/auth.module.js';
 import { UsersModule } from './users/users.module.js';
 import { PrivateDataModule } from './private-data/private-data.module.js';
+import { IndexerReadModule } from './indexer/read.module.js';
 import { cookieNames } from './security/tokens.js';
 import { LogController } from 'fastify';
 import type { Logger } from 'pino';
@@ -20,7 +21,7 @@ import { createLogger, FrameworkLogger } from './http/logger.js';
 @Module({})
 export class AppModule {
   static register(settings: Settings): DynamicModule {
-    return { module: AppModule, imports: [ConfigModule.register(settings), HealthModule, AuthModule, UsersModule, PrivateDataModule] };
+    return { module: AppModule, imports: [ConfigModule.register(settings), HealthModule, AuthModule, UsersModule, PrivateDataModule, IndexerReadModule] };
   }
 }
 
@@ -53,7 +54,7 @@ export async function configureApplication(app: NestFastifyApplication, settings
     .addCookieAuth(cookieNames(settings).session, { type: 'apiKey', in: 'cookie' }, 'session').build());
   document.components ??= {};
   document.components.schemas ??= {};
-  for (const name of ['NonceInputDto', 'VerifyInputDto', 'UpdateUserDto', 'CourierProfileDto']) {
+  for (const name of ['NonceInputDto', 'VerifyInputDto', 'UpdateUserDto', 'CourierProfileDto', 'DeliveryQueryDto', 'DeliveryIdDto', 'BidQueryDto']) {
     const schema = document.components.schemas[name];
     if (schema && !('$ref' in schema)) schema.additionalProperties = false;
   }
@@ -67,7 +68,7 @@ export async function configureApplication(app: NestFastifyApplication, settings
   const ready = document.paths['/v1/health/ready']?.get;
   if (ready) ready.responses['503'] = { description: 'Service unavailable', content: { 'application/json': { schema: { $ref: '#/components/schemas/ApiError' } } } };
   for (const [path, item] of Object.entries(document.paths)) {
-    if (!path.startsWith('/v1/auth') && !path.startsWith('/v1/users')) continue;
+    if (!path.startsWith('/v1/auth') && !path.startsWith('/v1/users') && !path.startsWith('/v1/deliveries') && !path.startsWith('/v1/indexer')) continue;
     for (const method of ['get', 'post', 'patch', 'delete'] as const) {
       const operation = item?.[method];
       if (operation) for (const status of ['400', '401', '403', '429', '503']) {

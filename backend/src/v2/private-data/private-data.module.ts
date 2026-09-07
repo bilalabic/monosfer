@@ -7,16 +7,33 @@ export interface TrustedDelivery {
   privateRecordId: string; customer: string; acceptedCourier: string | null;
   status: string; verification: 'confirmed';
 }
-// Phase 4 replaces this provider with a confirmed projection reader. Legacy metadata cannot grant access.
+// Links are established only by a future server-side quote issuance workflow, never legacy ID matching.
 @Injectable()
 export class PrivateDeliveryProjection {
-  async findConfirmed(_recordId: string): Promise<TrustedDelivery | null> { return null; }
+  constructor(private readonly db: DatabaseService, private readonly config: ConfigService) {}
+  async findConfirmed(recordId: string): Promise<TrustedDelivery | null> {
+    const settings = this.config.settings.indexer;
+    if (!settings.enabled || !/^[0-9a-f-]{36}$/i.test(recordId)) return null;
+    const stream = `${settings.chainId}:${settings.deployment!.address.toLowerCase()}`;
+    try {
+      const result = await this.db.query(`SELECT d.data FROM monosfer.private_delivery_links l
+        JOIN monosfer.delivery_projections d ON d.stream=l.stream AND d.delivery_id=l.delivery_id
+        JOIN monosfer.indexer_streams s ON s.stream=l.stream
+        JOIN monosfer.private_delivery_records p ON p.id=l.private_record_id
+        WHERE l.private_record_id=$1 AND l.stream=$2 AND l.quote_digest=d.data->>'quoteDigest'
+        AND p.customer_wallet=d.data->>'customer' AND s.status='ready' AND s.integrity_ok
+        AND s.last_block=s.observed_head AND s.export_fingerprint=$4
+        AND s.checked_at>now()-($3::integer * interval '1 second')`, [recordId, stream, settings.staleSeconds, settings.fingerprint]);
+      const data = result.rows[0]?.data;
+      return data ? { privateRecordId: recordId, customer: data.customer, acceptedCourier: data.courier, status: data.state, verification: 'confirmed' } : null;
+    } catch { throw new ServiceUnavailableException(); }
+  }
 }
 export function deliveryAccess(wallet: string, recordId: string, state: TrustedDelivery | null): 'customer' | 'courier' | null {
   if (!/^0x[0-9a-fA-F]{40}$/.test(wallet) || !state || state.verification !== 'confirmed' || state.privateRecordId !== recordId) return null;
-  if (!['OpenForBids', 'Accepted', 'InTransit', 'Delivered', 'Cancelled'].includes(state.status)) return null;
+  if (!['Bidding', 'AwaitingFunding', 'ReadyForPickup', 'InTransit', 'DeliveredPending', 'ReturnRequired', 'Completed', 'Returned', 'Cancelled', 'Expired'].includes(state.status)) return null;
   if (state.customer.toLowerCase() === wallet.toLowerCase()) return 'customer';
-  if (state.acceptedCourier?.toLowerCase() === wallet.toLowerCase() && ['Accepted', 'InTransit'].includes(state.status)) return 'courier';
+  if (state.acceptedCourier?.toLowerCase() === wallet.toLowerCase() && ['ReadyForPickup', 'InTransit'].includes(state.status)) return 'courier';
   return null;
 }
 export interface PrivateRecord extends RecordContext { encrypted_payload: Envelope }

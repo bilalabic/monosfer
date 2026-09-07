@@ -16,7 +16,7 @@ export const testEnv = {
 };
 
 export async function testApplication(options = {}) {
-  const settings = parseSettings({ ...testEnv, ...options.env });
+  const settings = { ...parseSettings({ ...testEnv, ...options.env }), ...options.settings };
   const logs = [];
   const logger = createLogger({ write: line => { logs.push(String(line)); } });
   const database = options.database ?? { ping: async () => true, onApplicationShutdown: () => {} };
