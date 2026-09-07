@@ -1,5 +1,9 @@
 # Backend V2 İlerleme Kaydı
 
+## 2026-09-08 — Faz 5 commit teslim kaydı
+
+Uygulama commit'i `f35fdf3` — `feat(backend): implement phase 5 signed quotes and trusted private links`. `Monosfer-V2` üzerinde 31 dosyanın tamamı backend altındadır; staged diff/check ve kapsam doğrulandı. Bu hash kaydı ayrı docs commit'idir. Push/deploy yapılmadı. Sonraki uygulama fazı Faz 6'dır; production risk/provider/KMS ve frontend quote entegrasyon ihtiyaçları `backend-v2-handoffs.md` içinde kalır.
+
 ## 2026-09-08 — Faz 5 / tamamlandı
 
 F5.1–F5.6 kod/test/sözleşme doğrulandı; `bekliyor → devam ediyor → doğrulanıyor → tamamlandı`. Quote issuance ve refresh, finalized RPC policy/hash doğrulaması, AES-GCM native private kayıt, HMAC idempotency, audit ve outbox tek transaction; ayrı worker güvenilir projection'dan link kuruyor. Production API/worker kapalı; gerçek risk/provider/KMS kararları handoffs'a yazıldı. İşlem gönderilmedi.
