@@ -1,5 +1,9 @@
 # Backend V2 İlerleme Kaydı
 
+## 2026-09-10 — Faz 6 commit teslim kaydı
+
+Uygulama commit'i `6af295f13f545793c48715b8caf8e3b97295411c` — `feat(backend): implement phase 6 tracking and provider services`. `Monosfer-V2` üzerinde 35 dosyanın tamamı `backend/` altında; staged diff/check ve kapsam doğrulandı. Bu hash kaydı ayrı docs commit'idir. OpenAPI export API için 21 path / 25 işlem, realtime için 7 path / 8 işlem içerir. Push/deploy yapılmadı; external provider/production kabulü handoff'ta bekliyor.
+
 ## 2026-09-10 — Faz 6 / yerel-test teslimi tamamlandı
 
 F6.1–F6.6: bekliyor → devam ediyor → doğrulanıyor → tamamlandı; yalnız planın yerel/test adapter kapsamı. Kısa, SIWE session ve finalized delivery binding'ine bağlı tracking token; şifreli Redis TTL/stream; ayrı SSE process; private kaynaklı dev RouteProvider; owner-only şifreli evidence ve transactional job; durable in-app notifications uygulandı. Provider retry/dead-letter, deployment izolasyonu ve frontend/OpenAPI sözleşmesi eklendi. Harici Route/S3/WebPush entegrasyonu ve production kabulü **bekliyor (dış bağımlılık)**; production fail-closed.
