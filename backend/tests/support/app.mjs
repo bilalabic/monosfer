@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Test } from '@nestjs/testing';
-import { AppModule, createAdapter, configureApplication } from '../../dist/app.js';
+import { AppModule, RealtimeAppModule, createAdapter, configureApplication } from '../../dist/app.js';
 import { parseSettings } from '../../dist/config/config.js';
 import { DatabaseService } from '../../dist/infrastructure/database.module.js';
 import { RedisService } from '../../dist/infrastructure/redis.module.js';
@@ -21,7 +21,7 @@ export async function testApplication(options = {}) {
   const logger = createLogger({ write: line => { logs.push(String(line)); } });
   const database = options.database ?? { ping: async () => true, onApplicationShutdown: () => {} };
   const redis = options.redis ?? { ping: async () => true, onApplicationShutdown: () => {} };
-  const builder = Test.createTestingModule({ imports: [AppModule.register(settings), ...(options.imports ?? [])] })
+  const builder = Test.createTestingModule({ imports: [(options.realtime?RealtimeAppModule:AppModule).register(settings), ...(options.imports ?? [])] })
     .overrideProvider(DatabaseService).useValue(database)
     .overrideProvider(RedisService).useValue(redis);
   if (options.authRepository) builder.overrideProvider(AuthRepository).useValue(options.authRepository);

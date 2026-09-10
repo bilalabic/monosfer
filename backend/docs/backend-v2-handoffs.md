@@ -1,5 +1,14 @@
 # V2 Backend Ekip Bağımlılıkları
 
+## Faz 6 yerel/test teslimi — 2026-09-10
+
+- Frontend: [tracking/provider sözleşmesi](backend-v2-operations.md) ve iki OpenAPI export'u hazır. SIWE cookie + Origin/CSRF, tracking için bellekte/header'da kısa token, evidence için Idempotency-Key kullanın. Realtime ayrı Node process; fetch streaming + Last-Event-ID, reset/expiry/closed ve backoff gerekir. Native EventSource'a token URL'si eklemeyin. Gerçek browser/mobil arka plan/reconnect smoke bu teslimde yapılmadı; GPS izni ve çoklu sekme davranışı frontend sorumluluğunda.
+- Ürün: tracking/route/evidence-create yalnız ReadyForPickup/InTransit; ReturnRequired tracking ayrı erişim onayı bekler. Yeni evidence yalnız yükleyene görünür; legacy dispute veya support/admin yetkisi açılmaz. GPS consent, retention/silme, upload boyutu/antivirus/EXIF, katılımcılar arası delil paylaşımı ve push tercihleri kararlaştırılmalı. Dev TTL ve kuş uçuşu ETA production politikasına eşit değildir.
+- Provider/altyapı: gerçek Route/ETA hesabı, S3-compatible private bucket/region/credentials/KMS ve WebPush VAPID/abonelik/izin tercihleri bekleniyor. Bu teslimde adapter arayüzleri + yerel encrypted storage + in-app notification inbox vardır; harici provider entegrasyonu, push subscription API ve production storage hazır değildir. `OPERATIONS_ENABLED` varsayılan false; production true startup'ı reddeder.
+- Proxy/DevOps: realtime için aynı-site cookie, TLS, CORS ve buffering kapalı streaming upstream gerekir; API ve worker aynı yerel evidence diski/anahtarını kullanır. Process/distributed bağlantı sınırları, ortak auth IP rate bütçesinin GPS publish yüküne göre ayarı, sticky olmayan reconnect, object/disk kota, dead-letter alarmı, SQL+object+key restore ve retention prosedürü gerekli. Backend dışı proxy/deploy/CI dosyaları değiştirilmedi.
+- Kontrat: Faz 4/5 trusted finalized private-link tüketildi; backend chain state/contract/ABI yazmadı, işlem göndermedi. Native evidence hash off-chain içerik bütünlüğüdür, zincire dispute/evidence işlemi gönderildiği anlamına gelmez. Bildirim worker'ı current projection snapshot'ı bildirir, her ara zincir event'inin eksiksiz push kaydı değildir.
+
+
 ## Faz 5 teslimi — 2026-09-08
 
 - Frontend: üç yeni `/v1/quotes` endpoint'i OpenAPI ve [quote sözleşmesinde](backend-v2-quotes.md) tanımlandı. SIWE cookie + Origin/CSRF + Idempotency-Key kullanın. Aynı ağ retry'ında aynı key/body; ayrı eylem/refresh için yeni key. Response quote/signature ile createDelivery çağrısını wallet yapar. Ardından indexer pending/confirmed akışını izleyin; privateRecordId veya tx hash tek başına confirmed değildir. Signature/private alanlar browser log/analytics/cache'e gitmemeli. Gas/fee gösterimi frontend sorumluluğundadır.

@@ -11,6 +11,9 @@ import { UsersModule } from './users/users.module.js';
 import { PrivateDataModule } from './private-data/private-data.module.js';
 import { IndexerReadModule } from './indexer/read.module.js';
 import { QuotesModule } from './quotes/quotes.module.js';
+import { TrackingApiModule } from './tracking/tracking.module.js';
+import { TrackingRealtimeModule } from './tracking/realtime.js';
+import { ProvidersModule } from './providers/providers.module.js';
 import { cookieNames } from './security/tokens.js';
 import { LogController } from 'fastify';
 import type { Logger } from 'pino';
@@ -22,8 +25,13 @@ import { createLogger, FrameworkLogger } from './http/logger.js';
 @Module({})
 export class AppModule {
   static register(settings: Settings): DynamicModule {
-    return { module: AppModule, imports: [ConfigModule.register(settings), HealthModule, AuthModule, UsersModule, PrivateDataModule, IndexerReadModule, QuotesModule] };
+    return { module: AppModule, imports: [ConfigModule.register(settings), HealthModule, AuthModule, UsersModule, PrivateDataModule, IndexerReadModule, QuotesModule, TrackingApiModule, ProvidersModule] };
   }
+}
+
+@Module({})
+export class RealtimeAppModule {
+  static register(settings:Settings):DynamicModule{return {module:RealtimeAppModule,imports:[ConfigModule.register(settings),HealthModule,TrackingRealtimeModule]};}
 }
 
 export function createAdapter(settings: Settings, logger: Logger): FastifyAdapter {
@@ -42,7 +50,7 @@ export async function configureApplication(app: NestFastifyApplication, settings
   await app.register(helmet);
   await app.register(cookie);
   app.enableCors({ origin: settings.corsOrigins, credentials: true, exposedHeaders: ['x-request-id', 'retry-after'],
-    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['content-type', 'x-csrf-token', 'idempotency-key'] });
+    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['content-type', 'x-csrf-token', 'idempotency-key', 'x-tracking-session', 'last-event-id'] });
   const server = app.getHttpAdapter().getInstance();
   server.addHook('onRequest', async (request, reply) => {
     reply.header('x-request-id', request.id);
@@ -56,7 +64,8 @@ export async function configureApplication(app: NestFastifyApplication, settings
   document.components ??= {};
   document.components.schemas ??= {};
   for (const name of ['NonceInputDto', 'VerifyInputDto', 'UpdateUserDto', 'CourierProfileDto', 'DeliveryQueryDto', 'DeliveryIdDto', 'BidQueryDto',
-    'CreateQuoteDto','QuoteMetadataDto','QuoteLocationDto','QuoteDropoffDto','QuotePrivatePayloadDto','QuoteDigestDto','RefreshQuoteDto']) {
+    'CreateQuoteDto','QuoteMetadataDto','QuoteLocationDto','QuoteDropoffDto','QuotePrivatePayloadDto','QuoteDigestDto','RefreshQuoteDto',
+    'TrackingLocationDto','TrackingEmptyDto','EvidenceInputDto','EvidenceGpsDto','DeliveryEvidenceIdDto','NotificationQueryDto']) {
     const schema = document.components.schemas[name];
     if (schema && !('$ref' in schema)) schema.additionalProperties = false;
   }
@@ -70,7 +79,7 @@ export async function configureApplication(app: NestFastifyApplication, settings
   const ready = document.paths['/v1/health/ready']?.get;
   if (ready) ready.responses['503'] = { description: 'Service unavailable', content: { 'application/json': { schema: { $ref: '#/components/schemas/ApiError' } } } };
   for (const [path, item] of Object.entries(document.paths)) {
-    if (!path.startsWith('/v1/auth') && !path.startsWith('/v1/users') && !path.startsWith('/v1/deliveries') && !path.startsWith('/v1/indexer') && !path.startsWith('/v1/quotes')) continue;
+    if (!path.startsWith('/v1/auth') && !path.startsWith('/v1/users') && !path.startsWith('/v1/deliveries') && !path.startsWith('/v1/indexer') && !path.startsWith('/v1/quotes') && !path.startsWith('/v1/notifications')) continue;
     for (const method of ['get', 'post', 'patch', 'delete'] as const) {
       const operation = item?.[method];
       if (operation) for (const status of ['400', '401', '403', '404', '409', '429', '503']) {
@@ -84,9 +93,9 @@ export async function configureApplication(app: NestFastifyApplication, settings
   return document;
 }
 
-export async function createApplication(env: NodeJS.ProcessEnv = process.env, logger = createLogger()) {
+export async function createApplication(env: NodeJS.ProcessEnv = process.env, logger = createLogger(), realtime=false) {
   const settings = parseSettings(env);
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule.register(settings), createAdapter(settings, logger), { logger: new FrameworkLogger(logger), abortOnError: false });
+  const app = await NestFactory.create<NestFastifyApplication>((realtime?RealtimeAppModule:AppModule).register(settings), createAdapter(settings, logger), { logger: new FrameworkLogger(logger), abortOnError: false });
   try {
     await configureApplication(app, settings);
     return { app, settings };

@@ -119,13 +119,16 @@ Controller('private-probe')(PrivateProbe);
 Get()(PrivateProbe.prototype, 'fail', Object.getOwnPropertyDescriptor(PrivateProbe.prototype, 'fail'));
 class PrivateProbeModule {}
 Module({ controllers: [PrivateProbe] })(PrivateProbeModule);
-test('private data errors and logs are sanitized; no new public private endpoint', async t => {
-  const { app, logger, logs, document } = await testApplication({ imports: [PrivateProbeModule] });
+test('private data errors and logs are sanitized; legacy private records have no public endpoint', async t => {
+  const { app, logger, logs, document } = await testApplication({ imports: [PrivateProbeModule], redis: { ping: async()=>true, increment: async()=>1 } });
   t.after(() => app.close());
   const response = await app.inject('/v1/private-probe');
   assert.equal(response.statusCode, 500);
   assert.equal(response.json().error.code, 'INTERNAL_ERROR');
   logger.info({ payload: privateFixtures().delivery, pickup: 'PRIVATE_ADDRESS', deliveryCode: 'PRIVATE_CODE', evidence: 'PRIVATE_EVIDENCE', nested: { pushToken: 'PRIVATE_PUSH' } });
   for (const secret of privateSecrets) assert.equal((logs.join('') + response.body).includes(secret), false);
-  assert.equal(Object.entries(document.paths).some(([path, methods]) => path.startsWith('/v1/deliveries') && Object.keys(methods).some(method => method !== 'get')), false);
+  assert.deepEqual(Object.entries(document.paths).filter(([path, methods]) => path.startsWith('/v1/deliveries') && Object.keys(methods).some(method => method !== 'get')).map(([path])=>path).sort(),
+    ['/v1/deliveries/{id}/evidence','/v1/deliveries/{id}/tracking/location','/v1/deliveries/{id}/tracking/sessions']);
+  assert.equal((await app.inject('/v1/private-records/legacy-id')).statusCode,404);
+  assert.equal((await app.inject('/v1/deliveries/0/evidence/00000000-0000-4000-8000-000000000000/content')).statusCode,401);
 });

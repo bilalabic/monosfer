@@ -1,5 +1,34 @@
 # Backend V2 İlerleme Kaydı
 
+## 2026-09-10 — Faz 6 / yerel-test teslimi tamamlandı
+
+F6.1–F6.6: bekliyor → devam ediyor → doğrulanıyor → tamamlandı; yalnız planın yerel/test adapter kapsamı. Kısa, SIWE session ve finalized delivery binding'ine bağlı tracking token; şifreli Redis TTL/stream; ayrı SSE process; private kaynaklı dev RouteProvider; owner-only şifreli evidence ve transactional job; durable in-app notifications uygulandı. Provider retry/dead-letter, deployment izolasyonu ve frontend/OpenAPI sözleşmesi eklendi. Harici Route/S3/WebPush entegrasyonu ve production kabulü **bekliyor (dış bağımlılık)**; production fail-closed.
+
+| Kontrol | Gerçek sonuç |
+| --- | --- |
+| `npm.cmd run typecheck` | Başarılı, strict TypeScript |
+| `npm.cmd run build` | Başarılı; test ve OpenAPI komutlarında tekrar çalıştı |
+| `npm.cmd test` | 75/75 geçti, auth/CSRF/DTO/OpenAPI/redaction/config ve önceki faz regresyonları |
+| `npm.cmd run test:integration` | 28/28 geçti; gerçek localhost PostgreSQL/Redis/Mongo, migration tekrarları, encrypted local storage ve iki gerçek HTTP SSE instance dahil |
+| `npm.cmd run test:legacy` | 13/13 geçti; legacy kaynak kodu değiştirilmedi |
+| `npm.cmd run openapi:export` | Başarılı; API ve ayrı realtime OpenAPI JSON üretildi |
+| `npm.cmd audit --json` | 0 güvenlik açığı; yeni bağımlılık eklenmedi, lockfile değişmedi |
+| `git diff --check` | Başarılı; değişikliklerin tamamı backend altında |
+
+F6.1/F6.2: yetkisiz/başka delivery/başka session token'ı, atama değişimi, stale/error/integrity/lag/fingerprint, terminal lifecycle, token rotation/revoke, SIWE revoke, gerçek TTL, atomik duplicate/sequence kontrolü doğrulandı. Redis history 128 ile sınırlı; trimmed ve future cursor reset testi geçer. İki SSE instance ortak Redis üzerinden reconnect, aynı token connection lease, revoke sonrası closed ve shutdown cleanup testlerini geçti. Redis komut kesintisi kontrollü enjekte edildi; 503 yanıtı hassas hata içermedi. Önceki infrastructure testleri gerçek erişilemeyen PostgreSQL/Redis ve SIGINT/SIGTERM süreç kapanışını da doğruladı.
+
+F6.3–F6.5: route cache/provider hata/stale yanıt, enqueue sırasında SQL rollback, eşzamanlı evidence idempotency, owner/cross-delivery erişim, şifreli SQL/object içeriği ve tamper kontrolü geçti. Storage side-effect sonrası hata + retry aynı immutable object'i kullandı, tek ready notification üretti. Üç başarısız deneme failed job/evidence durumuna geçti. Notification retry sabit idempotencyKey kullandı; in-app inbox wallet/pagination/indexer yetki filtresi doğrulandı. External provider kesintileri gerçek üçüncü taraf hesabıyla değil test double'larıyla sınandı.
+
+İlk kontroller: Docker daemon kapalı olduğundan yerel infrastructure denemesi ECONNREFUSED verdi; Docker Desktop ve backend Compose servisleri başlatıldıktan sonra gerçek integration geçti. Derlemede notification response array tipi açıklandı. İlk tam unit turunda Faz 3'ün artık eskimiş “delivery altında yalnız GET” beklentisi başarısızdı; yeni Phase 6 mutasyon allowlist'i ve legacy private endpoint izolasyonu ile güncellendi. Yeni auth kontrolü için test Redis stub'ına rate counter eklendi; son `npm.cmd test` 75/75. Bu başarısız denemeler nihai test sonucu olarak sayılmadı.
+
+Çalıştırılmayan/kapsam dışı: production deploy/import, canlı zincir işlemi/Testnet smoke, gerçek map/S3/WebPush teslimi, browser/mobile GPS ve cookie/SSE smoke, çok-host storage ve yük testi, Linux POSIX realtime/worker signal testi, object/key restore drill, antivirus/EXIF pipeline ve production retention/silme. Temiz `npm ci` bu fazda yeniden çalıştırılmadı; bağımlılık değişmedi. Provider CLI retry/watch'ın uzun süreli process smoke'u yapılmadı; worker servisinin retry/concurrency davranışı integration ile sınandı. Root/CI/frontend/contract dosyaları değiştirilmedi, push yapılmadı.
+
+Teslim notları: [Faz 6 API/runbook](backend-v2-operations.md), [ekip ihtiyaçları](backend-v2-handoffs.md). Sonraki iki iş: (1) güvenlik/operasyon için gerçek provider hesapları, adapter contract testleri ve retention/object-key restore kararları; (2) Faz 7 support/dispute yetkisi, audit, metrics/traces ve frontend browser smoke. Yerel uygulama commit kimliği takip kaydına yazılacak.
+
+## 2026-09-08 — Faz 6 / devam ediyor
+
+Başlangıç `555473b`, temiz Monosfer-V2, origin'e göre 8 commit ileride. F6.1–F6.6 bekliyor → devam ediyor. Kullanıcının teknoloji baseline 18.1–18.6 metni, mevcut private/indexer/quote erişim sınırları incelendi. Plan backend altında kaydedildi. Ayrı Node realtime ve delivery-scoped token kullanılır; dev/test provider adapter'ları, production fail-closed. Henüz test çalıştırılmadı; canlı provider/retention/support yetkileri handoff'a yazılacak. Frontend/contract/root/CI değişikliği yapılmaz.
+
 ## 2026-09-08 — Faz 5 commit teslim kaydı
 
 Uygulama commit'i `f35fdf3` — `feat(backend): implement phase 5 signed quotes and trusted private links`. `Monosfer-V2` üzerinde 31 dosyanın tamamı backend altındadır; staged diff/check ve kapsam doğrulandı. Bu hash kaydı ayrı docs commit'idir. Push/deploy yapılmadı. Sonraki uygulama fazı Faz 6'dır; production risk/provider/KMS ve frontend quote entegrasyon ihtiyaçları `backend-v2-handoffs.md` içinde kalır.

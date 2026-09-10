@@ -1,5 +1,20 @@
 # Monosfer V2 Backend — Fazlı Uygulama Planı
 
+## Faz 6 — Tracking, realtime ve provider servisleri / 2026-09-08
+
+Başlangıç `555473b`, Monosfer-V2; backend-only. F6.1–F6.6 yerel/test kapsamı: bekliyor → devam ediyor → doğrulanıyor → tamamlandı (2026-09-10). Gerçek sonuçlar ilerleme günlüğünde, çalıştırma/API ayrıntıları [Faz 6 sözleşmesinde](backend-v2-operations.md). Canlı provider hesabı/retention politikası bulunmadığı için yerel/test adapter teslimi yapıldı; production açılmaz. Harici Route/S3/WebPush adapter entegrasyonu ve production kabulü dış bağımlılık olarak bekliyor; bu durum Faz 6'nın production-ready olduğu anlamına gelmez.
+
+| Görev | Davranış / kabul |
+| --- | --- |
+| F6.1 | Delivery-scoped kısa tracking token; cookie oturumuna ve trusted finalized binding'e bağlı; atanmış courier yayınlar, customer/courier izler. ReadyForPickup/InTransit dışı ve stale indexer deny. |
+| F6.2 | Redis TTL + AES-GCM latest/event stream, atomik seq/retry ve bounded history. Ayrı Node SSE process; reconnect cursor/reset, her poll'da auth/binding/expiry revalidation, disconnect/shutdown cleanup. |
+| F6.3 | RouteProvider interface, deterministic dev straight-line estimate; private endpoints server-side okunur, şifreli kısa cache, timeout/provider outage fail-closed. |
+| F6.4 | Owner-only native evidence metadata/content API; metin/küçük fotoğraf ve opsiyonel GPS, şifreli local object adapter, hash integrity, idempotent SQL outbox + worker. Legacy dispute/evidence veya support erişimi açılmaz. |
+| F6.5 | NotificationProvider interface + in-app dev inbox, internal lifecycle/evidence notification üretimi, idempotent bounded retry/dead-letter jobs. Dış Web Push/S3/provider hesabı ve retention handoff. |
+| F6.6 | Unit/inject, gerçek SQL/Redis/storage, SSE multi-instance/reconnect/revoke, TTL/seq/yetki, provider retry/kesinti; build/typecheck/legacy/audit/OpenAPI/diff ve yerel commit. |
+
+API: POST/DELETE `/v1/deliveries/:id/tracking/sessions`; POST/GET `.../tracking/location`; SSE GET `.../tracking/events` ayrı realtime process; GET `.../route`; POST `.../evidence`, GET `.../evidence/:evidenceId` ve `/content`; GET `/v1/notifications`. Mutasyonlar SIWE cookie + Origin + CSRF; evidence ayrıca Idempotency-Key. Tracking token yalnız `x-tracking-session` header'ında taşınır; URL/log/cache'e yazılmaz. TTL rakamları yalnız dev/test varsayımlarıdır. Production retention, external providers ve support/dispute yetki matrisi uydurulmaz.
+
 ## Faz 5 — Quote, audit ve güvenilir private link / 2026-09-08
 
 Başlangıç `82cf5c9`, `Monosfer-V2`. F5.1–F5.6: bekliyor → devam ediyor → doğrulanıyor → tamamlandı. Sonuçlar `backend-v2-progress.md`, API/operasyon ayrıntıları `backend-v2-quotes.md` içindedir. Yalnız backend; otomatik push yok.

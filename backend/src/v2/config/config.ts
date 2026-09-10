@@ -2,10 +2,12 @@ import { Global, Inject, Injectable, Module, type DynamicModule } from '@nestjs/
 import { parsePrivateKey, type PrivateKeySettings } from '../private-data/crypto.js';
 import { parseIndexerSettings, type IndexerSettings } from '../indexer/config.js';
 import { parseQuoteSettings, type QuoteSettings } from '../quotes/config.js';
+import { parseOperationsSettings, type OperationsSettings } from '../operations/config.js';
 
 export interface Settings extends PrivateKeySettings {
   indexer: IndexerSettings;
   quotes: QuoteSettings;
+  operations: OperationsSettings;
   environment: 'development' | 'test' | 'production';
   host: string;
   port: number;
@@ -87,6 +89,7 @@ export function parseSettings(env: NodeJS.ProcessEnv): Settings {
     ...parsePrivateKey(env),
     indexer,
     quotes: parseQuoteSettings(env),
+    operations: parseOperationsSettings(env),
     environment: environment as Settings['environment'], host,
     port: integer('PORT', 3001, 1, 65535),
     databaseUrl: endpoint('DATABASE_URL', ['postgres:', 'postgresql:']),
