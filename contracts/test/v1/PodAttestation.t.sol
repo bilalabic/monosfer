@@ -136,6 +136,17 @@ contract PodAttestationTest is QuoteFixture, PickupFixture, PodFixture {
         hub.submitDeliveryProof(id, a, sig);
     }
 
+    /**
+     * @dev A fixed 65-byte blob standing in for "a signature the attestation
+     *      service did not produce". Deriving one with `vm.sign` from a junk key
+     *      works too, but its bytes come out of a cheatcode rather than out of
+     *      the protocol, and the measured gas of a test then depends on how many
+     *      of those bytes happen to be zero. A constant keeps the measurement a
+     *      function of the code.
+     */
+    bytes internal constant NOT_THE_SERVICE = hex"1111111111111111111111111111111111111111111111111111111111111111"
+        hex"2222222222222222222222222222222222222222222222222222222222222222" hex"1b";
+
     function _full(uint256 id, bytes32 proofType, uint64 issuedAt, uint64 expiresAt, uint256 tag)
         internal
         view
@@ -299,12 +310,10 @@ contract PodAttestationTest is QuoteFixture, PickupFixture, PodFixture {
     function test_Rejects_ForgedSignature() public {
         uint256 id = _inTransit();
         DeliveryProof.Attestation memory a = buildAttestation(config, id, courier);
-        bytes memory sig = signAttestationAs(hub, a, 0xBADBADBAD);
+        bytes32 digest = podDigest(hub, a);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(PodAttestationVerifier.PodProofSignatureInvalid.selector, podDigest(hub, a))
-        );
-        _submit(id, a, sig);
+        vm.expectRevert(abi.encodeWithSelector(PodAttestationVerifier.PodProofSignatureInvalid.selector, digest));
+        _submit(id, a, NOT_THE_SERVICE);
     }
 
     /// @dev The risk-quote key is a different trust point and cannot stand in.
@@ -374,10 +383,9 @@ contract PodAttestationTest is QuoteFixture, PickupFixture, PodFixture {
     function test_FailedAttestation_ChangesNothing() public {
         uint256 id = _inTransit();
         DeliveryProof.Attestation memory a = buildAttestation(config, id, courier);
-        bytes memory sig = signAttestationAs(hub, a, 0xBADBADBAD);
 
         vm.expectRevert();
-        _submit(id, a, sig);
+        _submit(id, a, NOT_THE_SERVICE);
 
         assertEq(uint8(hub.deliveryOf(id).state), uint8(DeliveryHub.State.InTransit));
         assertFalse(hub.podNonceUsed(podSignerAddress(), a.nonce));

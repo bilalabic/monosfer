@@ -739,8 +739,11 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
         address courier = d.courier;
         if (courier == address(0)) return;
 
-        ReputationRegistry.Outcome outcome;
-        bool onTime;
+        // Both assigned on every path: punctuality only means something for a
+        // delivery that completed, and an unassigned default would leave that
+        // implicit.
+        ReputationRegistry.Outcome outcome = ReputationRegistry.Outcome.Expired;
+        bool onTime = false;
         if (terminal == State.Completed) {
             outcome = ReputationRegistry.Outcome.Completed;
             // A delivery with no recorded ETA deadline was never picked up, so
@@ -748,8 +751,6 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
             onTime = d.etaDeadline != 0 && block.timestamp <= d.etaDeadline;
         } else if (terminal == State.Returned) {
             outcome = ReputationRegistry.Outcome.Returned;
-        } else {
-            outcome = ReputationRegistry.Outcome.Expired;
         }
 
         _report(abi.encodeCall(ReputationRegistry.recordOutcome, (courier, deliveryId, outcome, onTime)));
