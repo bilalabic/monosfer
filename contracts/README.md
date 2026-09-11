@@ -88,7 +88,7 @@ test etmez**.
 | Build | `forge build` |
 | Format | `forge fmt --check` |
 | Test | `forge test -vvv` |
-| Gas | `forge snapshot --check --no-match-test "testFuzz\|invariant_"` |
+| Gas | `forge snapshot --check --no-match-test "testFuzz\|invariant_" --tolerance 1` |
 | Statik analiz | `slither .` (`fail_on: medium`) |
 | Deploy dry-run | Devralınan iki deploy script'i simüle edilir |
 
@@ -118,6 +118,14 @@ ondan önce hangi testlerin koştuğuna bağlı olmamalı. Test fixture'larında
 sayaçtan üretilip calldata'ya ulaşan değerler tam olarak bu bağımlılığı yaratır
 ve kapıyı kodun değil test filtresinin fonksiyonu haline getirir. Fixture'lar bu
 yüzden nonce/salt gibi değerleri argümanlardan türetir.
+
+**%1 tolerans bir kod farkını değil, platform farkını soğurur.** Karşılaştırılan
+276 girdinin üçü, Windows geliştirme makinesi ile Linux CI arasında 55–64 gas
+(%0,003–0,006) ayrışıyor — aynı forge sürümü, aynı commit SHA — ve fark yerelde
+tekrarlanamıyor. Tolerans olmadan kapı her fazda yanlış alarm veriyordu ve buna
+cevap vermek, aracı memnun etmek için gerçek test kodunu değiştirmek anlamına
+geliyordu. %1 hâlâ bu kapının işini görüyor: 40 bin gaslık bir birim testinde 400
+gas, yani istenmeden eklenen bir cold SLOAD (2100) kaçmaz.
 
 Aynı gerekçeyle `test/v1/invariant/` altındaki **erişilebilirlik probları** da
 kapının dışındadır. Bunlar fuzzer'ın yetkili yolu gerçekten kat edebildiğini

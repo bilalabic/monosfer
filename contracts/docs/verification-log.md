@@ -344,6 +344,52 @@ cezası 2, zamanındalık ağırlığı 2 test kırdı.
 
 ---
 
+## P3 — İtibar, rozetler, ödüller, referans
+
+Üç alt faz: `ReputationRegistry`, `BadgeSBT`, `RewardDistributor` + `Referral`.
+
+**Mutasyonla ölçüldü** — her kural tek tek koddan çıkarıldığında test kırılıyor:
+referans döngü tespiti 6, soulbound kilidi ve deneyime bağlı güven 4'er, kalan
+on üç kural 2'şer test.
+
+### Gas kapısı: üçüncü kez aynı sebeple kırıldı, bu sefer kökünden çözüldü
+
+CI üç fazda üst üste gas kapısında düştü. Bu turda tek tek yamamak yerine **tüm**
+testlerin CI değerlerini çekip yerel snapshot'la karşılaştırdım:
+
+```text
+276 ortak test  ->  273 birebir ayni,  3 tanesi 55-64 gas (%0,003-0,006) sapiyor
+```
+
+Aynı forge sürümü, aynı commit SHA, farklı platform binary'si; fark yerelde
+tekrarlanamıyor. Önceki iki turda tek tek testleri değiştirerek geçtim — ve o
+düzeltmelerden biri **aracı memnun etmek için gerçek test kodunu değiştirmekti**
+(sahte imzayı sabit bloba çevirmek). Kuyruğun köpeği salladığı durum.
+
+`forge snapshot --check --tolerance 1` CI'a eklendi. Tolerans bir kod farkını
+değil platform farkını soğuruyor ve kapının işini görmeye devam ediyor: 40 bin
+gaslık bir birim testinde %1 = 400 gas, yani istenmeden eklenen bir cold SLOAD
+(2100) kaçmıyor. `foundry.toml`'da karşılığı olmadığı için CI dosyasına dokunmak
+gerekti; onay alındı.
+
+### Slither: bu turda iki bulgu
+
+- **`uninitialized-local`** (medium) iki kez: `_reportOutcome` ve `badgesOf`.
+  Yereller her yolda açıkça atanır hale getirildi.
+- **`arbitrary-send-eth`** (high): `RewardDistributor._payOut`. Hedef
+  saldırganın seçebildiği bir adres değil — ya Merkle kanıtıyla **az önce
+  doğrulanmış** bir leaf'teki hesap, ya da config'deki hazine. Tasarımı bozmak
+  (yalnızca `msg.sender`'a ödemek) keeper'ın talep edenin gasını ödeyebilmesini
+  kaldırırdı; bunun yerine tam o satırda gerekçesiyle bastırıldı ve
+  [`static-analysis-baseline.md`](static-analysis-baseline.md)'ye kaydedildi.
+
+### Config'de üç eksik getter
+
+`podAttestationValidity`, `rewardClaimWindow`, `rewardReclaimDelay` P0.2'den beri
+parametre olarak duruyordu ama dışarıdan okunamıyordu. Üçü de eklendi.
+
+---
+
 ## Testnet doğrulaması
 
 Adresler: [`../deployments/10143.json`](../deployments/10143.json)
