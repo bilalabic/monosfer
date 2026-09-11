@@ -328,6 +328,14 @@ contract ProtocolConfig {
         return _params.ratingWindow;
     }
 
+    function rewardClaimWindow() external view returns (uint32) {
+        return _params.rewardClaimWindow;
+    }
+
+    function rewardReclaimDelay() external view returns (uint32) {
+        return _params.rewardReclaimDelay;
+    }
+
     /// @notice Coverage basis points for a risk tier. Tier 4 (R4) is disabled per sec. 49.
     function coverageBpsForTier(uint8 tier) external view returns (uint16) {
         if (tier == 1) return _params.coverageBpsR1;

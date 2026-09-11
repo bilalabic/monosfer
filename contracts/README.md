@@ -26,6 +26,8 @@ edilir, yetkiler tek bir rol yöneticisinden gelir.
 | `PodAttestationVerifier` | İmzalı teslim kanıtı, challenge taahhüdü, 10 dk ömür | [proofs](docs/proofs.md) |
 | `ReputationRegistry` | 0-1000 puan, ayrı güven seviyesi, sıralama yok | [reputation](docs/reputation.md) |
 | `BadgeSBT` | Devredilemez rozetler (ERC-721 + ERC-5192) | [badges](docs/badges.md) |
+| `RewardDistributor` | Epoch bütçeli Merkle ödül dağıtımı | [rewards](docs/rewards.md) |
+| `Referral` | Tek referans eden, tek ödül, döngüsüz | [rewards](docs/rewards.md) |
 
 Sıradaki fazlar (`ReputationRegistry`, `DisputeCourt`, …):
 [`docs/implementation-plan-v1.0.md`](docs/implementation-plan-v1.0.md).
@@ -246,6 +248,7 @@ contracts/
 │   │   ├── risk/               CoverageQuote, RiskQuoteVerifier
 │   │   ├── reputation/         ReputationRegistry
 │   │   ├── badge/              BadgeSBT, IERC5192
+│   │   ├── rewards/            RewardDistributor, Referral
 │   │   ├── proof/              PickupProof(+Verifier), DeliveryProof(+PodAttestationVerifier)
 │   │   └── interfaces/         ISettlementVault
 │   └── *.sol                   devralinan (dondurulmus, bkz. sec. 8)

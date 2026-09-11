@@ -11,6 +11,8 @@ import {CourierRegistry} from "../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../src/v1/hub/DeliveryHub.sol";
 import {ReputationRegistry} from "../../src/v1/reputation/ReputationRegistry.sol";
 import {BadgeSBT} from "../../src/v1/badge/BadgeSBT.sol";
+import {RewardDistributor} from "../../src/v1/rewards/RewardDistributor.sol";
+import {Referral} from "../../src/v1/rewards/Referral.sol";
 
 /**
  * @title DeployCore
@@ -76,6 +78,8 @@ contract DeployCoreScript is Script {
         CourierRegistry registry = new CourierRegistry(accessManager, config, vault);
         ReputationRegistry reputation = new ReputationRegistry(accessManager);
         BadgeSBT badge = new BadgeSBT(accessManager, reputation, registry, vm.envOr("BADGE_BASE_URI", string("")));
+        RewardDistributor rewards = new RewardDistributor(accessManager, config);
+        Referral referral = new Referral(accessManager);
         DeliveryHub hub = new DeliveryHub(accessManager, config, registry, vault, reputation, bidDeposit);
 
         vm.stopBroadcast();
@@ -88,7 +92,7 @@ contract DeployCoreScript is Script {
         if (address(registry).balance != 0) revert VaultNotEmpty("registry balance");
         if (hub.nextDeliveryId() != 0) revert VaultNotEmpty("hub deliveries");
 
-        _report(accessManager, config, vault, registry, hub, reputation, badge, roles);
+        _report(accessManager, config, vault, registry, hub, reputation, badge, rewards, referral, roles);
     }
 
     function _loadRoles() internal view returns (RoleSet memory roles) {
@@ -143,6 +147,8 @@ contract DeployCoreScript is Script {
         DeliveryHub hub,
         ReputationRegistry reputation,
         BadgeSBT badge,
+        RewardDistributor rewards,
+        Referral referral,
         RoleSet memory roles
     ) internal pure {
         console2.log("ProtocolAccessManager:", address(accessManager));
@@ -152,6 +158,8 @@ contract DeployCoreScript is Script {
         console2.log("DeliveryHub:          ", address(hub));
         console2.log("ReputationRegistry:   ", address(reputation));
         console2.log("BadgeSBT:             ", address(badge));
+        console2.log("RewardDistributor:    ", address(rewards));
+        console2.log("Referral:             ", address(referral));
         console2.log("default admin:        ", roles.defaultAdmin);
         console2.log("config admin:         ", roles.configAdmin);
         console2.log("emergency:            ", roles.emergency);
