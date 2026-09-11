@@ -125,7 +125,7 @@ yorumlanabilir kalır, çünkü her biri hangi formülün ürettiğini söyler.
 
 34 test (21 birim/fuzz + 13 entegrasyon).
 
-Mutasyonla ölçüldü — her kural tek tek koddan çıkarıldığında test kırılıyor:
+Mutasyon testi — her kural tek tek koddan çıkarıldığında test kırılıyor:
 
 | Kaldırılan | Kırılan test |
 |---|---|

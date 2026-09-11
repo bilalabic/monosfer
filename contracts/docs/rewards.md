@@ -18,7 +18,7 @@ yerden gitmiştir. Invariant sec. 33-12 tam olarak bunun için var.
 
 Testte sabit: `test_ProofFromOneEpochCannotDrainAnother` — epoch 2'nin ağacı
 yanlış üretilmiş ve tuttuğundan fazlasını vaat ediyor. Kanıt doğrulanıyor; onu
-durduran şey bütçe kontrolü ve epoch 1'in parası el değmeden kalıyor.
+durduran şey bütçe kontrolü ve epoch 1'in parasına hiç dokunulmuyor.
 
 ---
 
@@ -51,7 +51,7 @@ verir.
 | Talep penceresi | 90 gün (root yayımından itibaren) |
 | Geri alma gecikmesi | +7 gün |
 
-Geri alma **yalnızca talep edilmemiş kalanı** döndürür. Gecikme, uçuştaki bir
+Geri alma **yalnızca talep edilmemiş kalanı** döndürür. Gecikme, henüz işlenmekte olan bir
 talebin altından bütçenin çekilmemesi için var.
 
 ---
@@ -79,7 +79,7 @@ tamamlanmış teslimat, ilk sonuçlanmış jüri katılımı. Kayıt bedava ve h
 kanıtlamaz; nitelenme, o eylemi gören protokol kontratı tarafından raporlanır.
 
 **Referred cüzdan başına tek ödül**, hangi rolde önce nitelendiyse. sec. 25 bir
-katılımcı kazandırmanın karşılığını ödüyor, o kişinin taktığı her şapka için
+katılımcı kazandırmanın karşılığını ödüyor, o kişinin üstlendiği her rol için
 ayrı ayrı değil.
 
 ## 7. Döngüler aramayla değil, yapıyla imkânsız
@@ -105,13 +105,13 @@ kimseyi bekletmez.
 
 `recordQualification` ödül yolunda **hiç revert etmez**. Bütçe yetmiyorsa
 nitelenme yine kaydedilir ve eksik olay olarak yayılır — çağıran bir uzlaşma
-kontratıdır ve boş bir referans kesesi yüzünden başarısız olmamalıdır.
+kontratıdır ve referans bütçesi boş diye başarısız olmamalıdır.
 
 ---
 
 ## 9. Test kapsamı
 
-38 test (19 ödül + 19 referans). Mutasyonla ölçüldü:
+38 test (19 ödül + 19 referans). Mutasyon testi:
 
 | Kaldırılan | Kırılan test |
 |---|---|

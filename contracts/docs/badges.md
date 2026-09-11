@@ -16,7 +16,7 @@ Bu bir kolaylık değil, yapısal bir karar. `confirmDelivery` içinden basım y
 buradaki bir hatanın — revert, gas tükenmesi, yanlış kurgulanmış bir duplicate
 kontrolü — birinin ödemesini askıya alabilmesi demektir. Dekoratif bir alt
 sistemin bunu yapabilmesi kabul edilemez ve bunu garanti etmenin en kesin yolu,
-uzlaşmadan bu kontrata giden bir kenar **hiç bırakmamaktır**.
+uzlaşmadan bu kontrata giden **hiçbir çağrı bırakmamaktır**.
 
 ---
 
@@ -60,8 +60,8 @@ ister.
 
 Tek bir kontrol noktası var: OpenZeppelin 5.x'te her ERC-721 hareketi `_update`
 üzerinden geçer. Basım (`from == 0`) serbest, **diğer her şey** — transfer,
-`safeTransferFrom`, yakma — reddedilir. Tek tek giriş noktalarını değil bu huniyi
-override etmek, ileriki bir OZ sürümünün kuralı atlayan yeni bir yol eklemesini
+`safeTransferFrom`, yakma — reddedilir. Tek tek giriş noktalarını değil bu ortak
+noktayı override etmek, ileriki bir OZ sürümünün kuralı atlayan yeni bir yol eklemesini
 imkânsız kılar.
 
 `approve` ve `setApprovalForAll` de reddedilir: hareket edemeyen bir token için
@@ -103,7 +103,7 @@ yeni bir sorumluluğudur**.
 
 ## 7. Test kapsamı
 
-20 birim/fuzz testi. Mutasyonla ölçüldü:
+20 birim/fuzz testi. Mutasyon testi:
 
 | Kaldırılan | Kırılan test |
 |---|---|

@@ -185,7 +185,7 @@ ediyordu. Artık kurye işlemi gönderiyor, **gönderen imzalıyor** (sec. 12).
 sec. 12'nin altı kontrolü ayrı ayrı zorunlu: teslimat, aksiyon, kurye, süre,
 nonce, imzacı. `SignatureChecker` ile ERC-1271 gönderen EOA gibi çalışıyor.
 
-**Testlerin gerçekten ısırdığı mutasyonla ölçüldü.** Altı kontrolün her biri tek
+**Testlerin bu kuralları gerçekten yakaladığı mutasyon testiyle ölçüldü.** Altı kontrolün her biri tek
 tek koddan çıkarıldı:
 
 | Kaldırılan kontrol | Kırılan unit test |
@@ -307,7 +307,7 @@ sec. 19'un ağırlık tablosuyla 0–1000 puan ve **ondan ayrı** bir güven sev
 Ayrı tutulması, tek mükemmel teslimatı olan kuryenin yüzlercesi olanla aynı
 okunmasını engelliyor.
 
-**Testlerin ısırdığı mutasyonla ölçüldü:** her kural tek tek koddan çıkarıldı —
+**Mutasyon testiyle ölçüldü** — her kural koddan çıkarıldığında test kırılıyor: her kural tek tek koddan çıkarıldı —
 deneyime bağlı güven 4, nötr prior 2, iptal cezası 2, rating ağırlığı 2, ihtilaf
 cezası 2, zamanındalık ağırlığı 2 test kırdı.
 
@@ -364,7 +364,7 @@ testlerin CI değerlerini çekip yerel snapshot'la karşılaştırdım:
 Aynı forge sürümü, aynı commit SHA, farklı platform binary'si; fark yerelde
 tekrarlanamıyor. Önceki iki turda tek tek testleri değiştirerek geçtim — ve o
 düzeltmelerden biri **aracı memnun etmek için gerçek test kodunu değiştirmekti**
-(sahte imzayı sabit bloba çevirmek). Kuyruğun köpeği salladığı durum.
+(sahte imzayı sabit bloba çevirmek); yani aracı düzeltmek yerine koda uydurmuşum.
 
 `forge snapshot --check --tolerance 1` CI'a eklendi. Tolerans bir kod farkını
 değil platform farkını soğuruyor ve kapının işini görmeye devam ediyor: 40 bin
@@ -473,7 +473,7 @@ dayanıyor.
   Monad'da gas peşin rezerve edildiği için (sec. 43) büyük `--gas-limit` ile
   gönderilen işlemler bu şekilde davranabiliyor; senaryolar daha küçük limitle
   `cast send`'e taşınınca hepsi geçti.
-- **İlk koşuda üç senaryo "FAIL" göründü, üçü de yanlış alarmdı.** `cast call`
+- **İlk koşuda üç senaryo "FAIL" göründü, üçü de hatalı okumaydı.** `cast call`
   custom error'ları ham selector olarak döndürüyor; ben hata **adını**
   grep'liyordum. Selector karşılaştırmasına çevrilince üçü de doğru hatayla
   reddedildiği görüldü (`0xa9214540`, `0x55e8f70e`, `0x7acaadee`). Aynı sınıf hata

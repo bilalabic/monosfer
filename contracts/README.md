@@ -110,7 +110,7 @@ aynı PR'da yeniden üretilmelidir.
 
 Snapshot **yalnızca deterministik testleri** kapsar. Fuzz ve invariant testlerinin
 raporladığı gas, rastgele girdiler üzerinden bir ortalamadır ve fuzz seed'iyle
-değişir; snapshot'a dahil edilseler kapı dalgalı olurdu. Kapıya anlamını veren şey
+değişir; snapshot'a dahil edilseler kontrol dalgalı olurdu. Bu kontrolü anlamlı kılan şey
 determinizmdir.
 
 Determinizm testin **kendi başına** ölçülebilmesi demektir: bir girdinin gası,
@@ -122,9 +122,9 @@ yüzden nonce/salt gibi değerleri argümanlardan türetir.
 **%1 tolerans bir kod farkını değil, platform farkını soğurur.** Karşılaştırılan
 276 girdinin üçü, Windows geliştirme makinesi ile Linux CI arasında 55–64 gas
 (%0,003–0,006) ayrışıyor — aynı forge sürümü, aynı commit SHA — ve fark yerelde
-tekrarlanamıyor. Tolerans olmadan kapı her fazda yanlış alarm veriyordu ve buna
+tekrarlanamıyor. Tolerans olmadan bu kontrol her fazda gereksiz yere kırmızı yanıyordu ve buna
 cevap vermek, aracı memnun etmek için gerçek test kodunu değiştirmek anlamına
-geliyordu. %1 hâlâ bu kapının işini görüyor: 40 bin gaslık bir birim testinde 400
+geliyordu. %1 hâlâ bu kontrolün işini görüyor: 40 bin gaslık bir birim testinde 400
 gas, yani istenmeden eklenen bir cold SLOAD (2100) kaçmaz.
 
 Aynı gerekçeyle `test/v1/invariant/` altındaki **erişilebilirlik probları** da
