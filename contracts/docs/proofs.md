@@ -1,8 +1,8 @@
-# Kanıtlar: Teslim Alma
+# Kanıtlar: Teslim Alma ve Teslim Etme
 
-> Kalıcı referans. Kaynak: `src/v1/proof/PickupProof.sol`, `src/v1/proof/PickupProofVerifier.sol`
-> Baseline: sec. 11, sec. 12, sec. 47, invariant sec. 33-7
-> Faz: P2.1
+> Kalıcı referans. Kaynak: `src/v1/proof/` altındaki dört dosya
+> Baseline: sec. 11, sec. 12, sec. 15, sec. 47, sec. 48, invariant sec. 33-7
+> Faz: P2.1 (teslim alma), P2.2 (teslim etme)
 
 ---
 
@@ -145,3 +145,87 @@ Invariant suite'inde `invariant_PickupAcceptanceNeverReplayed` (sec. 33-7) ve
 > **harcanmış bir nonce ile yeni ve doğru imzalanmış bir kabul** üretmektir;
 > invariant handler'ı bunu yapar. Nonce yakma satırı koddan çıkarıldığında
 > invariant kırmızıya döner — doğrulanmıştır.
+
+
+---
+
+# Teslim Etme Kanıtı (PoD)
+
+## 7. Neden alıcının imzası değil
+
+Bir teslimatta cüzdanı olduğu varsayılamayacak tek kişi alıcıdır. sec. 15 bu
+yüzden onun kanıtını sahip olmayabileceği bir anahtardan değil, protokolden
+geçirir: alıcı bir challenge'ı (OTP veya okutulan kod) yanıtlar, backend
+doğrular, PoD attestation servisi doğrulamanın geçtiğini imzalar.
+
+Zincir sırrı hiç görmez. `challengeHash` ona bir taahhüttür; bir ihtilafta hangi
+challenge'ın yanıtlandığı gösterilebilir, düz metin hiç yayımlanmadan.
+
+## 8. Attestation'ın bağladıkları
+
+```text
+PodAttestation(uint256 deliveryId,address courier,bytes32 proofType,
+               bytes32 challengeHash,uint256 nonce,uint64 issuedAt,uint64 expiresAt)
+```
+
+| Kontrol | Nerede |
+|---|---|
+| Doğru teslimat | `deliveryId` çağrının teslimatıyla karşılaştırılır |
+| Doğru kurye | `courier` ↔ zincirdeki kurye |
+| Bilinen tip | `POD_OTP` / `POD_QR` / `POD_RECIPIENT_SIGNATURE` |
+| Gerçek challenge | `challengeHash` sıfır olamaz |
+| Ömür | Pencere tutarlı, süresi dolmamış, **ve zincirce sınırlı** |
+| Nonce tekliği | `podNonceUsed[imzacı][nonce]` |
+| Doğru imzacı | `SignatureChecker`, `podAttestationSigner`'a karşı |
+
+**Ömrü zincir sınırlar.** İmzacı pencereyi beyan eder ama sec. 48 üst sınırı 10
+dakikadır ve bu kural imzacının düzenleyemeyeceği bir yerde durmalıdır. Sınır
+olmasa bir yıl geçerli attestation kesilebilir ve kural yalnızca backend'de
+yaşardı — yani imzanın gereksiz kılmayı amaçladığı bileşende.
+
+**Bilinmeyen tip reddedilir.** Böylece gelecekteki bir kanıt türü, kod onu
+anlamadan kabul edilemez; yeni tip eklemek bilinçli bir değişikliktir, imzacının
+tek taraflı sokabileceği bir şey değil.
+
+## 9. Ele geçirilmiş bir attestation imzacısı ne yapabilir
+
+Bu anahtar teslimatı beyan edebilir, yani gerçek bir güven noktasıdır — risk
+teklifi imzacısından **bağımsız döner** (`SIGNER_ADMIN_ROLE`) ve deploy script'i
+tek adresin ikisini birden tutmasını reddeder.
+
+Yapamadığı şey uzlaşmaktır: attestation yalnızca **itiraz penceresini açar**
+(sec. 16), müşteriye değer hareket etmeden önce itiraz etme süresi kalır.
+
+Döndürme, bekleyen attestation'ları anında geçersizleştirir: nonce'lar imzalayan
+hesaba göre tutulur ve imza gönderim anında config'in adını verdiği imzacıya
+karşı doğrulanır.
+
+## 10. Backend'in üretmesi gerekenler
+
+- Tip değerleri `hub.podProofTypes()` ile zincirden okunur, tahmin edilmez.
+- `hub.hashPodAttestation(attestation)` digest'i döndürür.
+- `hub.podNonceUsed(imzacı, nonce)` bir nonce'un harcanıp harcanmadığını söyler.
+- Düz metin OTP **hiçbir koşulda** zincire gönderilmez; yalnızca hash'i.
+
+## 11. Henüz yapılmayan
+
+sec. 15 cüzdanı olan bir alıcı için isteğe bağlı **doğrudan imza yolundan** da
+söz eder. Bugün uygulanmadı: bir teslimat zincirde alıcı adresi taşımıyor, bu
+yüzden kontrat böyle bir imzayı kendisi doğrulayamaz. `POD_RECIPIENT_SIGNATURE`
+tipi kabul edilir ve anlamı "attestation servisi alıcının imzasını zincir dışında
+doğruladı"dır. Doğrudan yol, teslimata alıcı alanı eklenmesini gerektirir.
+
+## 12. Test kapsamı
+
+27 birim/fuzz testi. Altı kontrolün her biri tek tek koddan çıkarılarak ölçüldü:
+
+| Kaldırılan | Kırılan test |
+|---|---|
+| İmza doğrulama | 14 |
+| Nonce yakma | 6 |
+| Ömür üst sınırı | 4 |
+| Bilinmeyen tip | 2 |
+| Boş challenge | 2 |
+| Kurye | 2 |
+
+Invariant: `invariant_ForgedPodAttestationNeverAccepted`.

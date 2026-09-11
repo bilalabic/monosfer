@@ -145,12 +145,12 @@ teklifinden gelir ve zincirde yeniden sınırlandırılır — bkz.
 taşır (sec. 12). Hiçbir taraf paketi tek başına transit'e sokamaz — bkz.
 [`proofs.md`](proofs.md).
 
-`submitDeliveryProof` hâlâ çağıran kontrolü yapar; P2.2'de yerine imzalı PoD
-attestation'ı gelecek. Durum geçişleri değişmeyecek.
+`submitDeliveryProof` da kurye tarafından gönderilir ve **PoD attestation'ı**
+taşır: alıcının challenge'ını doğrulayan servisin imzası (sec. 15). Uzlaşmaz,
+yalnızca itiraz penceresini açar.
 
 ---
 
 ## 9. Sonraki fazların bağlanacağı yerler
 
-- **P2.2:** PoD attestation'ı (cüzdansız alıcı, sec. 15).
 - **P4:** `Disputed` / `Resolved` durumları ve ihtilaf girişi.

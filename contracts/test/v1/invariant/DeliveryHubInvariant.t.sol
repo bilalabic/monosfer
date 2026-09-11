@@ -10,9 +10,11 @@ import {SettlementVault} from "../../../src/v1/vault/SettlementVault.sol";
 import {CourierRegistry} from "../../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../../src/v1/hub/DeliveryHub.sol";
 import {CoverageQuote} from "../../../src/v1/risk/CoverageQuote.sol";
+import {DeliveryProof} from "../../../src/v1/proof/DeliveryProof.sol";
 import {PickupProof} from "../../../src/v1/proof/PickupProof.sol";
 import {QuoteFixture} from "../helpers/QuoteFixture.sol";
 import {PickupFixture} from "../helpers/PickupFixture.sol";
+import {PodFixture} from "../helpers/PodFixture.sol";
 
 /**
  * @notice Drives DeliveryHub through random lifecycles from random callers,
@@ -20,7 +22,7 @@ import {PickupFixture} from "../helpers/PickupFixture.sol";
  * @dev Reverts are swallowed. The point is that no ordering of calls, authorised
  *      or not, can break the invariants asserted by the test contract.
  */
-contract HubHandler is QuoteFixture, PickupFixture {
+contract HubHandler is QuoteFixture, PickupFixture, PodFixture {
     DeliveryHub public immutable hub;
     CourierRegistry public immutable registry;
     ProtocolConfig public immutable config;
@@ -44,6 +46,9 @@ contract HubHandler is QuoteFixture, PickupFixture {
     uint256 public replayAttempts;
     uint256 public courierFunded;
     uint256 public forgeAttempts;
+    uint256 public proved;
+    uint256 public forgedProofAttempts;
+    uint256 public forgedProofAccepted;
     uint256 public selected;
     uint256 public funded;
     uint256 public settled;
@@ -310,8 +315,43 @@ contract HubHandler is QuoteFixture, PickupFixture {
     function deliverProof(uint256 dSeed) external {
         (uint256 id, bool ok) = _delivery(dSeed);
         if (!ok) return;
-        vm.prank(hub.deliveryOf(id).courier);
-        try hub.submitDeliveryProof(id) {} catch {}
+        DeliveryHub.Delivery memory d = hub.deliveryOf(id);
+        if (d.courier == address(0)) return;
+
+        DeliveryProof.Attestation memory a = buildAttestation(config, id, d.courier);
+        bytes memory sig = signAttestation(hub, a);
+
+        vm.prank(d.courier);
+        try hub.submitDeliveryProof(id, a, sig) {
+            proved++;
+        } catch {}
+    }
+
+    /// @dev An attestation the configured service never signed must never pass.
+    function deliverProofForged(uint256 dSeed, uint256 wrongKey) external {
+        (uint256 id, bool ok) = _delivery(dSeed);
+        if (!ok) return;
+        DeliveryHub.Delivery memory d = hub.deliveryOf(id);
+        if (d.courier == address(0)) return;
+
+        wrongKey = bound(wrongKey, 1, type(uint128).max);
+        if (wrongKey == POD_SIGNER_KEY) return;
+
+        DeliveryProof.Attestation memory a = buildAttestationFull(
+            id,
+            d.courier,
+            DeliveryProof.POD_OTP,
+            uint64(block.timestamp),
+            uint64(block.timestamp) + config.podAttestationValidity(),
+            1
+        );
+        bytes memory sig = signAttestationAs(hub, a, wrongKey);
+
+        forgedProofAttempts++;
+        vm.prank(d.courier);
+        try hub.submitDeliveryProof(id, a, sig) {
+            forgedProofAccepted++;
+        } catch {}
     }
 
     function confirmDelivery(uint256 dSeed) external {
@@ -356,7 +396,7 @@ contract HubHandler is QuoteFixture, PickupFixture {
     }
 }
 
-contract DeliveryHubInvariantTest is StdInvariant, QuoteFixture {
+contract DeliveryHubInvariantTest is StdInvariant, QuoteFixture, PodFixture {
     ProtocolAccessManager internal manager;
     ProtocolConfig internal config;
     SettlementVault internal vault;
@@ -370,7 +410,7 @@ contract DeliveryHubInvariantTest is StdInvariant, QuoteFixture {
     function setUp() public {
         manager = new ProtocolAccessManager(3 days, admin);
         config = new ProtocolConfig(
-            manager, 2 days, BaselineParams.baseline(), treasury, quoteSignerAddress(), address(0x2)
+            manager, 2 days, BaselineParams.baseline(), treasury, quoteSignerAddress(), podSignerAddress()
         );
         vault = new SettlementVault(manager);
         registry = new CourierRegistry(manager, config, vault);
@@ -523,6 +563,11 @@ contract DeliveryHubInvariantTest is StdInvariant, QuoteFixture {
         assertEq(handler.forgedPickupAccepted(), 0, "a pickup was accepted on a signature the sender never made");
     }
 
+    /// @dev sec. 15: only the configured attestation service can prove delivery.
+    function invariant_ForgedPodAttestationNeverAccepted() public view {
+        assertEq(handler.forgedProofAccepted(), 0, "a delivery was proven with an attestation the service never signed");
+    }
+
     /// @dev Guards against vacuity: the authorised lifecycle must be reachable.
     function test_invariant_HandlerReachesFullLifecycle() public {
         handler.createDelivery(0, 1, 20 ether);
@@ -549,6 +594,9 @@ contract DeliveryHubInvariantTest is StdInvariant, QuoteFixture {
         assertGt(handler.forgeAttempts(), 0, "forged-pickup path reachable");
 
         handler.deliverProof(0);
+        assertGt(handler.proved(), 0, "signed delivery proof reachable");
+        handler.deliverProofForged(0, 0xFEEDFACE);
+        assertGt(handler.forgedProofAttempts(), 0, "forged-proof path reachable");
         handler.confirmDelivery(0);
         assertGt(handler.settled(), 0, "settlement reachable");
     }

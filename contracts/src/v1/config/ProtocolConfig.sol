@@ -319,6 +319,10 @@ contract ProtocolConfig {
         return _params.riskQuoteValidity;
     }
 
+    function podAttestationValidity() external view returns (uint32) {
+        return _params.podAttestationValidity;
+    }
+
     /// @notice Coverage basis points for a risk tier. Tier 4 (R4) is disabled per sec. 49.
     function coverageBpsForTier(uint8 tier) external view returns (uint16) {
         if (tier == 1) return _params.coverageBpsR1;

@@ -8,8 +8,10 @@ import {ProtocolAccessManager} from "../access/ProtocolAccessManager.sol";
 import {ProtocolConfig} from "../config/ProtocolConfig.sol";
 import {CourierRegistry} from "../registry/CourierRegistry.sol";
 import {ISettlementVault} from "../interfaces/ISettlementVault.sol";
+import {DeliveryProof} from "../proof/DeliveryProof.sol";
 import {PickupProof} from "../proof/PickupProof.sol";
 import {PickupProofVerifier} from "../proof/PickupProofVerifier.sol";
+import {PodAttestationVerifier} from "../proof/PodAttestationVerifier.sol";
 import {CoverageQuote} from "../risk/CoverageQuote.sol";
 import {RiskQuoteVerifier} from "../risk/RiskQuoteVerifier.sol";
 
@@ -58,8 +60,15 @@ import {RiskQuoteVerifier} from "../risk/RiskQuoteVerifier.sol";
  *      `confirmPickup` is sent by the courier and carries the sender's
  *      signed acceptance of the handover (sec. 12). Neither party can move
  *      the package into transit alone.
+ *
+ *      ## Delivery is proven by attestation, because recipients may be walletless
+ *
+ *      `submitDeliveryProof` carries a PoD attestation signed by the attestation
+ *      service after it checked the recipient's challenge off-chain (sec. 15).
+ *      It opens the challenge window rather than settling, so the customer still
+ *      has time to dispute (sec. 16).
  */
-contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier {
+contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier, PodAttestationVerifier {
     // --------------------------------------------------------------------
     // State machine (sec. 11)
     // --------------------------------------------------------------------
@@ -459,13 +468,28 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier 
 
     /**
      * @notice Courier submits delivery proof, opening the challenge window (sec. 16).
-     * @dev Authorisation is currently the caller check; P2 replaces it with a
-     *      signed proof-of-delivery attestation.
+     * @dev The recipient may have no wallet, so their proof arrives as an
+     *      attestation signed by the PoD service after it validated the challenge
+     *      off-chain (sec. 15). The chain sees only a commitment to that
+     *      challenge, never the secret.
+     *
+     *      This opens the challenge window; it does not settle. A compromised
+     *      attestation signer can therefore assert delivery, but the customer
+     *      still has the window in which to dispute (sec. 16).
+     * @param deliveryId The delivery being proven delivered.
+     * @param attestation The signed proof-of-delivery attestation.
+     * @param signature EOA or ERC-1271 signature over `hashPodAttestation`.
      */
-    function submitDeliveryProof(uint256 deliveryId) external nonReentrant whenNotPaused {
+    function submitDeliveryProof(
+        uint256 deliveryId,
+        DeliveryProof.Attestation calldata attestation,
+        bytes calldata signature
+    ) external nonReentrant whenNotPaused {
         Delivery storage d = _requireDelivery(deliveryId);
         _requireState(deliveryId, d, State.InTransit);
         if (msg.sender != d.courier) revert NotCourier(msg.sender);
+
+        _consumePodAttestation(config, deliveryId, d.courier, attestation, signature);
 
         emit DeliveryProofSubmitted(deliveryId, d.courier);
         _transition(deliveryId, d, State.DeliveredPending, config.challengeWindow());

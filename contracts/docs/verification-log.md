@@ -258,6 +258,49 @@ receipt'teki `status` alanı.
 
 ---
 
+## P2.2 — Teslim etme kanıtı
+
+`submitDeliveryProof` kuryenin beyanıydı. Artık alıcının challenge'ını zincir
+dışında doğrulayan **PoD attestation servisinin imzasını** taşıyor (sec. 15).
+Zincire sırrın kendisi değil, `challengeHash` taahhüdü düşer.
+
+Yedi kontrolün her biri tek tek koddan çıkarılarak ölçüldü:
+
+| Kaldırılan kontrol | Kırılan birim testi |
+|---|---|
+| İmza doğrulama | 14 |
+| Nonce yakma | 6 |
+| Ömür üst sınırı (sec. 48) | 4 |
+| Bilinmeyen kanıt tipi | 2 |
+| Boş challenge | 2 |
+| Kurye | 2 |
+
+`invariant_ForgedPodAttestationNeverAccepted` da imza kontrolü kaldırılınca
+kırmızıya döner.
+
+### Yazarken yakalanan iki test hatası
+
+1. **Cheatcode tuzağı, yine.** İmza üretimi `hub`'a bir view çağrısı yapıyor;
+   `vm.expectRevert` / `vm.prank` armed iken argüman pozisyonunda değerlendirilince
+   cheatcode'u tüketiyor. Beş test "revert etmedi" diye patladı — yani hiçbir şey
+   doğrulamıyorlardı. İki fuzz testi ise **geçiyordu**, ama yanlış sebeple: prank
+   tükendiği için çağrı kuryeden değil test kontratından gidiyor, `NotCourier` ile
+   dönüyordu. Tüm test dosyaları tarandı, kalan yok.
+
+2. **sec. 9 custody limiti.** Üç test aynı kuryeye aynı anda iki paket taşıtmaya
+   çalışıyordu. Kontrat haklıydı; testler yeniden kurgulandı — biri artık ikinci
+   teslimatı ilan aşamasında bırakıyor, ikisi kanıt sonrası custody'nin kapanmasını
+   kullanıyor.
+
+### Doğrulama aracında yakalanan hata
+
+Zincir senaryosu ilk koşuda 12/14 düştü: `cast` çağrısında attestation tuple'ını
+**altı alanla** yazmışım, struct yedi alanlı (`challengeHash` düşmüş). Kontratla
+ilgisi yoktu; imza düzeltilince geçti. Kalan iki hata ise RPC bağlantısının
+kopmasıydı, ayrıca okunup doğrulandı.
+
+---
+
 ## Testnet doğrulaması
 
 Adresler: [`../deployments/10143.json`](../deployments/10143.json)
@@ -301,6 +344,23 @@ Koşulan senaryolar (hepsi geçti):
 | T7 | Aynı kabulün tekrarı | Reddedildi |
 
 Kapanış: vault bakiye 32.44 MON = yükümlülük 32.44 MON, surplus 0, **fark 0**.
+
+### P2.2 senaryoları (yeni deploy, 14/14 geçti)
+
+| # | Senaryo | Sonuç |
+|---|---|---|
+| T1 | Bozuk imza baytı | Reddedildi |
+| T2 | Kuryenin kendi imzası | Reddedildi |
+| T3 | **Risk-teklifi imzacısının** imzası | Reddedildi — iki güven noktası ayrı |
+| T4 | Bilinmeyen kanıt tipi | Reddedildi |
+| T5 | Boş `challengeHash` | Reddedildi |
+| T6 | sec. 48 ömrünü (600 sn) aşan pencere | Reddedildi |
+| T7 | Süresi dolmuş attestation | Reddedildi |
+| — | Yedi retten sonra durum ve nonce | **Değişmedi** |
+| T8 | Geçerli attestation | Kabul; `DeliveredPending`, nonce yandı, custody kapandı |
+| T9 | İkinci kanıt denemesi | Reddedildi |
+
+Kapanış: vault bakiye 13.22 MON = yükümlülük 13.22 MON, surplus 0, **fark 0**.
 
 ### Testnet'te doğrulanamayanlar (dürüst sınır)
 
