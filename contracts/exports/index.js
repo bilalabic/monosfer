@@ -12,29 +12,29 @@ export const CHAINS = {
     "explorer": "https://testnet.monadexplorer.com",
     "contracts": {
       "ProtocolAccessManager": {
-        "address": "0x7517ab90904894915f71931fb566c6d8f2f94de2",
-        "txHash": "0x86f9029cb3edc36f17a882ee2672244967bff35b6850c439f022c9c743afdf9b",
-        "block": 61607470
+        "address": "0x47c073e453538d14906eb7b31e868676e3f8ef2d",
+        "txHash": "0xeabec7fbcdb7201477d9aace13a1495d367fc4254d64d629c38d7d22c8d0cab3",
+        "block": 61688696
       },
       "ProtocolConfig": {
-        "address": "0x4f4a5dd6baf8ec87e3986faae4ac322b133c2d23",
-        "txHash": "0xa8ae14246a080a2242583688f74af04983566a107d70c9cf74751a0e6333d860",
-        "block": 61607472
+        "address": "0x841b7f1e480d026a41643a5509c05bd3eda259b5",
+        "txHash": "0x4b2d8ac8d86a21f23d3a2bf6fb05fd6b0366a01cd5c176f83e9a151723da8ac1",
+        "block": 61688704
       },
       "SettlementVault": {
-        "address": "0x20d3291530e50f83145f0f8e088633680f2ea64e",
-        "txHash": "0x14ac7c9ef9cecb8d09490902ad2a3a6ba3db80d77ca7be48a9b656ca92243f95",
-        "block": 61607475
+        "address": "0xae8a9e137608371a7719a5fdb5c64cecaca5437c",
+        "txHash": "0x5416904870bc56e6f6e312da00e17fb91e733e4324601e291a3a9fc1a3fb0a61",
+        "block": 61688706
       },
       "CourierRegistry": {
-        "address": "0x3cecc1511c3d7a88f52009bbc11aca2af9d4878a",
-        "txHash": "0x424de42e39b9aac690009617597449f8732f39504bb18aec571de189ab6ad763",
-        "block": 61607477
+        "address": "0x4cb626885a3d763ed6e631be570c99bd2a6a7eb7",
+        "txHash": "0x58d1bc5c9bad4c9c04aed38c38b4ba73766dfbd899c7d4867ae767c283de8f54",
+        "block": 61688708
       },
       "DeliveryHub": {
-        "address": "0xd94cbad3b5cdcd9e1dc12ba06fec2bcff0a75e9b",
-        "txHash": "0x56d619e367394be3d817c49bce81aab6cb84c3fd432d26b370f0a5fbfd46175b",
-        "block": 61607479
+        "address": "0x9d40efdf8e46edecf106928ebea3c28bdd2bc30f",
+        "txHash": "0xe30f6371af459adf1700db6844158c3883821eb7061b7fbbd0b9405fd073fec4",
+        "block": 61688713
       },
       "Delivera": {
         "address": "0x70042757830398af367c989d9bc8bab244c871d9",
@@ -71,6 +71,11 @@ export const CHAINS = {
         "txHash": "0xc42df664fbe668005be5a2380e92c834427cdc78b707866f53ab9c8f459ff1c5",
         "block": 60022414,
         "legacy": true
+      },
+      "ReputationRegistry": {
+        "address": "0x77df138fb453e5bc0fa677edf0c4b82f6e84e0f0",
+        "txHash": "0x312539e271d30c034b65775c7613621a8c30633890e7680985d2e61c340f369b",
+        "block": 61688711
       }
     }
   }

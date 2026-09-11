@@ -301,6 +301,49 @@ kopmasıydı, ayrıca okunup doğrulandı.
 
 ---
 
+## P3.1 — İtibar
+
+sec. 19'un ağırlık tablosuyla 0–1000 puan ve **ondan ayrı** bir güven seviyesi.
+Ayrı tutulması, tek mükemmel teslimatı olan kuryenin yüzlercesi olanla aynı
+okunmasını engelliyor.
+
+**Testlerin ısırdığı mutasyonla ölçüldü:** her kural tek tek koddan çıkarıldı —
+deneyime bağlı güven 4, nötr prior 2, iptal cezası 2, rating ağırlığı 2, ihtilaf
+cezası 2, zamanındalık ağırlığı 2 test kırdı.
+
+### Yakalanan üç sorun
+
+1. **Hub itibarı hiç yazmıyormuş.** `REPUTATION_REPORTER_ROLE` hiçbir kurulumda
+   verilmemişti. Raporlama hata toleranslı olduğu için 249 test yeşil kalıyor ve
+   entegrasyonun hiç çalışmadığı görünmüyordu. Teşhis: happy-path testinde
+   `ReputationReportFailed` olayı iki kez yayılıyordu. Rol bağlandıktan sonra 0.
+
+2. **İki test boş çıktı.** "Yeni kurye nötr başlar", priorler tam nota çevrilse
+   bile geçiyordu. "İptal puanı düşürür" ise aslında başarı oranındaki düşüşü
+   ölçüyordu — iptal cezası koddan çıkarılınca hâlâ geçiyordu. İkincisi artık
+   iptal edeni iade edenle karşılaştırıyor: aynı başarı oranı, farklı tek bileşen.
+
+3. **Cheatcode tuzağı, altıncı kez.** Bu sefer `{value:}` ifadesinde:
+   `registry.depositStake{value: config.courierBaseDeposit() + 20 ether}()`
+   satırındaki view çağrısı `vm.prank`'i tüketiyor ve stake kuryeye değil test
+   kontratına yatıyordu.
+
+   `tools/cheatcode-scan.py` yazıldı. **İlk hali boş çıktı** — pattern'i yamalarken
+   `` gerçek bir backspace karakterine dönüşmüştü, hiçbir şey eşleşmiyordu.
+   Bilerek bozulmuş örneklerle test edilip düzeltildi; artık hem argüman hem
+   `{value:}` biçimini yakalıyor. Kod tabanında kalan yok.
+
+### CI'ın yakaladığı iki kapı
+
+- **Slither `uninitialized-local`** medium seviye, `fail_on: medium` eşiğini
+  tetikliyordu. `_reportOutcome`'daki iki yerel her yolda atanır hale getirildi.
+- **Gas kapısı** iki sahte-imza testinde CI ile ayrıştı. Ölçüm, cheatcode'un
+  ürettiği imza baytlarına biniyordu — yani protokolün fonksiyonu değildi. Sahte
+  imza testinin gerçek imzaya ihtiyacı yok; sabit bir blob aynı şeyi söylüyor ve
+  bayt olarak kararlı.
+
+---
+
 ## Testnet doğrulaması
 
 Adresler: [`../deployments/10143.json`](../deployments/10143.json)
@@ -344,6 +387,34 @@ Koşulan senaryolar (hepsi geçti):
 | T7 | Aynı kabulün tekrarı | Reddedildi |
 
 Kapanış: vault bakiye 32.44 MON = yükümlülük 32.44 MON, surplus 0, **fark 0**.
+
+### P3.1 senaryoları (yeni deploy, 10/10 + 3 bağımsız okuma)
+
+| # | Senaryo | Sonuç |
+|---|---|---|
+| R1 | Geçmişsiz kurye | Puan **575** — nötr priorlerin tam beklenen değeri, tam not değil |
+| R2 | Güven | 0 — geçmiş yoksa güven yok |
+| R3 | Seçim | Atama olarak kaydedildi |
+| R4 | Tamamlama | `completed=1`, `onTime=1` (kabul edilen ETA içinde) |
+| R5 | Güven arttı | 1/100 teslimat → 10 |
+| R6 | Temiz teslimat puanı yükseltti | 575 → 901 |
+| R7 | Müşteri puanı | `ratingCount=1`, ortalama 5.0 |
+| R8 | Ölçek | Puan 0–1000 aralığında kaldı |
+| — | İkinci puanlama | `DeliveryAlreadyRated(0)` ile reddedildi |
+| — | Vault | Bakiye = yükümlülük, **fark 0** |
+
+Zincirdeki kayıt birebir: `completed=1, onTime=1, assignments=1, ratingCount=1,
+ratingSum=5`, diğer tüm sayaçlar 0.
+
+### Doğrulama sırasında çıkan iki operasyonel not
+
+- **Monad testnet RPC'si kesikli çalışıyor.** Okumalar yeniden deneme sarmalıyla
+  yapılmalı; tek seferlik `cast call` sessizce boş dönebiliyor ve bir kontrolü
+  yanlışlıkla "başarısız" gösterebiliyor (P2.2'de tam olarak bu oldu).
+- **`forge script --gas-limit` hem işlem başına rezervi hem script gövdesinin
+  toplam bütçesini belirliyor.** 3M ile tam yaşam döngüsü `ReentrancySentryOOG`
+  veriyor; 9M yetiyor. Monad'da bu limit peşin rezerve edildiği için (sec. 43)
+  gereğinden büyük seçmek de hesapları işlem gönderemez hale getiriyor.
 
 ### P2.2 senaryoları (yeni deploy, 14/14 geçti)
 
