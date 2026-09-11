@@ -98,6 +98,11 @@
             "internalType": "uint32"
           },
           {
+            "name": "ratingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "challengeWindow",
             "type": "uint32",
             "internalType": "uint32"
@@ -877,6 +882,11 @@
             "internalType": "uint32"
           },
           {
+            "name": "ratingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "challengeWindow",
             "type": "uint32",
             "internalType": "uint32"
@@ -1018,6 +1028,11 @@
           },
           {
             "name": "returnWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "ratingWindow",
             "type": "uint32",
             "internalType": "uint32"
           },
@@ -1210,6 +1225,11 @@
             "internalType": "uint32"
           },
           {
+            "name": "ratingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "challengeWindow",
             "type": "uint32",
             "internalType": "uint32"
@@ -1319,7 +1339,46 @@
   },
   {
     "type": "function",
+    "name": "ratingWindow",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "returnWindow",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "rewardClaimWindow",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "rewardReclaimDelay",
     "inputs": [],
     "outputs": [
       {
@@ -1524,6 +1583,11 @@
             "internalType": "uint32"
           },
           {
+            "name": "ratingWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "challengeWindow",
             "type": "uint32",
             "internalType": "uint32"
@@ -1671,6 +1735,11 @@
           },
           {
             "name": "returnWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "ratingWindow",
             "type": "uint32",
             "internalType": "uint32"
           },

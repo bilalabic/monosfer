@@ -9,6 +9,7 @@ import {BaselineParams} from "../../../src/v1/config/BaselineParams.sol";
 import {SettlementVault} from "../../../src/v1/vault/SettlementVault.sol";
 import {CourierRegistry} from "../../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../../src/v1/hub/DeliveryHub.sol";
+import {ReputationRegistry} from "../../../src/v1/reputation/ReputationRegistry.sol";
 import {CoverageQuote} from "../../../src/v1/risk/CoverageQuote.sol";
 import {DeliveryProof} from "../../../src/v1/proof/DeliveryProof.sol";
 import {PickupProof} from "../../../src/v1/proof/PickupProof.sol";
@@ -402,6 +403,7 @@ contract DeliveryHubInvariantTest is StdInvariant, QuoteFixture, PodFixture {
     SettlementVault internal vault;
     CourierRegistry internal registry;
     DeliveryHub internal hub;
+    ReputationRegistry internal reputation;
     HubHandler internal handler;
 
     address internal admin = address(0xA11CE);
@@ -414,12 +416,14 @@ contract DeliveryHubInvariantTest is StdInvariant, QuoteFixture, PodFixture {
         );
         vault = new SettlementVault(manager);
         registry = new CourierRegistry(manager, config, vault);
-        hub = new DeliveryHub(manager, config, registry, vault, 1 ether);
+        reputation = new ReputationRegistry(manager);
+        hub = new DeliveryHub(manager, config, registry, vault, reputation, 1 ether);
 
         vm.startPrank(admin);
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(registry));
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(hub));
         manager.grantRole(manager.REGISTRY_CONTROLLER_ROLE(), address(hub));
+        manager.grantRole(manager.REPUTATION_REPORTER_ROLE(), address(hub));
         manager.grantRole(manager.VERIFIER_ROLE(), address(this));
         vm.stopPrank();
 

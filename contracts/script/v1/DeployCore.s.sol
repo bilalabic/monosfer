@@ -9,6 +9,10 @@ import {SettlementVault} from "../../src/v1/vault/SettlementVault.sol";
 import {BaselineParams} from "../../src/v1/config/BaselineParams.sol";
 import {CourierRegistry} from "../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../src/v1/hub/DeliveryHub.sol";
+import {ReputationRegistry} from "../../src/v1/reputation/ReputationRegistry.sol";
+import {BadgeSBT} from "../../src/v1/badge/BadgeSBT.sol";
+import {RewardDistributor} from "../../src/v1/rewards/RewardDistributor.sol";
+import {Referral} from "../../src/v1/rewards/Referral.sol";
 
 /**
  * @title DeployCore
@@ -72,7 +76,11 @@ contract DeployCoreScript is Script {
 
         SettlementVault vault = new SettlementVault(accessManager);
         CourierRegistry registry = new CourierRegistry(accessManager, config, vault);
-        DeliveryHub hub = new DeliveryHub(accessManager, config, registry, vault, bidDeposit);
+        ReputationRegistry reputation = new ReputationRegistry(accessManager);
+        BadgeSBT badge = new BadgeSBT(accessManager, reputation, registry, vm.envOr("BADGE_BASE_URI", string("")));
+        RewardDistributor rewards = new RewardDistributor(accessManager, config);
+        Referral referral = new Referral(accessManager);
+        DeliveryHub hub = new DeliveryHub(accessManager, config, registry, vault, reputation, bidDeposit);
 
         vm.stopBroadcast();
 
@@ -84,7 +92,7 @@ contract DeployCoreScript is Script {
         if (address(registry).balance != 0) revert VaultNotEmpty("registry balance");
         if (hub.nextDeliveryId() != 0) revert VaultNotEmpty("hub deliveries");
 
-        _report(accessManager, config, vault, registry, hub, roles);
+        _report(accessManager, config, vault, registry, hub, reputation, badge, rewards, referral, roles);
     }
 
     function _loadRoles() internal view returns (RoleSet memory roles) {
@@ -137,6 +145,10 @@ contract DeployCoreScript is Script {
         SettlementVault vault,
         CourierRegistry registry,
         DeliveryHub hub,
+        ReputationRegistry reputation,
+        BadgeSBT badge,
+        RewardDistributor rewards,
+        Referral referral,
         RoleSet memory roles
     ) internal pure {
         console2.log("ProtocolAccessManager:", address(accessManager));
@@ -144,6 +156,10 @@ contract DeployCoreScript is Script {
         console2.log("SettlementVault:      ", address(vault));
         console2.log("CourierRegistry:      ", address(registry));
         console2.log("DeliveryHub:          ", address(hub));
+        console2.log("ReputationRegistry:   ", address(reputation));
+        console2.log("BadgeSBT:             ", address(badge));
+        console2.log("RewardDistributor:    ", address(rewards));
+        console2.log("Referral:             ", address(referral));
         console2.log("default admin:        ", roles.defaultAdmin);
         console2.log("config admin:         ", roles.configAdmin);
         console2.log("emergency:            ", roles.emergency);
@@ -159,6 +175,8 @@ contract DeployCoreScript is Script {
         console2.log("Grant after deployment:");
         console2.log("  VAULT_CONTROLLER_ROLE    -> CourierRegistry and DeliveryHub");
         console2.log("  REGISTRY_CONTROLLER_ROLE -> DeliveryHub");
+        console2.log("  REPUTATION_REPORTER_ROLE -> DeliveryHub");
+        console2.log("  BADGE_AWARDER_ROLE       -> the weekly ranking service (sec. 22)");
         console2.log("Both are contracts. Neither role may ever go to an EOA.");
     }
 }

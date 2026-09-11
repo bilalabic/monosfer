@@ -3,32 +3,32 @@
   "name": "monad-testnet",
   "rpcUrl": "https://testnet-rpc.monad.xyz",
   "explorer": "https://testnet.monadexplorer.com",
-  "commit": "4cd4cc627b29ee1d1f3e27f561c7d759772de91d",
+  "commit": "216c5a8f785bf524cbd88413acb0d4fbfed8563e",
   "contracts": {
     "ProtocolAccessManager": {
-      "address": "0x7517ab90904894915f71931fb566c6d8f2f94de2",
-      "txHash": "0x86f9029cb3edc36f17a882ee2672244967bff35b6850c439f022c9c743afdf9b",
-      "block": 61607470
+      "address": "0xd255ab6f3c2997f752e18439c4f077c4508cdf61",
+      "txHash": "0xfb0be59fa5be49f0df510d14f5906740c2f5e00383dc7512c6205c87bca80c0a",
+      "block": 61717419
     },
     "ProtocolConfig": {
-      "address": "0x4f4a5dd6baf8ec87e3986faae4ac322b133c2d23",
-      "txHash": "0xa8ae14246a080a2242583688f74af04983566a107d70c9cf74751a0e6333d860",
-      "block": 61607472
+      "address": "0xdfd4c8b9ea37ae7b5a0a0f176f525689c7c84d97",
+      "txHash": "0xa5392f6439c0c9e08f7c33d7076d83c8429cd93e6c475154db7e421d98309cda",
+      "block": 61717428
     },
     "SettlementVault": {
-      "address": "0x20d3291530e50f83145f0f8e088633680f2ea64e",
-      "txHash": "0x14ac7c9ef9cecb8d09490902ad2a3a6ba3db80d77ca7be48a9b656ca92243f95",
-      "block": 61607475
+      "address": "0x0c09d9967609101b47d25e4ea473269eec774b72",
+      "txHash": "0x03df2418d91821a25224f7bf5a0ea09af48502c05745db0a21b2927fbf128356",
+      "block": 61717436
     },
     "CourierRegistry": {
-      "address": "0x3cecc1511c3d7a88f52009bbc11aca2af9d4878a",
-      "txHash": "0x424de42e39b9aac690009617597449f8732f39504bb18aec571de189ab6ad763",
-      "block": 61607477
+      "address": "0x1a010877beab20e96a9f6de7f7d240fb1b06e1ab",
+      "txHash": "0x4bda6ae4f6328af4cdcec7abacd3c01ec67102bc0829ad4dc53fc9a04d5c1ec3",
+      "block": 61717442
     },
     "DeliveryHub": {
-      "address": "0xd94cbad3b5cdcd9e1dc12ba06fec2bcff0a75e9b",
-      "txHash": "0x56d619e367394be3d817c49bce81aab6cb84c3fd432d26b370f0a5fbfd46175b",
-      "block": 61607479
+      "address": "0xa1309b20a3e66a23d61b1dd261965375bba84d43",
+      "txHash": "0x6379e167bed21b99a888219752854d348c4f7abbd6253016777bd8b805cfb6bb",
+      "block": 61717466
     },
     "Delivera": {
       "address": "0x70042757830398af367c989d9bc8bab244c871d9",
@@ -55,16 +55,30 @@
       "legacy": true
     },
     "RewardDistributor": {
-      "address": "0x2cd2158dd751930eaca0ff24d4d3d9106d3aa1a7",
-      "txHash": "0xae505befd164660d202aba335da6818e67b31f0ec813855978eeecbbe43b9e72",
-      "block": 60022407,
-      "legacy": true
+      "address": "0xd471cd7ae1b84e22f65d0c6a1f995d75b3ade100",
+      "txHash": "0x7541b6933beb5a33ce38706ff22fb975e2fe73e36bb6da55f15a710bf0ea83c4",
+      "block": 61717461
     },
     "DeliveryEscrow": {
       "address": "0x0b0afb512a50ed98e58f8c3922fc89e9332a4c89",
       "txHash": "0xc42df664fbe668005be5a2380e92c834427cdc78b707866f53ab9c8f459ff1c5",
       "block": 60022414,
       "legacy": true
+    },
+    "ReputationRegistry": {
+      "address": "0x710553e6b9a3d5861924a84e6d0b65f38b4750d9",
+      "txHash": "0x01b65a397dbaefb60ffd04b6f51260672fdae0c5b8a86d06e4c2bf5229b32980",
+      "block": 61717450
+    },
+    "BadgeSBT": {
+      "address": "0x487c4006026b7418a62cde9775827f298a219f00",
+      "txHash": "0xf309cbafb109342b7be3deb25845c51a18efab4b7d97c71cde90c791c71388c1",
+      "block": 61717453
+    },
+    "Referral": {
+      "address": "0x0aea969ca8c68d9d6067f23e93598b448e4c7f4e",
+      "txHash": "0xe0dc709335230f08edc45f9f46a22bbec4eb4fcb953fd18786a7239a8861aac7",
+      "block": 61717463
     }
   }
 }

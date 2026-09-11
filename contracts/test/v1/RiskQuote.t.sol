@@ -7,6 +7,7 @@ import {BaselineParams} from "../../src/v1/config/BaselineParams.sol";
 import {SettlementVault} from "../../src/v1/vault/SettlementVault.sol";
 import {CourierRegistry} from "../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../src/v1/hub/DeliveryHub.sol";
+import {ReputationRegistry} from "../../src/v1/reputation/ReputationRegistry.sol";
 import {CoverageQuote} from "../../src/v1/risk/CoverageQuote.sol";
 import {RiskQuoteVerifier} from "../../src/v1/risk/RiskQuoteVerifier.sol";
 import {QuoteFixture} from "./helpers/QuoteFixture.sol";
@@ -17,6 +18,7 @@ contract RiskQuoteTest is QuoteFixture {
     SettlementVault internal vault;
     CourierRegistry internal registry;
     DeliveryHub internal hub;
+    ReputationRegistry internal reputation;
 
     address internal admin = address(0xA11CE);
     address internal signerAdmin = address(0x5165);
@@ -34,13 +36,15 @@ contract RiskQuoteTest is QuoteFixture {
         );
         vault = new SettlementVault(manager);
         registry = new CourierRegistry(manager, config, vault);
-        hub = new DeliveryHub(manager, config, registry, vault, 1 ether);
+        reputation = new ReputationRegistry(manager);
+        hub = new DeliveryHub(manager, config, registry, vault, reputation, 1 ether);
 
         vm.startPrank(admin);
         manager.grantRole(manager.SIGNER_ADMIN_ROLE(), signerAdmin);
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(registry));
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(hub));
         manager.grantRole(manager.REGISTRY_CONTROLLER_ROLE(), address(hub));
+        manager.grantRole(manager.REPUTATION_REPORTER_ROLE(), address(hub));
         vm.stopPrank();
     }
 
@@ -276,7 +280,7 @@ contract RiskQuoteTest is QuoteFixture {
     /// @dev sec. 12: the domain must bind chain id and verifying contract, so a
     ///      quote cannot be replayed against another deployment.
     function test_DomainIsBoundToThisDeployment() public {
-        DeliveryHub other = new DeliveryHub(manager, config, registry, vault, 1 ether);
+        DeliveryHub other = new DeliveryHub(manager, config, registry, vault, reputation, 1 ether);
         assertTrue(
             hub.quoteDomainSeparator() != other.quoteDomainSeparator(),
             "two deployments must not share a domain separator"

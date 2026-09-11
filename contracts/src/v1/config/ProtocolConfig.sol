@@ -58,6 +58,7 @@ contract ProtocolConfig {
         uint32 pickupWindow; // beyond sec. 48
         uint32 transitWindow; // beyond sec. 48
         uint32 returnWindow; // beyond sec. 48
+        uint32 ratingWindow; // beyond sec. 48 — sec. 20 requires a bound, not a figure
         uint32 challengeWindow; // sec. 48: 24 h
         uint32 courierWithdrawalCooldown; // sec. 48: 24 h
         uint32 riskQuoteValidity; // sec. 48: 5 min
@@ -323,6 +324,18 @@ contract ProtocolConfig {
         return _params.podAttestationValidity;
     }
 
+    function ratingWindow() external view returns (uint32) {
+        return _params.ratingWindow;
+    }
+
+    function rewardClaimWindow() external view returns (uint32) {
+        return _params.rewardClaimWindow;
+    }
+
+    function rewardReclaimDelay() external view returns (uint32) {
+        return _params.rewardReclaimDelay;
+    }
+
     /// @notice Coverage basis points for a risk tier. Tier 4 (R4) is disabled per sec. 49.
     function coverageBpsForTier(uint8 tier) external view returns (uint16) {
         if (tier == 1) return _params.coverageBpsR1;
@@ -494,6 +507,7 @@ contract ProtocolConfig {
         _validateLifecycleWindow(p.pickupWindow, "pickupWindow");
         _validateLifecycleWindow(p.transitWindow, "transitWindow");
         _validateLifecycleWindow(p.returnWindow, "returnWindow");
+        _validateLifecycleWindow(p.ratingWindow, "ratingWindow");
         if (p.challengeWindow < MIN_CHALLENGE_WINDOW || p.challengeWindow > MAX_CHALLENGE_WINDOW) {
             revert OutOfBounds("challengeWindow");
         }

@@ -24,6 +24,10 @@ edilir, yetkiler tek bir rol yöneticisinden gelir.
 | `RiskQuoteVerifier` | İmzalı kapsam teklifi, zincirde kapsam bandı | [risk-quote](docs/risk-quote.md) |
 | `PickupProofVerifier` | Gönderenin imzalı devir kabulü, nonce, ERC-1271 | [proofs](docs/proofs.md) |
 | `PodAttestationVerifier` | İmzalı teslim kanıtı, challenge taahhüdü, 10 dk ömür | [proofs](docs/proofs.md) |
+| `ReputationRegistry` | 0-1000 puan, ayrı güven seviyesi, sıralama yok | [reputation](docs/reputation.md) |
+| `BadgeSBT` | Devredilemez rozetler (ERC-721 + ERC-5192) | [badges](docs/badges.md) |
+| `RewardDistributor` | Epoch bütçeli Merkle ödül dağıtımı | [rewards](docs/rewards.md) |
+| `Referral` | Tek referans eden, tek ödül, döngüsüz | [rewards](docs/rewards.md) |
 
 Sıradaki fazlar (`ReputationRegistry`, `DisputeCourt`, …):
 [`docs/implementation-plan-v1.0.md`](docs/implementation-plan-v1.0.md).
@@ -69,6 +73,7 @@ submodule kurulumu gerekmez.
 | `forge fmt` | Biçimlendir |
 | `forge snapshot --no-match-test "testFuzz\|invariant_"` | Gas snapshot'ını yeniden üret |
 | `slither .` | Statik analiz (`pip install slither-analyzer==0.11.6`) |
+| `python3 tools/cheatcode-scan.py` | Cheatcode tüketen test satırlarını arar (aşağıya bkz.) |
 
 ---
 
@@ -83,7 +88,7 @@ test etmez**.
 | Build | `forge build` |
 | Format | `forge fmt --check` |
 | Test | `forge test -vvv` |
-| Gas | `forge snapshot --check --no-match-test "testFuzz\|invariant_"` |
+| Gas | `forge snapshot --check --no-match-test "testFuzz\|invariant_" --tolerance 1` |
 | Statik analiz | `slither .` (`fail_on: medium`) |
 | Deploy dry-run | Devralınan iki deploy script'i simüle edilir |
 
@@ -105,7 +110,7 @@ aynı PR'da yeniden üretilmelidir.
 
 Snapshot **yalnızca deterministik testleri** kapsar. Fuzz ve invariant testlerinin
 raporladığı gas, rastgele girdiler üzerinden bir ortalamadır ve fuzz seed'iyle
-değişir; snapshot'a dahil edilseler kapı dalgalı olurdu. Kapıya anlamını veren şey
+değişir; snapshot'a dahil edilseler kontrol dalgalı olurdu. Bu kontrolü anlamlı kılan şey
 determinizmdir.
 
 Determinizm testin **kendi başına** ölçülebilmesi demektir: bir girdinin gası,
@@ -113,6 +118,14 @@ ondan önce hangi testlerin koştuğuna bağlı olmamalı. Test fixture'larında
 sayaçtan üretilip calldata'ya ulaşan değerler tam olarak bu bağımlılığı yaratır
 ve kapıyı kodun değil test filtresinin fonksiyonu haline getirir. Fixture'lar bu
 yüzden nonce/salt gibi değerleri argümanlardan türetir.
+
+**%1 tolerans bir kod farkını değil, platform farkını soğurur.** Karşılaştırılan
+276 girdinin üçü, Windows geliştirme makinesi ile Linux CI arasında 55–64 gas
+(%0,003–0,006) ayrışıyor — aynı forge sürümü, aynı commit SHA — ve fark yerelde
+tekrarlanamıyor. Tolerans olmadan bu kontrol her fazda gereksiz yere kırmızı yanıyordu ve buna
+cevap vermek, aracı memnun etmek için gerçek test kodunu değiştirmek anlamına
+geliyordu. %1 hâlâ bu kontrolün işini görüyor: 40 bin gaslık bir birim testinde 400
+gas, yani istenmeden eklenen bir cold SLOAD (2100) kaçmaz.
 
 Aynı gerekçeyle `test/v1/invariant/` altındaki **erişilebilirlik probları** da
 kapının dışındadır. Bunlar fuzzer'ın yetkili yolu gerçekten kat edebildiğini
@@ -135,6 +148,17 @@ Kabul edilen baseline ve gerekçeleri
 [`docs/static-analysis-baseline.md`](docs/static-analysis-baseline.md)'de kayıtlı,
 filtreler `slither.config.json`'da. Filtrelenmiş koşu **0 sonuç** vermelidir;
 vermiyorsa bulgu yeni kodadır.
+
+### Cheatcode tüketen testler
+
+Foundry'de `vm.prank` ve `vm.expectRevert` **bir sonraki çağrıya** uygulanır. O
+çağrının argümanları (veya `{value:}` ifadesi) kurulurken bir view çağrısı
+yapılıyorsa, cheatcode ona iner ve asıl çağrı prank'siz gider. Test sessizce
+yanlış sebeple geçer.
+
+Bu hata bu depoda altı kez çıktı, üçü testi tamamen anlamsızlaştırmıştı.
+`tools/cheatcode-scan.py` bunu arar; bir kapı değil, elle koşulan bir tarayıcı.
+Bilerek bozulmuş örneklere karşı doğrulanmıştır.
 
 ### Solidity satır sonları
 
@@ -230,6 +254,9 @@ contracts/
 │   │   ├── registry/           CourierRegistry
 │   │   ├── hub/                DeliveryHub
 │   │   ├── risk/               CoverageQuote, RiskQuoteVerifier
+│   │   ├── reputation/         ReputationRegistry
+│   │   ├── badge/              BadgeSBT, IERC5192
+│   │   ├── rewards/            RewardDistributor, Referral
 │   │   ├── proof/              PickupProof(+Verifier), DeliveryProof(+PodAttestationVerifier)
 │   │   └── interfaces/         ISettlementVault
 │   └── *.sol                   devralinan (dondurulmus, bkz. sec. 8)

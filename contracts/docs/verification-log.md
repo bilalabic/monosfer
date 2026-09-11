@@ -185,7 +185,7 @@ ediyordu. Artık kurye işlemi gönderiyor, **gönderen imzalıyor** (sec. 12).
 sec. 12'nin altı kontrolü ayrı ayrı zorunlu: teslimat, aksiyon, kurye, süre,
 nonce, imzacı. `SignatureChecker` ile ERC-1271 gönderen EOA gibi çalışıyor.
 
-**Testlerin gerçekten ısırdığı mutasyonla ölçüldü.** Altı kontrolün her biri tek
+**Testlerin bu kuralları gerçekten yakaladığı mutasyon testiyle ölçüldü.** Altı kontrolün her biri tek
 tek koddan çıkarıldı:
 
 | Kaldırılan kontrol | Kırılan unit test |
@@ -301,6 +301,95 @@ kopmasıydı, ayrıca okunup doğrulandı.
 
 ---
 
+## P3.1 — İtibar
+
+sec. 19'un ağırlık tablosuyla 0–1000 puan ve **ondan ayrı** bir güven seviyesi.
+Ayrı tutulması, tek mükemmel teslimatı olan kuryenin yüzlercesi olanla aynı
+okunmasını engelliyor.
+
+**Mutasyon testiyle ölçüldü** — her kural koddan çıkarıldığında test kırılıyor: her kural tek tek koddan çıkarıldı —
+deneyime bağlı güven 4, nötr prior 2, iptal cezası 2, rating ağırlığı 2, ihtilaf
+cezası 2, zamanındalık ağırlığı 2 test kırdı.
+
+### Yakalanan üç sorun
+
+1. **Hub itibarı hiç yazmıyormuş.** `REPUTATION_REPORTER_ROLE` hiçbir kurulumda
+   verilmemişti. Raporlama hata toleranslı olduğu için 249 test yeşil kalıyor ve
+   entegrasyonun hiç çalışmadığı görünmüyordu. Teşhis: happy-path testinde
+   `ReputationReportFailed` olayı iki kez yayılıyordu. Rol bağlandıktan sonra 0.
+
+2. **İki test boş çıktı.** "Yeni kurye nötr başlar", priorler tam nota çevrilse
+   bile geçiyordu. "İptal puanı düşürür" ise aslında başarı oranındaki düşüşü
+   ölçüyordu — iptal cezası koddan çıkarılınca hâlâ geçiyordu. İkincisi artık
+   iptal edeni iade edenle karşılaştırıyor: aynı başarı oranı, farklı tek bileşen.
+
+3. **Cheatcode tuzağı, altıncı kez.** Bu sefer `{value:}` ifadesinde:
+   `registry.depositStake{value: config.courierBaseDeposit() + 20 ether}()`
+   satırındaki view çağrısı `vm.prank`'i tüketiyor ve stake kuryeye değil test
+   kontratına yatıyordu.
+
+   `tools/cheatcode-scan.py` yazıldı. **İlk hali boş çıktı** — pattern'i yamalarken
+   `` gerçek bir backspace karakterine dönüşmüştü, hiçbir şey eşleşmiyordu.
+   Bilerek bozulmuş örneklerle test edilip düzeltildi; artık hem argüman hem
+   `{value:}` biçimini yakalıyor. Kod tabanında kalan yok.
+
+### CI'ın yakaladığı iki kapı
+
+- **Slither `uninitialized-local`** medium seviye, `fail_on: medium` eşiğini
+  tetikliyordu. `_reportOutcome`'daki iki yerel her yolda atanır hale getirildi.
+- **Gas kapısı** iki sahte-imza testinde CI ile ayrıştı. Ölçüm, cheatcode'un
+  ürettiği imza baytlarına biniyordu — yani protokolün fonksiyonu değildi. Sahte
+  imza testinin gerçek imzaya ihtiyacı yok; sabit bir blob aynı şeyi söylüyor ve
+  bayt olarak kararlı.
+
+---
+
+## P3 — İtibar, rozetler, ödüller, referans
+
+Üç alt faz: `ReputationRegistry`, `BadgeSBT`, `RewardDistributor` + `Referral`.
+
+**Mutasyonla ölçüldü** — her kural tek tek koddan çıkarıldığında test kırılıyor:
+referans döngü tespiti 6, soulbound kilidi ve deneyime bağlı güven 4'er, kalan
+on üç kural 2'şer test.
+
+### Gas kapısı: üçüncü kez aynı sebeple kırıldı, bu sefer kökünden çözüldü
+
+CI üç fazda üst üste gas kapısında düştü. Bu turda tek tek yamamak yerine **tüm**
+testlerin CI değerlerini çekip yerel snapshot'la karşılaştırdım:
+
+```text
+276 ortak test  ->  273 birebir ayni,  3 tanesi 55-64 gas (%0,003-0,006) sapiyor
+```
+
+Aynı forge sürümü, aynı commit SHA, farklı platform binary'si; fark yerelde
+tekrarlanamıyor. Önceki iki turda tek tek testleri değiştirerek geçtim — ve o
+düzeltmelerden biri **aracı memnun etmek için gerçek test kodunu değiştirmekti**
+(sahte imzayı sabit bloba çevirmek); yani aracı düzeltmek yerine koda uydurmuşum.
+
+`forge snapshot --check --tolerance 1` CI'a eklendi. Tolerans bir kod farkını
+değil platform farkını soğuruyor ve kapının işini görmeye devam ediyor: 40 bin
+gaslık bir birim testinde %1 = 400 gas, yani istenmeden eklenen bir cold SLOAD
+(2100) kaçmıyor. `foundry.toml`'da karşılığı olmadığı için CI dosyasına dokunmak
+gerekti; onay alındı.
+
+### Slither: bu turda iki bulgu
+
+- **`uninitialized-local`** (medium) iki kez: `_reportOutcome` ve `badgesOf`.
+  Yereller her yolda açıkça atanır hale getirildi.
+- **`arbitrary-send-eth`** (high): `RewardDistributor._payOut`. Hedef
+  saldırganın seçebildiği bir adres değil — ya Merkle kanıtıyla **az önce
+  doğrulanmış** bir leaf'teki hesap, ya da config'deki hazine. Tasarımı bozmak
+  (yalnızca `msg.sender`'a ödemek) keeper'ın talep edenin gasını ödeyebilmesini
+  kaldırırdı; bunun yerine tam o satırda gerekçesiyle bastırıldı ve
+  [`static-analysis-baseline.md`](static-analysis-baseline.md)'ye kaydedildi.
+
+### Config'de üç eksik getter
+
+`podAttestationValidity`, `rewardClaimWindow`, `rewardReclaimDelay` P0.2'den beri
+parametre olarak duruyordu ama dışarıdan okunamıyordu. Üçü de eklendi.
+
+---
+
 ## Testnet doğrulaması
 
 Adresler: [`../deployments/10143.json`](../deployments/10143.json)
@@ -344,6 +433,80 @@ Koşulan senaryolar (hepsi geçti):
 | T7 | Aynı kabulün tekrarı | Reddedildi |
 
 Kapanış: vault bakiye 32.44 MON = yükümlülük 32.44 MON, surplus 0, **fark 0**.
+
+### P3 senaryoları (yeni deploy, dokuz kontrat)
+
+**P3.1 — itibar** (önceki deploy, 10/10): geçmişsiz kurye **575**, temiz teslimat
++ 5 yıldız sonrası **901**, güven 10; ikinci puanlama reddedildi.
+
+**P3.2 — rozetler** (13 kontrol, zincirde):
+
+| Kontrol | Sonuç |
+|---|---|
+| Gerçek teslimat tamamlandı ve kaydedildi | ✓ |
+| `FirstDelivery` hak edilmiş, `TenDeliveries` edilmemiş | ✓ |
+| Rozet basıldı, **kuryeye** — talep edene değil | ✓ |
+| `locked()` true (ERC-5192) | ✓ |
+
+Rozet, uydurulmuş bir itibar kaydına değil **gerçekten yürünen bir teslimata**
+dayanıyor.
+
+**P3.3 — ödül ve referans** (15/15, zincirde):
+
+| # | Senaryo | Sonuç |
+|---|---|---|
+| 1 | Epoch fonlandı, bütçe zincirde göründü | ✓ |
+| 2 | Root yayımlandı | ✓ |
+| 3 | Talep leaf'teki hesaba ödendi (0.1 MON) | ✓ |
+| 4 | Bütçeden yalnızca o kadarı düştü | ✓ |
+| 5 | **Çift talep** | `AlreadyClaimed` ile reddedildi |
+| 6 | Bütçe içindeki ikinci talep | Geçerli |
+| 7–12 | Referans: ödül ayarı, fonlama, kayıt, derinlik 1, kayıt tek başına ödeme yapmıyor | ✓ |
+| 13 | **Kendini referans** | `SelfReferral` ile reddedildi |
+| 14 | **Döngüsel referans** | `CircularReferral` ile reddedildi |
+
+### Doğrulama sırasında çıkan iki şey
+
+- **`forge script` bir işlemi zincirde düşürdü ama `cast run` ile yeniden
+  oynatınca "başarılı" dedi** (zincirdeki gasUsed 104 917, replay'de 79 806).
+  Zincirdeki durum okumaları üç kez üst üste "inmemiş" dedi ve doğru olan oydu.
+  Monad'da gas peşin rezerve edildiği için (sec. 43) büyük `--gas-limit` ile
+  gönderilen işlemler bu şekilde davranabiliyor; senaryolar daha küçük limitle
+  `cast send`'e taşınınca hepsi geçti.
+- **İlk koşuda üç senaryo "FAIL" göründü, üçü de hatalı okumaydı.** `cast call`
+  custom error'ları ham selector olarak döndürüyor; ben hata **adını**
+  grep'liyordum. Selector karşılaştırmasına çevrilince üçü de doğru hatayla
+  reddedildiği görüldü (`0xa9214540`, `0x55e8f70e`, `0x7acaadee`). Aynı sınıf hata
+  P2.2'de de çıkmıştı — zincir doğrulamasında **okuma yönteminin kendisi** de
+  doğrulanmalı.
+
+### P3.1 senaryoları (yeni deploy, 10/10 + 3 bağımsız okuma)
+
+| # | Senaryo | Sonuç |
+|---|---|---|
+| R1 | Geçmişsiz kurye | Puan **575** — nötr priorlerin tam beklenen değeri, tam not değil |
+| R2 | Güven | 0 — geçmiş yoksa güven yok |
+| R3 | Seçim | Atama olarak kaydedildi |
+| R4 | Tamamlama | `completed=1`, `onTime=1` (kabul edilen ETA içinde) |
+| R5 | Güven arttı | 1/100 teslimat → 10 |
+| R6 | Temiz teslimat puanı yükseltti | 575 → 901 |
+| R7 | Müşteri puanı | `ratingCount=1`, ortalama 5.0 |
+| R8 | Ölçek | Puan 0–1000 aralığında kaldı |
+| — | İkinci puanlama | `DeliveryAlreadyRated(0)` ile reddedildi |
+| — | Vault | Bakiye = yükümlülük, **fark 0** |
+
+Zincirdeki kayıt birebir: `completed=1, onTime=1, assignments=1, ratingCount=1,
+ratingSum=5`, diğer tüm sayaçlar 0.
+
+### Doğrulama sırasında çıkan iki operasyonel not
+
+- **Monad testnet RPC'si kesikli çalışıyor.** Okumalar yeniden deneme sarmalıyla
+  yapılmalı; tek seferlik `cast call` sessizce boş dönebiliyor ve bir kontrolü
+  yanlışlıkla "başarısız" gösterebiliyor (P2.2'de tam olarak bu oldu).
+- **`forge script --gas-limit` hem işlem başına rezervi hem script gövdesinin
+  toplam bütçesini belirliyor.** 3M ile tam yaşam döngüsü `ReentrancySentryOOG`
+  veriyor; 9M yetiyor. Monad'da bu limit peşin rezerve edildiği için (sec. 43)
+  gereğinden büyük seçmek de hesapları işlem gönderemez hale getiriyor.
 
 ### P2.2 senaryoları (yeni deploy, 14/14 geçti)
 

@@ -23,6 +23,11 @@
         "internalType": "contract ISettlementVault"
       },
       {
+        "name": "reputation_",
+        "type": "address",
+        "internalType": "contract ReputationRegistry"
+      },
+      {
         "name": "bidDeposit_",
         "type": "uint96",
         "internalType": "uint96"
@@ -356,6 +361,21 @@
           },
           {
             "name": "stateDeadline",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "etaDeadline",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "etaMinutes",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "completedAt",
             "type": "uint64",
             "internalType": "uint64"
           },
@@ -836,6 +856,24 @@
   },
   {
     "type": "function",
+    "name": "rateCourier",
+    "inputs": [
+      {
+        "name": "deliveryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "rating",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "registry",
     "inputs": [],
     "outputs": [
@@ -843,6 +881,19 @@
         "name": "",
         "type": "address",
         "internalType": "contract CourierRegistry"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "reputation",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract ReputationRegistry"
       }
     ],
     "stateMutability": "view"
@@ -1318,6 +1369,19 @@
         "type": "bytes32",
         "indexed": false,
         "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ReputationReportFailed",
+    "inputs": [
+      {
+        "name": "data",
+        "type": "bytes",
+        "indexed": false,
+        "internalType": "bytes"
       }
     ],
     "anonymous": false
@@ -1828,6 +1892,17 @@
         "name": "maximum",
         "type": "uint32",
         "internalType": "uint32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "RatingWindowClosed",
+    "inputs": [
+      {
+        "name": "completedAt",
+        "type": "uint64",
+        "internalType": "uint64"
       }
     ]
   },

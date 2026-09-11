@@ -35,6 +35,10 @@ library BaselineParams {
             pickupWindow: 24 hours, // lifecycle window, not in sec. 48
             transitWindow: 72 hours, // lifecycle window, not in sec. 48
             returnWindow: 72 hours, // lifecycle window, not in sec. 48
+            // sec. 20 wants the rating window bounded but names no figure; a week
+            // is long enough for a customer to get round to it and short enough
+            // that a rating still describes a delivery they remember.
+            ratingWindow: 7 days,
             challengeWindow: 24 hours, // sec. 48
             courierWithdrawalCooldown: 24 hours, // sec. 48
             riskQuoteValidity: 5 minutes, // sec. 48

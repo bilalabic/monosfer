@@ -7,6 +7,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ProtocolAccessManager} from "../access/ProtocolAccessManager.sol";
 import {ProtocolConfig} from "../config/ProtocolConfig.sol";
 import {CourierRegistry} from "../registry/CourierRegistry.sol";
+import {ReputationRegistry} from "../reputation/ReputationRegistry.sol";
 import {ISettlementVault} from "../interfaces/ISettlementVault.sol";
 import {DeliveryProof} from "../proof/DeliveryProof.sol";
 import {PickupProof} from "../proof/PickupProof.sol";
@@ -98,6 +99,12 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
         uint8 riskTier;
         uint32 termsVersion;
         uint64 stateDeadline;
+        /// @dev Set at pickup from the bid's own etaMinutes. sec. 13 judges
+        ///      punctuality against the ETA the courier accepted, not a constant.
+        uint64 etaDeadline;
+        uint32 etaMinutes;
+        /// @dev When the delivery completed, so the rating window has an origin.
+        uint64 completedAt;
         uint96 courierAsk;
         uint96 protocolFee;
         uint96 returnReserve;
@@ -123,6 +130,7 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
     ProtocolConfig public immutable config;
     CourierRegistry public immutable registry;
     ISettlementVault public immutable vault;
+    ReputationRegistry public immutable reputation;
 
     uint256 public nextDeliveryId;
 
@@ -172,6 +180,8 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
     // Errors
     // --------------------------------------------------------------------
 
+    event ReputationReportFailed(bytes data);
+
     error ZeroAddress();
     error ZeroAmount();
     error UnknownDelivery(uint256 deliveryId);
@@ -189,6 +199,7 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
     error AlreadyFunded();
     error DeadlineNotReached(uint64 deadline);
     error InsufficientBond(uint256 required, uint256 provided);
+    error RatingWindowClosed(uint64 completedAt);
 
     // --------------------------------------------------------------------
     // Modifiers
@@ -208,18 +219,21 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
         ProtocolConfig config_,
         CourierRegistry registry_,
         ISettlementVault vault_,
+        ReputationRegistry reputation_,
         uint96 bidDeposit_
     ) {
         if (address(accessManager_) == address(0)) revert ZeroAddress();
         if (address(config_) == address(0)) revert ZeroAddress();
         if (address(registry_) == address(0)) revert ZeroAddress();
         if (address(vault_) == address(0)) revert ZeroAddress();
+        if (address(reputation_) == address(0)) revert ZeroAddress();
         if (bidDeposit_ == 0) revert ZeroAmount();
 
         accessManager = accessManager_;
         config = config_;
         registry = registry_;
         vault = vault_;
+        reputation = reputation_;
         bidDeposit = bidDeposit_;
     }
 
@@ -260,6 +274,9 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
             riskTier: riskTier,
             termsVersion: 0,
             stateDeadline: deadline,
+            etaDeadline: 0,
+            etaMinutes: 0,
+            completedAt: 0,
             courierAsk: 0,
             protocolFee: 0,
             returnReserve: 0,
@@ -361,9 +378,11 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
         d.returnReserve = b.returnAsk;
         d.protocolFee = fee;
         d.termsVersion = b.termsVersion;
+        d.etaMinutes = b.etaMinutes;
 
         _transition(deliveryId, d, State.AwaitingFunding, config.fundingWindow());
         emit CourierSelected(deliveryId, courier, b.courierAsk, fee);
+        _report(abi.encodeCall(ReputationRegistry.recordAssignment, (courier)));
     }
 
     // --------------------------------------------------------------------
@@ -461,6 +480,11 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
 
         _consumePickupAcceptance(deliveryId, d.courier, d.customer, acceptance, signature);
 
+        // sec. 13: punctuality is measured against the ETA this courier accepted
+        // in its own bid. Fixing the deadline now means a later config change
+        // cannot retroactively make a delivery late.
+        d.etaDeadline = SafeCast.toUint64(block.timestamp + uint256(d.etaMinutes) * 1 minutes);
+
         emit PickupConfirmed(deliveryId, d.courier);
         _transition(deliveryId, d, State.InTransit, config.transitWindow());
         registry.openCustody(d.courier);
@@ -494,6 +518,26 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
         emit DeliveryProofSubmitted(deliveryId, d.courier);
         _transition(deliveryId, d, State.DeliveredPending, config.challengeWindow());
         registry.closeCustody(d.courier);
+    }
+
+    /**
+     * @notice Customer rates the courier after a completed delivery (sec. 20).
+     * @dev Only the delivery's customer, only after completion, only once, and
+     *      only inside the rating window. The rating is one reputation input, not
+     *      the score, and it cannot reopen settlement — the delivery is already
+     *      terminal when this runs.
+     *
+     *      Unlike outcome reporting this call is *not* failure-tolerant: nothing
+     *      is settling here, so a rejected rating should tell the customer why
+     *      rather than silently do nothing.
+     */
+    function rateCourier(uint256 deliveryId, uint8 rating) external nonReentrant whenNotPaused {
+        Delivery storage d = _requireDelivery(deliveryId);
+        if (d.state != State.Completed) revert WrongState(deliveryId, d.state, State.Completed);
+        if (msg.sender != d.customer) revert NotCustomer(msg.sender);
+        if (block.timestamp > d.completedAt + config.ratingWindow()) revert RatingWindowClosed(d.completedAt);
+
+        reputation.recordRating(d.courier, deliveryId, rating);
     }
 
     /// @notice Customer confirms early, completing before the challenge window ends (sec. 16).
@@ -584,6 +628,7 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
     function _complete(uint256 deliveryId, Delivery storage d) internal {
         ISettlementVault.Payout[] memory payouts = _successPayouts(d);
         _releaseCourierCollateral(d);
+        d.completedAt = SafeCast.toUint64(block.timestamp);
         _finish(deliveryId, d, State.Completed);
         emit Settled(deliveryId, State.Completed);
         vault.releaseLock(escrowLockId(deliveryId), payouts);
@@ -674,6 +719,54 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
         d.stateDeadline = 0;
         if (activeListings[d.customer] > 0) activeListings[d.customer] -= 1;
         emit StateChanged(deliveryId, from, terminal, 0);
+        _reportOutcome(deliveryId, d, terminal);
+    }
+
+    /**
+     * @dev Maps a terminal state onto a reputation outcome.
+     *
+     *      Cancellation is deliberately *not* attributed to the courier. A
+     *      delivery reaches `Cancelled` when the handover did not happen, and
+     *      P2.1 made a legitimate route to that: a sender who declines to sign
+     *      the pickup acceptance stalls the delivery until the window closes.
+     *      The chain cannot tell that apart from a courier who never showed, and
+     *      sec. 13 is explicit that an unfavourable outcome is not by itself
+     *      fault. Blame needs evidence, which means the dispute court (P4) —
+     *      `Outcome.CancelledByCourier` exists for it to report, and nothing
+     *      else produces it.
+     */
+    function _reportOutcome(uint256 deliveryId, Delivery storage d, State terminal) internal {
+        address courier = d.courier;
+        if (courier == address(0)) return;
+
+        // Both assigned on every path: punctuality only means something for a
+        // delivery that completed, and an unassigned default would leave that
+        // implicit.
+        ReputationRegistry.Outcome outcome = ReputationRegistry.Outcome.Expired;
+        bool onTime = false;
+        if (terminal == State.Completed) {
+            outcome = ReputationRegistry.Outcome.Completed;
+            // A delivery with no recorded ETA deadline was never picked up, so
+            // there is nothing to have been late for.
+            onTime = d.etaDeadline != 0 && block.timestamp <= d.etaDeadline;
+        } else if (terminal == State.Returned) {
+            outcome = ReputationRegistry.Outcome.Returned;
+        }
+
+        _report(abi.encodeCall(ReputationRegistry.recordOutcome, (courier, deliveryId, outcome, onTime)));
+    }
+
+    /**
+     * @dev Reputation is a reporting concern, never a settlement precondition.
+     *      A registry that reverts — a revoked role, a replaced contract, a bug
+     *      in a later version — must not be able to strand a delivery or hold up
+     *      a payout. The call is made without letting its failure propagate, and
+     *      the failure is surfaced as an event so it is visible rather than
+     *      silent.
+     */
+    function _report(bytes memory data) internal {
+        (bool ok,) = address(reputation).call(data);
+        if (!ok) emit ReputationReportFailed(data);
     }
 
     function _requireDelivery(uint256 deliveryId) internal view returns (Delivery storage d) {

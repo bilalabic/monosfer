@@ -17,6 +17,19 @@
   },
   {
     "type": "function",
+    "name": "BADGE_AWARDER_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "CONFIG_ADMIN_ROLE",
     "inputs": [],
     "outputs": [
@@ -70,6 +83,19 @@
   {
     "type": "function",
     "name": "REGISTRY_CONTROLLER_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "REPUTATION_REPORTER_ROLE",
     "inputs": [],
     "outputs": [
       {
