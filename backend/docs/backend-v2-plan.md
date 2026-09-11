@@ -1,5 +1,22 @@
 # Monosfer V2 Backend — Fazlı Uygulama Planı
 
+## Faz 7 — Support, audit ve yayın hazırlığı / 2026-09-11
+
+Başlangıç `282c570`, `Monosfer-V2`, yalnız `backend/`. Kullanıcının Faz 7 planı uygulandı. Durum: **bekliyor → devam ediyor → doğrulanıyor → tamamlandı (2026-09-11)**; planın local/test adapter ve read-only Testnet kapsamı için. [Gerçek test günlüğü](backend-v2-progress.md): 81 unit/inject, 38 integration, 13 legacy; preflight, gerçek pg_dump/restore fixture ve canlı salt-okunur Testnet başarılı. API/CLI ayrıntıları [Faz 7 sözleşmesi](backend-v2-release.md) içindedir. Production/provider/gerçek DR kabulü handoff'ta bekler.
+
+| Görev | Uygulama ve kabul koşulu |
+| --- | --- |
+| F7.1 Support | SIWE cookie + ayrı SUPPORT_WALLETS/ADMIN_WALLETS allowlist. Case oluşturma idempotent; değişiklik Origin/CSRF ister. Atanmış açık case veya admin dışında private/evidence content açılmaz. Indexer stale/integrity/fingerprint/lag ve private link doğrulanır. |
+| F7.2 Audit | Privileged sonuç audit ile aynı SQL transaction içinde tutulur; audit commit olmadan private yanıt gönderilmez. Denial ayrı append-only kayıttır. Case notları AES-GCM; audit serbest metin/credential içermez. |
+| F7.3 Projection | Finalized delivery projection'dan müşteri/kurye sayaçları; legacy kayıtlar kullanılmaz. Dry-run yazmaz; local-only apply atomik/idempotent rebuild yapar. Reward/referral pending_policy; payout/claim yok. |
+| F7.4 Telemetry | Token korumalı status ve Prometheus text metrics; token veya admin ile sampled trace okuma. Body/URL/header saklanmaz. Trace örnekleme varsayılan 0, retention kararı bekler. |
+| F7.5 Drills | Ayrı rastgele fixture şemasının gerçek pg_dump/pg_restore turu, encrypted object+key kontrolü, Redis TTL ve erişilemeyen bağımlılık/recovery kontrolleri. Production RTO/RPO ve cluster failover kanıtı değildir. |
+| F7.6 Testnet ve teslim | Export bundle adres/ABI kaynağı; chain 10143, finalized block, code/config/hashQuote/indexer RPC salt okunur kontrolü. Tam regresyon, OpenAPI, audit, backend-only diff ve yerel commit; push yok. |
+
+Kararlar: support kapalıyken boş allowlist geçerlidir; açılırken en az bir support/admin wallet zorunludur. Ops token boşsa ops bearer erişimi kapanır. Mevcut production provider kısıtı korunur. Ürün risk/reward/referral politikası, retention/silme, provider hesapları, destek SLA ve production RTO/RPO değerleri uydurulmaz; handoff kaydında bekler.
+
+Doğrulama sırası: strict typecheck/build → unit/inject → gerçek SQL/Redis integration → legacy → OpenAPI → local preflight/restore → canlı salt-okunur Testnet → npm audit → diff kapsamı/yerel commit. Her eksik veya başarısız kontrol ilerleme kaydına yazılır; koşulsuz production-ready ifadesi kullanılmaz.
+
 ## Faz 6 — Tracking, realtime ve provider servisleri / 2026-09-08
 
 Başlangıç `555473b`, Monosfer-V2; backend-only. F6.1–F6.6 yerel/test kapsamı: bekliyor → devam ediyor → doğrulanıyor → tamamlandı (2026-09-10). Gerçek sonuçlar ilerleme günlüğünde, çalıştırma/API ayrıntıları [Faz 6 sözleşmesinde](backend-v2-operations.md). Canlı provider hesabı/retention politikası bulunmadığı için yerel/test adapter teslimi yapıldı; production açılmaz. Harici Route/S3/WebPush adapter entegrasyonu ve production kabulü dış bağımlılık olarak bekliyor; bu durum Faz 6'nın production-ready olduğu anlamına gelmez.

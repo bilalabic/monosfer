@@ -1,5 +1,47 @@
 # Backend V2 İlerleme Kaydı
 
+## 2026-09-11 — Faz 7 / yerel-test ve read-only Testnet teslimi tamamlandı
+
+F7.1–F7.6: bekliyor → devam ediyor → doğrulanıyor → tamamlandı. SIWE support/admin allowlist, idempotent case API, native private/evidence support erişimi, transaction ile bağlı append-only audit, finalized reputation sayaçları, pending_policy referral/reward, token korumalı ops metrics/traces ve operational CLI'lar uygulandı. Yeni paket eklenmedi; lockfile değişmedi. Production provider/retention/RBAC/DR politikası bu teslimin kabulü değildir.
+
+| Kontrol | Gerçek son sonuç |
+| --- | --- |
+| `npm.cmd run typecheck` | Başarılı, strict TypeScript |
+| `npm.cmd run build` | Başarılı; mevcut contract export bundle üretildi |
+| `npm.cmd test` | **81/81** başarılı, skip yok |
+| `npm.cmd run test:integration` | **38/38** başarılı; gerçek yerel PostgreSQL/Redis/Mongo, migration/rerun, provider retry, auth/CSRF, private/audit ve SSE/shutdown regresyonları |
+| `npm.cmd run test:legacy` | **13/13** başarılı; legacy kaynak kodu değişmedi |
+| `npm.cmd run openapi:export` | Başarılı; API 33 path / 39 işlem, support/admin/ops/reputation endpoint ve response şemaları dahil |
+| `npm.cmd run ops:preflight` | Local harness üzerinden başarılı: config, migrations, OpenAPI, storage, PG/Redis ve token kontrolleri true. Yerel harness indexer'ı kapalı tuttuğu için ops status degraded/disabled; productionReady=false |
+| `npm.cmd run ops:restore-drill -- --fixture` | Local harness üzerinden başarılı, **1353 ms**. Gerçek `pg_dump -Fc`/`pg_restore`, AES-GCM object+DB+key roundtrip, yanlış key reddi, Redis TTL ve bağımlılık outage/recovery kontrolü |
+| `npm.cmd run ops:testnet-smoke` | Mevcut contract export'undaki public RPC ile canlı başarı. Chain 10143, finalized block **61593516**, hub/config code ve ProtocolConfig kontrolleri, contract `hashQuote` = backend digest, indexer block/log okuması. **0 transaction** |
+| `npm.cmd audit --json` | **0 açık**, dependency değişmedi |
+| `git diff --check` | Başarılı; dosya kapsamı yalnız backend |
+
+Local CLI komutları `node tests/support/release-cli.mjs preflight|restore|smoke` harness'i ile çağrıldı; harness ilgili gerçek npm komutunu sabit localhost fixture ayarları ve üretilen test ops token'ıyla çalıştırır. Smoke için `TESTNET_SMOKE_RPC_URL=https://testnet-rpc.monad.xyz` process seviyesinde seçildi. Kullanıcının `.env` dosyası değiştirilmedi. Normal CLI eksik zorunlu config ile başarısız olur; test ayarları runtime'a eklenmedi.
+
+F7.1/F7.2 doğrulamaları: wallet role escalation/allowlist, auth/Origin/CSRF, DTO/null/unknown field, eşzamanlı case idempotency, PATCH sonrası özgün response replay, notların şifrelenmesi, audit failure sırasında case/event rollback ve private yanıtın kapanması. Closed/unassigned case, unrelated wallet/delivery, stale/error/integrity/lag/wrong fingerprint/missing link, yanlış delivery evidence ve ciphertext tamper reddi doğrulandı. SQL UPDATE/DELETE/TRUNCATE trigger'ları audit'i korur. Support content erişimi requestId ile audit'e bağlanır.
+
+F7.3/F7.4: projection dry-run yazmaz; apply tekrarında sayaçlar sabit, canonical kaynak hash değişince rebuild_pending, integrity false olduğunda kapalı. Ops token/admin ayrımı, PG/Redis outage, sampled trace eventual consistency ve body/credential redaction doğrulandı. F7.5/F7.6: provider abort/immutable key/idempotent retry/dead-letter regresyonları geçti. Restore yalnız invocation'ın yeni fixture şemalarını, Redis key'lerini ve geçici backup/object dosyalarını temizledi; kaynak uygulama verisi silinmedi. Fixture audit/case geçmişi append-only olduğu için test DB'de saklandı. Canlı smoke fingerprint: `9f66dfb32762943661677c38d97ed7db1cb80244ef72729baed1ae7c4a05adf3`.
+
+Bulunan ve giderilen test/entegrasyon sorunları: support'un ikinci EvidenceStorage örneği üretmesi Phase 6 retry/tamper testlerini bozdu; artık ProvidersModule aynı adapter'ı export eder. Hedefli provider+Faz 7 integration **17/17** ardından tam **38/38** geçti. Docker/host saatleri arasında ölçülen ~1166 ms fark, eski quote testindeki SQL `now()-1 second` girdisini uygulama saatinde hâlâ geçerli bırakıyordu; test girdisi uygulamanın kullandığı saate göre açıkça geçmiş Date olarak ayarlandı, 409 beklentisi ve production kodu değiştirilmedi. OpenAPI şema ekleme aşamasındaki syntax hatası giderilip strict build ve tam unit turu yeniden geçti. İlk failed denemeler başarı olarak sayılmadı.
+
+Çalıştırılmayan/kapsam dışı: production deploy/import/restore, replica/cluster failover, gerçek S3/Route/WebPush hesabı, KMS/HSM, browser/mobile support UI smoke, trace/audit retention silme, gerçek reward/referral politikası veya payout. Temiz npm ci bu fazda yeniden çalıştırılmadı; paket/lockfile değişmedi. CLI production projection rebuild/apply çalıştırılmadı. Phase 7 rebuild servisinin dry-run/apply davranışı gerçek SQL integration ile doğrulandı. Yerel fixture restore production RTO/RPO kanıtı değildir.
+
+Devam notu: [Faz 7 sözleşmesi](backend-v2-release.md), [plan](backend-v2-plan.md), [ekip ihtiyaçları](backend-v2-handoffs.md). Sonraki iki iş: (1) runtime DB izinleri, provider/KMS, retention ve gerçek DR güvenlik kabulü; (2) support UI/browser akışları ve ürünün referral/reward kararları. Uygulama commit kimliği takip kaydına eklenecek; otomatik push yapılmaz.
+
+## 2026-09-11 — Faz 7 / doğrulanıyor
+
+Başlangıç `282c570`, temiz `Monosfer-V2`. F7.1–F7.6: bekliyor → devam ediyor → doğrulanıyor. Yalnız backend değiştirildi. Support/admin SIWE allowlist, case/access/audit, finalized reputation sayaçları, ops metrics/traces ve CLI kontrolleri eklendi. Phase 6 adapter'ları AbortSignal sözleşmesine uyar. Case notları şifreli; create idempotency yanıtı case değişse de sabit tutulur. Audit/case event tabloları UPDATE/DELETE/TRUNCATE trigger'larıyla append-only.
+
+İlk doğrulamalar: strict build geçti; Faz 7 gerçek SQL/Redis integration 10/10, Faz 7 + provider hedefli unit/inject 9/9 geçti. Migration/re-run bu integration içinde gerçek yerel PostgreSQL ile doğrulandı. İlk unit regresyondaki eski OpenAPI endpoint listesi ve eksik AbortSignal test girdileri güncellendi. Trace `onResponse` sonrasında yazıldığı için eventual-consistency testi sınırlı polling ile düzeltildi. Bu ilk başarısız denemeler son sonuç olarak sayılmaz.
+
+2026-09-10 sonundaki tam test process çıktıları oturum devamında alınamadı; başarı sayılmadan yeniden çalıştırılacak. İlk restore/npm audit çağrıları otomatik onay sisteminin kullanım limiti nedeniyle çalışmadı. 2026-09-11 kullanıcı devam talebiyle doğrulama sürüyor. İlk doğrudan `db:migrate` denemesi mevcut `.env` içinde DATABASE_URL bulunmadığı için çalışmadı; gerçek migration integration fixture bağlantısıyla uygulandı. Kullanıcının `.env` dosyası değiştirilmedi.
+
+Monad rehberinin block-states referansı 404 döndü; mevcut finalized tasarımı resmi [JSON-RPC belgesi](https://docs.monad.xyz/reference/json-rpc/api) üzerinden kontrol edildi. Canlı smoke yalnız `eth_call`/read yolundadır. Henüz tamamlanmış production deploy/restore/provider kabulü yok.
+
+Devam: tam regresyon, gerçek restore fixture, preflight, canlı read-only Testnet, audit sonuçları ve commit kimliği buraya eklenecek. Kabul koşulları doğrulanmadan Faz 7 tamamlandı sayılmayacak.
+
 ## 2026-09-10 — Faz 6 commit teslim kaydı
 
 Uygulama commit'i `6af295f13f545793c48715b8caf8e3b97295411c` — `feat(backend): implement phase 6 tracking and provider services`. `Monosfer-V2` üzerinde 35 dosyanın tamamı `backend/` altında; staged diff/check ve kapsam doğrulandı. Bu hash kaydı ayrı docs commit'idir. OpenAPI export API için 21 path / 25 işlem, realtime için 7 path / 8 işlem içerir. Push/deploy yapılmadı; external provider/production kabulü handoff'ta bekliyor.

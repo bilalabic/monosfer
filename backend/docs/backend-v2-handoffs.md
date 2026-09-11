@@ -1,5 +1,17 @@
 # V2 Backend Ekip Bağımlılıkları
 
+## Faz 7 — Support/operasyon sözleşmesi / 2026-09-11
+
+- Frontend/support aracı: [Faz 7 API ve örnekler](backend-v2-release.md), `artifacts/openapi.json`. Support/admin yetkisi profil role alanından gelmez; SIWE session + env allowlist gerekir. Case create `{id,assignee?,note?}`, Idempotency-Key, Origin/CSRF; private/evidence content için aktif atama gerekir. Case notes şifreli yazılır, genel case list/detail içinde döndürülmez. Legacy dispute evidence bu yüzeye aktarılmaz. Browser/mobile kabulü ayrıca yapılmalı.
+- Ürün/güvenlik: env allowlist geçici privileged kimlik yönetimi; kalıcı RBAC/IdP, atama yetki matrisi, destek notlarını okuma/paylaşma kapsamı ve SLA kararı bekler. Bu fazda allowlisted support case açıp allowlisted kişiye atayabilir; admin private erişiminde case zorunluluğunu aşabilir. Her gerçek privileged işlem auditlenir. Retention, yasal saklama/silme ve bağımsız değiştirilemez audit hedefi belirlenmeli.
+- Reputation/referral/reward: sayaçlar finalized projection'a bağlı, skor/ödül hesaplama veya ödeme yok. `pending_policy` referral qualification ve reward economics kararı beklediğini gösterir. Projection kaynak bloğu ilerlediğinde `rebuild_pending` görülebilir; production worker/scheduler ve SLA backend dışı operasyon teslimidir.
+- Altyapı: ayrı OPS_METRICS_TOKEN üretimi/rotation, TLS/private ağ, metrics scrape ve alarm, trace retention/sampling, runtime DB rolü ile migration owner ayrımı gerekir. DB owner/superuser trigger'ları değiştirebilir; append-only trigger bağımsız WORM depolama iddiası değildir. Trace body, URL, header, cookie veya credential saklamaz. Varsayılan sampling 0.
+- DR: local fixture PostgreSQL dump/restore, Redis TTL ve encrypted object/key kontrolleri production backup/PITR/replica failover veya KMS disaster-recovery kanıtı değildir. RTO/RPO, off-host object backup, anahtar escrow/rotation ve gerçek restore prosedürü kararlaştırılmalı. Redis gerçek session'larının geri yüklenmesi bu fazda yapılmaz.
+- Provider: Route/S3/WebPush hesapları/KMS hâlâ bekler. Dev/test adapter contract testleri, timeout/retry/dead-letter testleri mevcut; gerçek provider/region/multi-host davranışı için production kabulü ayrıca gerekir. Mevcut `OPERATIONS_ENABLED` production fail-closed kuralı sürer.
+- Contract: ABI/deployment bundle mevcut V2 export'larından okunur. Testnet smoke zincire transaction göndermez, signer gerektirmez. Canlı smoke başarısız veya deployment uyuşmazsa contract/RPC ekibine test aşaması ve sabit hata kodu ile iletilir; backend adres uydurmaz.
+
+Sonraki iki iş: (1) güvenlik/operasyon için production provider/KMS, runtime DB izinleri ve gerçek DR tatbikatı; (2) ürün/API için support ekranı, referral/reward politikası ve tarayıcı SIWE/CSRF/support kabul senaryoları.
+
 ## Faz 6 yerel/test teslimi — 2026-09-10
 
 - Frontend: [tracking/provider sözleşmesi](backend-v2-operations.md) ve iki OpenAPI export'u hazır. SIWE cookie + Origin/CSRF, tracking için bellekte/header'da kısa token, evidence için Idempotency-Key kullanın. Realtime ayrı Node process; fetch streaming + Last-Event-ID, reset/expiry/closed ve backoff gerekir. Native EventSource'a token URL'si eklemeyin. Gerçek browser/mobil arka plan/reconnect smoke bu teslimde yapılmadı; GPS izni ve çoklu sekme davranışı frontend sorumluluğunda.

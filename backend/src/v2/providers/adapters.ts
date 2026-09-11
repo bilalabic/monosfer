@@ -15,7 +15,8 @@ export interface RouteEstimate {provider:string;distanceMeters:number;durationSe
 export abstract class RouteProvider {abstract estimate(pickup:Point,dropoff:Point,signal:AbortSignal):Promise<RouteEstimate>}
 @Injectable()
 export class DevelopmentRouteProvider extends RouteProvider {
-  async estimate(a:Point,b:Point):Promise<RouteEstimate>{
+  async estimate(a:Point,b:Point,signal:AbortSignal):Promise<RouteEstimate>{
+    signal.throwIfAborted();
     const radians=(n:number)=>n*Math.PI/180;
     const h=Math.sin(radians(b.lat-a.lat)/2)**2+Math.cos(radians(a.lat))*Math.cos(radians(b.lat))*Math.sin(radians(b.lng-a.lng)/2)**2;
     const distanceMeters=Math.round(6371000*2*Math.asin(Math.sqrt(Math.min(1,h))));
@@ -57,5 +58,5 @@ export abstract class NotificationProvider {abstract send(idempotencyKey:string,
 @Injectable()
 export class InAppNotificationProvider extends NotificationProvider {
   // Durable delivery is the worker's SQL inbox insert. No third-party network sends.
-  async send():Promise<void>{}
+  async send(_key:string,_input:NotificationInput,signal:AbortSignal):Promise<void>{signal.throwIfAborted();}
 }

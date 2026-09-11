@@ -14,6 +14,10 @@ import { QuotesModule } from './quotes/quotes.module.js';
 import { TrackingApiModule } from './tracking/tracking.module.js';
 import { TrackingRealtimeModule } from './tracking/realtime.js';
 import { ProvidersModule } from './providers/providers.module.js';
+import { SupportModule } from './support/support.module.js';
+import { ReputationModule } from './reputation/reputation.module.js';
+import { OpsModule } from './ops/ops.module.js';
+import { OpsService } from './ops/ops.service.js';
 import { cookieNames } from './security/tokens.js';
 import { LogController } from 'fastify';
 import type { Logger } from 'pino';
@@ -25,7 +29,7 @@ import { createLogger, FrameworkLogger } from './http/logger.js';
 @Module({})
 export class AppModule {
   static register(settings: Settings): DynamicModule {
-    return { module: AppModule, imports: [ConfigModule.register(settings), HealthModule, AuthModule, UsersModule, PrivateDataModule, IndexerReadModule, QuotesModule, TrackingApiModule, ProvidersModule] };
+    return { module: AppModule, imports: [ConfigModule.register(settings), HealthModule, AuthModule, UsersModule, PrivateDataModule, IndexerReadModule, QuotesModule, TrackingApiModule, ProvidersModule, SupportModule, ReputationModule, OpsModule] };
   }
 }
 
@@ -58,14 +62,20 @@ export async function configureApplication(app: NestFastifyApplication, settings
   });
   server.addHook('onResponse', async (request, reply) => {
     request.log.info({ event: 'http_response', requestId: request.id, statusCode: reply.statusCode });
+    // Realtime process intentionally has no SQL telemetry dependency.
+    if (ops) await ops.observe(request.id, reply.statusCode, reply.elapsedTime);
   });
+  let ops: OpsService | undefined;
+  try { ops = app.get(OpsService); } catch { /* Realtime application. */ }
   const document = SwaggerModule.createDocument(app, new DocumentBuilder().setTitle('Monosfer V2 Backend').setVersion('2.0.0')
-    .addCookieAuth(cookieNames(settings).session, { type: 'apiKey', in: 'cookie' }, 'session').build());
+    .addCookieAuth(cookieNames(settings).session, { type: 'apiKey', in: 'cookie' }, 'session')
+    .addBearerAuth({type:'http',scheme:'bearer'},'ops').build());
   document.components ??= {};
   document.components.schemas ??= {};
   for (const name of ['NonceInputDto', 'VerifyInputDto', 'UpdateUserDto', 'CourierProfileDto', 'DeliveryQueryDto', 'DeliveryIdDto', 'BidQueryDto',
     'CreateQuoteDto','QuoteMetadataDto','QuoteLocationDto','QuoteDropoffDto','QuotePrivatePayloadDto','QuoteDigestDto','RefreshQuoteDto',
-    'TrackingLocationDto','TrackingEmptyDto','EvidenceInputDto','EvidenceGpsDto','DeliveryEvidenceIdDto','NotificationQueryDto']) {
+    'TrackingLocationDto','TrackingEmptyDto','EvidenceInputDto','EvidenceGpsDto','DeliveryEvidenceIdDto','NotificationQueryDto',
+    'CaseCreateDto','CasePatchDto','CaseIdDto','SupportEvidenceIdDto','WalletIdDto','TraceIdDto','SupportPageDto','AuditPageDto']) {
     const schema = document.components.schemas[name];
     if (schema && !('$ref' in schema)) schema.additionalProperties = false;
   }
@@ -79,7 +89,7 @@ export async function configureApplication(app: NestFastifyApplication, settings
   const ready = document.paths['/v1/health/ready']?.get;
   if (ready) ready.responses['503'] = { description: 'Service unavailable', content: { 'application/json': { schema: { $ref: '#/components/schemas/ApiError' } } } };
   for (const [path, item] of Object.entries(document.paths)) {
-    if (!path.startsWith('/v1/auth') && !path.startsWith('/v1/users') && !path.startsWith('/v1/deliveries') && !path.startsWith('/v1/indexer') && !path.startsWith('/v1/quotes') && !path.startsWith('/v1/notifications')) continue;
+    if (!['auth','users','deliveries','indexer','quotes','notifications','support','admin','ops'].some(prefix=>path.startsWith(`/v1/${prefix}`))) continue;
     for (const method of ['get', 'post', 'patch', 'delete'] as const) {
       const operation = item?.[method];
       if (operation) for (const status of ['400', '401', '403', '404', '409', '429', '503']) {

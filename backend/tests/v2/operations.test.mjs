@@ -13,9 +13,9 @@ test('phase 6 config is opt-in, bounded and refuses production defaults',()=>{
 });
 test('route test adapter is explicitly an estimate; provider timeout aborts work and hides raw errors',async()=>{
   const provider=new DevelopmentRouteProvider();
-  const route=await provider.estimate({lat:0,lng:0},{lat:0,lng:1});
+  const route=await provider.estimate({lat:0,lng:0},{lat:0,lng:1},new AbortController().signal);
   assert.equal(route.provider,'straight-line-dev');assert.ok(route.distanceMeters>111000&&route.distanceMeters<112000);
-  assert.equal((await provider.estimate({lat:0,lng:0},{lat:0,lng:0})).durationSeconds,0);
+  assert.equal((await provider.estimate({lat:0,lng:0},{lat:0,lng:0},new AbortController().signal)).durationSeconds,0);
   let signal;await assert.rejects(bounded(10,s=>{signal=s;return new Promise(()=>{});}),e=>e.getStatus()===503);
   assert.equal(signal.aborted,true);
   await assert.rejects(bounded(10,async()=>{throw new Error('PROVIDER_PRIVATE_CREDENTIAL');}),e=>!e.message.includes('PRIVATE'));

@@ -40,5 +40,5 @@ export class NotificationsController {
 @Module({imports:[DatabaseModule,RedisModule,DeliveryAccessModule,PrivateDataModule,AuthModule,SecurityModule],
   providers:[ProviderJobs,ProviderWorker,RouteService,EvidenceService,NotificationsService,
     {provide:RouteProvider,useClass:DevelopmentRouteProvider},{provide:EvidenceStorage,useClass:LocalEvidenceStorage},{provide:NotificationProvider,useClass:InAppNotificationProvider}],
-  controllers:[DeliveryProvidersController,NotificationsController],exports:[ProviderWorker]})
+  controllers:[DeliveryProvidersController,NotificationsController],exports:[ProviderWorker,EvidenceStorage]})
 export class ProvidersModule{}

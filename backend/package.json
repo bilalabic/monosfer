@@ -19,7 +19,11 @@
     "indexer": "npm run build && node --env-file-if-exists=.env scripts/indexer.mjs",
     "quote:worker": "npm run build && node --env-file-if-exists=.env scripts/quote-worker.mjs",
     "realtime": "npm run build && node --env-file-if-exists=.env dist/realtime.js",
-    "provider:worker": "npm run build && node --env-file-if-exists=.env scripts/provider-worker.mjs"
+    "provider:worker": "npm run build && node --env-file-if-exists=.env scripts/provider-worker.mjs",
+    "ops:preflight": "npm run build && node --env-file-if-exists=.env scripts/ops-preflight.mjs",
+    "ops:testnet-smoke": "npm run build && node --env-file-if-exists=.env scripts/ops-testnet-smoke.mjs",
+    "ops:rebuild-projections": "npm run build && node --env-file-if-exists=.env scripts/ops-rebuild-projections.mjs",
+    "ops:restore-drill": "npm run build && node --env-file-if-exists=.env scripts/ops-restore-drill.mjs"
   },
   "engines": {
     "node": ">=24.0.0 <25"

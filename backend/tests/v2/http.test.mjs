@@ -32,7 +32,15 @@ test('health, request IDs, headers, public contract, and legacy isolation', asyn
   assert.equal((await app.inject('/api/health')).statusCode, 404);
   const missing = await app.inject('/missing');
   assert.deepEqual(missing.json(), { error: { code: 'NOT_FOUND', message: 'Resource not found', requestId: missing.headers['x-request-id'] } });
-  assert.deepEqual(Object.keys(document.paths).sort(), ['/v1/auth/session', '/v1/auth/sessions', '/v1/auth/siwe/nonce', '/v1/auth/siwe/verify', '/v1/deliveries', '/v1/deliveries/{id}', '/v1/deliveries/{id}/bids', '/v1/deliveries/{id}/evidence', '/v1/deliveries/{id}/evidence/{evidenceId}', '/v1/deliveries/{id}/evidence/{evidenceId}/content', '/v1/deliveries/{id}/route', '/v1/deliveries/{id}/tracking/location', '/v1/deliveries/{id}/tracking/sessions', '/v1/health/live', '/v1/health/ready', '/v1/indexer/status', '/v1/notifications', '/v1/quotes/delivery', '/v1/quotes/{quoteDigest}', '/v1/quotes/{quoteDigest}/refresh', '/v1/users/me']);
+  assert.deepEqual(Object.keys(document.paths).sort(), [
+    '/v1/auth/session', '/v1/auth/sessions', '/v1/auth/siwe/nonce', '/v1/auth/siwe/verify', '/v1/deliveries', '/v1/deliveries/{id}',
+    '/v1/deliveries/{id}/bids', '/v1/deliveries/{id}/evidence', '/v1/deliveries/{id}/evidence/{evidenceId}', '/v1/deliveries/{id}/evidence/{evidenceId}/content',
+    '/v1/deliveries/{id}/route', '/v1/deliveries/{id}/tracking/location', '/v1/deliveries/{id}/tracking/sessions', '/v1/health/live', '/v1/health/ready',
+    '/v1/indexer/status', '/v1/notifications', '/v1/quotes/delivery', '/v1/quotes/{quoteDigest}', '/v1/quotes/{quoteDigest}/refresh', '/v1/users/me',
+    '/v1/admin/audit','/v1/ops/metrics','/v1/ops/status','/v1/ops/traces/{requestId}', '/v1/support/cases','/v1/support/cases/{caseId}',
+    '/v1/support/deliveries/{id}','/v1/support/deliveries/{id}/evidence','/v1/support/deliveries/{id}/evidence/{evidenceId}/content',
+    '/v1/support/deliveries/{id}/private','/v1/support/wallets/{wallet}/reputation','/v1/users/me/reputation',
+  ].sort());
   assert.equal((await app.inject('/v1/openapi.json')).statusCode, 200);
   assert.equal((await app.inject('/v1/docs')).statusCode, 404);
 });

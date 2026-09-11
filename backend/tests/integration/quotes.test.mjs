@@ -64,7 +64,8 @@ test('phase 5 real PostgreSQL + read-only RPC: issuance, concurrency, rollback, 
     const reordered={privatePayload:payload.privatePayload,metadata:{urgency:'standard',packageType:'document'},declaredValue:'10000'};
     assert.deepEqual((await post(reordered,key)).json(),issued);
     f.minBps=10000;assert.equal((await post(payload,key)).statusCode,409,'changed policy invalidates cached quote');f.minBps=7500;
-    await pool.query("UPDATE monosfer.idempotency_keys SET expires_at=now()-interval '1 second' WHERE quote_digest=$1",[issued.quoteDigest]);
+    // Issuance TTL is created/checked with the application clock. Docker's clock can differ from the host.
+    await pool.query('UPDATE monosfer.idempotency_keys SET expires_at=$2 WHERE quote_digest=$1',[issued.quoteDigest,new Date(Date.now()-1000)]);
     assert.equal((await post(payload,key)).statusCode,409,'expired key is a tombstone, not a new issuance');
     await pool.query("UPDATE monosfer.idempotency_keys SET expires_at=now()+interval '1 day' WHERE quote_digest=$1",[issued.quoteDigest]);
     const record=(await pool.query('SELECT * FROM monosfer.private_delivery_records WHERE id=$1',[issued.privateRecordId])).rows[0];
