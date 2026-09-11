@@ -434,6 +434,52 @@ Koşulan senaryolar (hepsi geçti):
 
 Kapanış: vault bakiye 32.44 MON = yükümlülük 32.44 MON, surplus 0, **fark 0**.
 
+### P3 senaryoları (yeni deploy, dokuz kontrat)
+
+**P3.1 — itibar** (önceki deploy, 10/10): geçmişsiz kurye **575**, temiz teslimat
++ 5 yıldız sonrası **901**, güven 10; ikinci puanlama reddedildi.
+
+**P3.2 — rozetler** (13 kontrol, zincirde):
+
+| Kontrol | Sonuç |
+|---|---|
+| Gerçek teslimat tamamlandı ve kaydedildi | ✓ |
+| `FirstDelivery` hak edilmiş, `TenDeliveries` edilmemiş | ✓ |
+| Rozet basıldı, **kuryeye** — talep edene değil | ✓ |
+| `locked()` true (ERC-5192) | ✓ |
+
+Rozet, uydurulmuş bir itibar kaydına değil **gerçekten yürünen bir teslimata**
+dayanıyor.
+
+**P3.3 — ödül ve referans** (15/15, zincirde):
+
+| # | Senaryo | Sonuç |
+|---|---|---|
+| 1 | Epoch fonlandı, bütçe zincirde göründü | ✓ |
+| 2 | Root yayımlandı | ✓ |
+| 3 | Talep leaf'teki hesaba ödendi (0.1 MON) | ✓ |
+| 4 | Bütçeden yalnızca o kadarı düştü | ✓ |
+| 5 | **Çift talep** | `AlreadyClaimed` ile reddedildi |
+| 6 | Bütçe içindeki ikinci talep | Geçerli |
+| 7–12 | Referans: ödül ayarı, fonlama, kayıt, derinlik 1, kayıt tek başına ödeme yapmıyor | ✓ |
+| 13 | **Kendini referans** | `SelfReferral` ile reddedildi |
+| 14 | **Döngüsel referans** | `CircularReferral` ile reddedildi |
+
+### Doğrulama sırasında çıkan iki şey
+
+- **`forge script` bir işlemi zincirde düşürdü ama `cast run` ile yeniden
+  oynatınca "başarılı" dedi** (zincirdeki gasUsed 104 917, replay'de 79 806).
+  Zincirdeki durum okumaları üç kez üst üste "inmemiş" dedi ve doğru olan oydu.
+  Monad'da gas peşin rezerve edildiği için (sec. 43) büyük `--gas-limit` ile
+  gönderilen işlemler bu şekilde davranabiliyor; senaryolar daha küçük limitle
+  `cast send`'e taşınınca hepsi geçti.
+- **İlk koşuda üç senaryo "FAIL" göründü, üçü de yanlış alarmdı.** `cast call`
+  custom error'ları ham selector olarak döndürüyor; ben hata **adını**
+  grep'liyordum. Selector karşılaştırmasına çevrilince üçü de doğru hatayla
+  reddedildiği görüldü (`0xa9214540`, `0x55e8f70e`, `0x7acaadee`). Aynı sınıf hata
+  P2.2'de de çıkmıştı — zincir doğrulamasında **okuma yönteminin kendisi** de
+  doğrulanmalı.
+
 ### P3.1 senaryoları (yeni deploy, 10/10 + 3 bağımsız okuma)
 
 | # | Senaryo | Sonuç |
