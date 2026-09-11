@@ -24,6 +24,7 @@ edilir, yetkiler tek bir rol yöneticisinden gelir.
 | `RiskQuoteVerifier` | İmzalı kapsam teklifi, zincirde kapsam bandı | [risk-quote](docs/risk-quote.md) |
 | `PickupProofVerifier` | Gönderenin imzalı devir kabulü, nonce, ERC-1271 | [proofs](docs/proofs.md) |
 | `PodAttestationVerifier` | İmzalı teslim kanıtı, challenge taahhüdü, 10 dk ömür | [proofs](docs/proofs.md) |
+| `ReputationRegistry` | 0-1000 puan, ayrı güven seviyesi, sıralama yok | [reputation](docs/reputation.md) |
 
 Sıradaki fazlar (`ReputationRegistry`, `DisputeCourt`, …):
 [`docs/implementation-plan-v1.0.md`](docs/implementation-plan-v1.0.md).
@@ -69,6 +70,7 @@ submodule kurulumu gerekmez.
 | `forge fmt` | Biçimlendir |
 | `forge snapshot --no-match-test "testFuzz\|invariant_"` | Gas snapshot'ını yeniden üret |
 | `slither .` | Statik analiz (`pip install slither-analyzer==0.11.6`) |
+| `python3 tools/cheatcode-scan.py` | Cheatcode tüketen test satırlarını arar (aşağıya bkz.) |
 
 ---
 
@@ -135,6 +137,17 @@ Kabul edilen baseline ve gerekçeleri
 [`docs/static-analysis-baseline.md`](docs/static-analysis-baseline.md)'de kayıtlı,
 filtreler `slither.config.json`'da. Filtrelenmiş koşu **0 sonuç** vermelidir;
 vermiyorsa bulgu yeni kodadır.
+
+### Cheatcode tüketen testler
+
+Foundry'de `vm.prank` ve `vm.expectRevert` **bir sonraki çağrıya** uygulanır. O
+çağrının argümanları (veya `{value:}` ifadesi) kurulurken bir view çağrısı
+yapılıyorsa, cheatcode ona iner ve asıl çağrı prank'siz gider. Test sessizce
+yanlış sebeple geçer.
+
+Bu hata bu depoda altı kez çıktı, üçü testi tamamen anlamsızlaştırmıştı.
+`tools/cheatcode-scan.py` bunu arar; bir kapı değil, elle koşulan bir tarayıcı.
+Bilerek bozulmuş örneklere karşı doğrulanmıştır.
 
 ### Solidity satır sonları
 
@@ -230,6 +243,7 @@ contracts/
 │   │   ├── registry/           CourierRegistry
 │   │   ├── hub/                DeliveryHub
 │   │   ├── risk/               CoverageQuote, RiskQuoteVerifier
+│   │   ├── reputation/         ReputationRegistry
 │   │   ├── proof/              PickupProof(+Verifier), DeliveryProof(+PodAttestationVerifier)
 │   │   └── interfaces/         ISettlementVault
 │   └── *.sol                   devralinan (dondurulmus, bkz. sec. 8)

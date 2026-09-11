@@ -51,6 +51,10 @@ contract ProtocolAccessManager is AccessControlDefaultAdminRules {
     /// @dev Reflects an off-chain verification decision on-chain (sec.4.4, sec.4.5).
     bytes32 public constant VERIFIER_ROLE = keccak256("MONOSFER_VERIFIER_ROLE");
 
+    /// @notice May write courier reputation. Held by protocol contracts only:
+    ///         an account that can write reputation can manufacture standing.
+    bytes32 public constant REPUTATION_REPORTER_ROLE = keccak256("MONOSFER_REPUTATION_REPORTER_ROLE");
+
     /// @notice Delay between scheduling an unpause and being able to execute it.
     uint256 public constant UNPAUSE_DELAY = 6 hours;
 

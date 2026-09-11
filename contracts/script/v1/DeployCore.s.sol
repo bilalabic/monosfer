@@ -9,6 +9,7 @@ import {SettlementVault} from "../../src/v1/vault/SettlementVault.sol";
 import {BaselineParams} from "../../src/v1/config/BaselineParams.sol";
 import {CourierRegistry} from "../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../src/v1/hub/DeliveryHub.sol";
+import {ReputationRegistry} from "../../src/v1/reputation/ReputationRegistry.sol";
 
 /**
  * @title DeployCore
@@ -72,7 +73,8 @@ contract DeployCoreScript is Script {
 
         SettlementVault vault = new SettlementVault(accessManager);
         CourierRegistry registry = new CourierRegistry(accessManager, config, vault);
-        DeliveryHub hub = new DeliveryHub(accessManager, config, registry, vault, bidDeposit);
+        ReputationRegistry reputation = new ReputationRegistry(accessManager);
+        DeliveryHub hub = new DeliveryHub(accessManager, config, registry, vault, reputation, bidDeposit);
 
         vm.stopBroadcast();
 
@@ -84,7 +86,7 @@ contract DeployCoreScript is Script {
         if (address(registry).balance != 0) revert VaultNotEmpty("registry balance");
         if (hub.nextDeliveryId() != 0) revert VaultNotEmpty("hub deliveries");
 
-        _report(accessManager, config, vault, registry, hub, roles);
+        _report(accessManager, config, vault, registry, hub, reputation, roles);
     }
 
     function _loadRoles() internal view returns (RoleSet memory roles) {
@@ -137,6 +139,7 @@ contract DeployCoreScript is Script {
         SettlementVault vault,
         CourierRegistry registry,
         DeliveryHub hub,
+        ReputationRegistry reputation,
         RoleSet memory roles
     ) internal pure {
         console2.log("ProtocolAccessManager:", address(accessManager));
@@ -144,6 +147,7 @@ contract DeployCoreScript is Script {
         console2.log("SettlementVault:      ", address(vault));
         console2.log("CourierRegistry:      ", address(registry));
         console2.log("DeliveryHub:          ", address(hub));
+        console2.log("ReputationRegistry:   ", address(reputation));
         console2.log("default admin:        ", roles.defaultAdmin);
         console2.log("config admin:         ", roles.configAdmin);
         console2.log("emergency:            ", roles.emergency);
@@ -159,6 +163,7 @@ contract DeployCoreScript is Script {
         console2.log("Grant after deployment:");
         console2.log("  VAULT_CONTROLLER_ROLE    -> CourierRegistry and DeliveryHub");
         console2.log("  REGISTRY_CONTROLLER_ROLE -> DeliveryHub");
+        console2.log("  REPUTATION_REPORTER_ROLE -> DeliveryHub");
         console2.log("Both are contracts. Neither role may ever go to an EOA.");
     }
 }

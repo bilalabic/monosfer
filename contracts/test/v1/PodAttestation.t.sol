@@ -7,6 +7,7 @@ import {BaselineParams} from "../../src/v1/config/BaselineParams.sol";
 import {SettlementVault} from "../../src/v1/vault/SettlementVault.sol";
 import {CourierRegistry} from "../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../src/v1/hub/DeliveryHub.sol";
+import {ReputationRegistry} from "../../src/v1/reputation/ReputationRegistry.sol";
 import {CoverageQuote} from "../../src/v1/risk/CoverageQuote.sol";
 import {PickupProof} from "../../src/v1/proof/PickupProof.sol";
 import {DeliveryProof} from "../../src/v1/proof/DeliveryProof.sol";
@@ -46,6 +47,7 @@ contract PodAttestationTest is QuoteFixture, PickupFixture, PodFixture {
     SettlementVault internal vault;
     CourierRegistry internal registry;
     DeliveryHub internal hub;
+    ReputationRegistry internal reputation;
 
     address internal admin = address(0xA11CE);
     address internal signerAdmin = address(0x516E);
@@ -71,12 +73,14 @@ contract PodAttestationTest is QuoteFixture, PickupFixture, PodFixture {
         );
         vault = new SettlementVault(manager);
         registry = new CourierRegistry(manager, config, vault);
-        hub = new DeliveryHub(manager, config, registry, vault, BID_DEPOSIT);
+        reputation = new ReputationRegistry(manager);
+        hub = new DeliveryHub(manager, config, registry, vault, reputation, BID_DEPOSIT);
 
         vm.startPrank(admin);
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(registry));
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(hub));
         manager.grantRole(manager.REGISTRY_CONTROLLER_ROLE(), address(hub));
+        manager.grantRole(manager.REPUTATION_REPORTER_ROLE(), address(hub));
         manager.grantRole(manager.SIGNER_ADMIN_ROLE(), signerAdmin);
         vm.stopPrank();
 

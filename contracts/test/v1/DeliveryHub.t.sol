@@ -8,6 +8,7 @@ import {BaselineParams} from "../../src/v1/config/BaselineParams.sol";
 import {SettlementVault} from "../../src/v1/vault/SettlementVault.sol";
 import {CourierRegistry} from "../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../src/v1/hub/DeliveryHub.sol";
+import {ReputationRegistry} from "../../src/v1/reputation/ReputationRegistry.sol";
 import {CoverageQuote} from "../../src/v1/risk/CoverageQuote.sol";
 import {RiskQuoteVerifier} from "../../src/v1/risk/RiskQuoteVerifier.sol";
 import {PickupProof} from "../../src/v1/proof/PickupProof.sol";
@@ -23,6 +24,7 @@ contract DeliveryHubTest is QuoteFixture, PickupFixture, PodFixture {
     SettlementVault internal vault;
     CourierRegistry internal registry;
     DeliveryHub internal hub;
+    ReputationRegistry internal reputation;
 
     address internal admin = address(0xA11CE);
     address internal emergency = address(0xE4E4);
@@ -52,7 +54,8 @@ contract DeliveryHubTest is QuoteFixture, PickupFixture, PodFixture {
         );
         vault = new SettlementVault(manager);
         registry = new CourierRegistry(manager, config, vault);
-        hub = new DeliveryHub(manager, config, registry, vault, BID_DEPOSIT);
+        reputation = new ReputationRegistry(manager);
+        hub = new DeliveryHub(manager, config, registry, vault, reputation, BID_DEPOSIT);
 
         vm.startPrank(admin);
         manager.grantRole(manager.EMERGENCY_ROLE(), emergency);
@@ -60,6 +63,7 @@ contract DeliveryHubTest is QuoteFixture, PickupFixture, PodFixture {
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(registry));
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(hub));
         manager.grantRole(manager.REGISTRY_CONTROLLER_ROLE(), address(hub));
+        manager.grantRole(manager.REPUTATION_REPORTER_ROLE(), address(hub));
         vm.stopPrank();
 
         DEPOSIT = config.courierBaseDeposit();
