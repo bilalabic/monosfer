@@ -1109,6 +1109,19 @@
   },
   {
     "type": "function",
+    "name": "podAttestationValidity",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "proposeParams",
     "inputs": [
       {

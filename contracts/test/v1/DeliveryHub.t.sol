@@ -12,10 +12,12 @@ import {CoverageQuote} from "../../src/v1/risk/CoverageQuote.sol";
 import {RiskQuoteVerifier} from "../../src/v1/risk/RiskQuoteVerifier.sol";
 import {PickupProof} from "../../src/v1/proof/PickupProof.sol";
 import {PickupProofVerifier} from "../../src/v1/proof/PickupProofVerifier.sol";
+import {DeliveryProof} from "../../src/v1/proof/DeliveryProof.sol";
 import {QuoteFixture} from "./helpers/QuoteFixture.sol";
 import {PickupFixture} from "./helpers/PickupFixture.sol";
+import {PodFixture} from "./helpers/PodFixture.sol";
 
-contract DeliveryHubTest is QuoteFixture, PickupFixture {
+contract DeliveryHubTest is QuoteFixture, PickupFixture, PodFixture {
     ProtocolAccessManager internal manager;
     ProtocolConfig internal config;
     SettlementVault internal vault;
@@ -46,7 +48,7 @@ contract DeliveryHubTest is QuoteFixture, PickupFixture {
 
         manager = new ProtocolAccessManager(3 days, admin);
         config = new ProtocolConfig(
-            manager, 2 days, BaselineParams.baseline(), treasury, quoteSignerAddress(), address(0x2)
+            manager, 2 days, BaselineParams.baseline(), treasury, quoteSignerAddress(), podSignerAddress()
         );
         vault = new SettlementVault(manager);
         registry = new CourierRegistry(manager, config, vault);
@@ -115,10 +117,19 @@ contract DeliveryHubTest is QuoteFixture, PickupFixture {
      */
     function _acceptance(uint256 id, address forCourier)
         internal
+        view
         returns (PickupProof.Acceptance memory acceptance, bytes memory signature)
     {
         acceptance = buildAcceptance(id, forCourier);
         signature = signAcceptance(hub, acceptance, senderKey(0));
+    }
+
+    /// @notice The authorised delivery proof: a signed PoD attestation (sec. 15).
+    function _deliverProof(uint256 id) internal {
+        DeliveryProof.Attestation memory a = buildAttestation(config, id, courier);
+        bytes memory sig = signAttestation(hub, a);
+        vm.prank(courier);
+        hub.submitDeliveryProof(id, a, sig);
     }
 
     /// @notice The authorised pickup: courier sends, sender's signature authorises.
@@ -415,8 +426,7 @@ contract DeliveryHubTest is QuoteFixture, PickupFixture {
         _pickup(id);
         assertEq(registry.courierOf(courier).activeCustody, 1);
 
-        vm.prank(courier);
-        hub.submitDeliveryProof(id);
+        _deliverProof(id);
         assertEq(uint8(hub.deliveryOf(id).state), uint8(DeliveryHub.State.DeliveredPending));
         assertEq(registry.courierOf(courier).activeCustody, 0);
 
@@ -438,8 +448,7 @@ contract DeliveryHubTest is QuoteFixture, PickupFixture {
     function test_ChallengeWindow_PermissionlessFinalizer() public {
         uint256 id = _toReadyForPickup();
         _pickup(id);
-        vm.prank(courier);
-        hub.submitDeliveryProof(id);
+        _deliverProof(id);
 
         vm.warp(block.timestamp + config.challengeWindow() + 1);
         vm.prank(stranger);
@@ -471,8 +480,7 @@ contract DeliveryHubTest is QuoteFixture, PickupFixture {
     function test_TerminalStateCannotReopen() public {
         uint256 id = _toReadyForPickup();
         _pickup(id);
-        vm.prank(courier);
-        hub.submitDeliveryProof(id);
+        _deliverProof(id);
         vm.prank(customer);
         hub.confirmDelivery(id);
 
