@@ -15,6 +15,7 @@ Sistem geliştikçe güncellenir; sürüm/tarih taşımazlar.
 | [`delivery-lifecycle.md`](delivery-lifecycle.md) | 11 durumlu makine, her durumun çıkışı, teklifler, fonlama, uzlaşma |
 | [`risk-quote.md`](risk-quote.md) | İmzalı kapsam teklifi, kapsam bandı, tekrar koruması, teminat bölünmesi |
 | [`reputation.md`](reputation.md) | 0-1000 puan, ayrı güven seviyesi, sec. 19 ağırlıkları, sürümleme |
+| [`badges.md`](badges.md) | Devredilemez rozetler, ERC-5192, talep/verme ayrımı |
 | [`proofs.md`](proofs.md) | Teslim alma kabulü ve PoD attestation: altı kontrol, nonce, ERC-1271 |
 | [`integration.md`](integration.md) | Frontend/backend için adres + ABI + tip paylaşımı |
 | [`static-analysis-baseline.md`](static-analysis-baseline.md) | Devralınan kontratların kabul edilen Slither bulguları ve `forge lint` dağılımı |
@@ -50,7 +51,7 @@ Sürümlü belgeler; içerik revize edilirse sürüm numarası artar.
 | P2.3 | İtiraz penceresi ve izinsiz finalize | Mekanizma **tamamlandı** (P1.1 içinde); ihtilaf girişi P4'e bağlı |
 | P2.4 | İade akışı | Durumlar ve rezerv ödemesi **tamamlandı** (P1.1 içinde); iade kanıtı P2.2'ye bağlı |
 | P3.1 | `ReputationRegistry` — puan, güven, sürümleme | **Tamamlandı** |
-| P3.2 | `BadgeSBT` (ERC-721 + ERC-5192) | Sırada |
-| P3.3 | Ödül dağıtımı v2 + referans | Bekliyor |
+| P3.2 | `BadgeSBT` (ERC-721 + ERC-5192) | **Tamamlandı** |
+| P3.3 | Ödül dağıtımı v2 + referans | Sırada |
 | P4 | İhtilaf, jüri, randomness | Bekliyor |
 | P5 | Invariant/failure suite, deploy sertleştirme, cut-over | Bekliyor |

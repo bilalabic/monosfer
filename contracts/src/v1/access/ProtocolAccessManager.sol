@@ -55,6 +55,11 @@ contract ProtocolAccessManager is AccessControlDefaultAdminRules {
     ///         an account that can write reputation can manufacture standing.
     bytes32 public constant REPUTATION_REPORTER_ROLE = keccak256("MONOSFER_REPUTATION_REPORTER_ROLE");
 
+    /// @notice May award the one badge the chain cannot verify for itself —
+    ///         the weekly ranking, which sec. 22 keeps in an indexer. Narrow by
+    ///         design: it cannot mint the history-based badges.
+    bytes32 public constant BADGE_AWARDER_ROLE = keccak256("MONOSFER_BADGE_AWARDER_ROLE");
+
     /// @notice Delay between scheduling an unpause and being able to execute it.
     uint256 public constant UNPAUSE_DELAY = 6 hours;
 

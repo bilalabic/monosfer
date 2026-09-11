@@ -25,6 +25,7 @@ edilir, yetkiler tek bir rol yöneticisinden gelir.
 | `PickupProofVerifier` | Gönderenin imzalı devir kabulü, nonce, ERC-1271 | [proofs](docs/proofs.md) |
 | `PodAttestationVerifier` | İmzalı teslim kanıtı, challenge taahhüdü, 10 dk ömür | [proofs](docs/proofs.md) |
 | `ReputationRegistry` | 0-1000 puan, ayrı güven seviyesi, sıralama yok | [reputation](docs/reputation.md) |
+| `BadgeSBT` | Devredilemez rozetler (ERC-721 + ERC-5192) | [badges](docs/badges.md) |
 
 Sıradaki fazlar (`ReputationRegistry`, `DisputeCourt`, …):
 [`docs/implementation-plan-v1.0.md`](docs/implementation-plan-v1.0.md).
@@ -244,6 +245,7 @@ contracts/
 │   │   ├── hub/                DeliveryHub
 │   │   ├── risk/               CoverageQuote, RiskQuoteVerifier
 │   │   ├── reputation/         ReputationRegistry
+│   │   ├── badge/              BadgeSBT, IERC5192
 │   │   ├── proof/              PickupProof(+Verifier), DeliveryProof(+PodAttestationVerifier)
 │   │   └── interfaces/         ISettlementVault
 │   └── *.sol                   devralinan (dondurulmus, bkz. sec. 8)
