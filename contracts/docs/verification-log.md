@@ -1020,3 +1020,47 @@ açık `--gas-limit` diyordu; bu, aynı kuralın E2E tarafındaki karşılığı
 > Yan bulgu: `cast run` bu işlemleri **başarılı** olarak yeniden oynatıyor.
 > Önceki bir fazda da aynı şey olmuştu. Zincirde düşen bir işlemin replay'i
 > kanıt değildir.
+
+---
+
+## Rastgelelik adaptörü ölü bir adrese bağlanmıştı
+
+Akış 3'ü koşmaya başlayınca `requestDraw` düştü: adaptörün `fee()`'si revert
+ediyordu.
+
+**Sebep:** `PythEntropyAdapter`'a Pyth Entropy'nin **proxy'si yerine
+implementation'ı** verilmişti — `0x36825bf3…`. Gerçek bir kontrat, 16 KB kod;
+ama UUPS implementation'ı hiç başlatılmadığı için her çağrı revert ediyor.
+Teşhis: `proxiableUUID()` cevap veriyor ve `owner()` sıfır — bir proxy olsaydı
+ikisi de böyle olmazdı.
+
+Doğrusu `0x825c0390f379c631f3cf11a82a37d20bddf93c07`; `getFeeV2()` 0.128 MON
+döndürüyor, varsayılan sağlayıcı `0x6CC14824…`.
+
+### Bunu hiçbir kontrol yakalamadı
+
+| Kontrol | Neden kaçırdı |
+|---|---|
+| `DeployDispute` | Yalnızca `PYTH_ENTROPY != address(0)` bakıyordu |
+| `VerifyDeployment` | Rastgelelik adaptörüne **hiç bakmıyordu** |
+
+İkincisi daha rahatsız edici: o denetleyici "komite birinin EOA'sına bağlanmış"
+türü hataları yakalasın diye yazılmıştı ve aynı sınıftan bir hatayı
+kapsamıyordu. Sıfır olmamak, çalışmak değildir.
+
+Adres kullanılırken komut satırına *"as verified live in P4.1"* yorumu
+düşülmüştü. **Bu doğrulanmamış bir iddiaydı** — hatırlandığı sanılan bir şey
+kanıtlanmış gibi yazılmıştı. P4.1'in kaydı yalnızca bizim adaptörümüzün adresini
+tutuyor, altındaki sağlayıcıyı değil; bu yüzden iddia kontrol de edilemiyordu.
+
+### Düzeltme
+
+- `DeployDispute` artık sağlayıcıya `getFeeV2()` soruyor; cevap vermezse deploy
+  durur. Ölü adresle denendi: `EntropyDoesNotAnswer(0x36825bf3…)`.
+- `VerifyDeployment` artık mahkemenin adaptörünü okuyup `fee()` soruyor.
+- Doğru adresle yeni bir adaptör ve mahkeme deploy edildi.
+
+### Kayda geçmesi gereken kural
+
+Bir dış bağımlılığın adresi, **o adrese bir soru sorulmadan** manifestte
+doğrulanmış sayılmamalı. Kod uzunluğu da yetmez: bu adreste 16 KB kod vardı.

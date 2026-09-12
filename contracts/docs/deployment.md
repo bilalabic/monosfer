@@ -48,6 +48,11 @@ forge script script/v1/DeployDispute.s.sol:DeployDisputeScript \
   --rpc-url monad_testnet --broadcast --slow
 ```
 
+`PYTH_ENTROPY` **cevap vermek zorunda**, yalnızca sıfırdan farklı olmak değil.
+Script sağlayıcıya `getFeeV2()` soruyor. Bir kez Entropy'nin proxy'si yerine
+implementation'ı verildi: 16 KB kodu olan, her çağrısı revert eden gerçek bir
+kontrat. İlk jüri çekilişine kadar hiçbir şey fark etmedi.
+
 `FALLBACK_SAFE` **bir kontrat olmak zorunda**. EOA verilirse script reddeder:
 sec. 31 3-of-5 Safe istiyor ve tek anahtar, her başarısız ihtilafı sonlandırma
 gücünü tek elde toplar. Bu kontrol runbook'ta değil kodda, çünkü runbook revert
@@ -110,6 +115,7 @@ Hiçbir şey broadcast etmez, her zaman koşulabilir. Ne kontrol ettiği:
 | İki imzacı ayrı mı | Tek sızıntıyla hem fiyat hem teslim kanıtı sahtelenir |
 | Vault ve mahkeme ödeme gücünde mi | Invariant sec. 33-1 |
 | Komite bir kontrat mı | EOA'ya bağlanmış yedek |
+| Rastgelelik adaptörü ücretini söylüyor mu | Ölü bir sağlayıcıya bağlanmış adaptör |
 
 ### Ayrışma kontrolü adreslere değil **zincire** sorar
 

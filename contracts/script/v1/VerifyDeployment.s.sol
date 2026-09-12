@@ -54,6 +54,7 @@ contract VerifyDeploymentScript is Script {
     error CriticalRolesShared(string roleA, string roleB, address who);
     error Insolvent(string what, uint256 owed, uint256 held);
     error Misconfigured(string what, address expected, address actual);
+    error RandomnessSilent(address adapter);
 
     struct Wiring {
         ProtocolAccessManager manager;
@@ -75,6 +76,7 @@ contract VerifyDeploymentScript is Script {
         _checkHumanRoles(w);
         _checkSolvency(w);
         _checkCommittee(w);
+        _checkRandomness(w);
 
         console2.log("");
         console2.log("=== deployment verified ===");
@@ -85,6 +87,7 @@ contract VerifyDeploymentScript is Script {
         console2.log("operator roles:    checked and pairwise distinct");
         console2.log("vault + court:     solvent");
         console2.log("committee:         a contract, not an EOA");
+        console2.log("randomness:        answers with a fee");
     }
 
     // ---------------------------------------------------------------- load
@@ -287,6 +290,29 @@ contract VerifyDeploymentScript is Script {
         address safe = w.committee.safe();
         if (safe == address(0)) revert Missing("committee safe");
         if (safe.code.length == 0) revert NotAContract("committee safe", safe);
+    }
+
+    // -------------------------------------------------------- randomness
+
+    /**
+     * @dev sec. 29: the draw depends on a provider outside this system, so
+     *      "the adapter exists" says nothing. It has to answer.
+     *
+     *      This check exists because its absence cost a deployment. The adapter
+     *      was wired to Pyth's Entropy *implementation* instead of its proxy —
+     *      a real contract with real code whose every call reverts, because an
+     *      implementation behind UUPS is never initialised. The deploy script
+     *      checked the address was non-zero, the verifier did not look at
+     *      randomness at all, and the fault surfaced only when a jury was first
+     *      drawn.
+     */
+    function _checkRandomness(Wiring memory w) internal view {
+        address adapter = address(w.court.randomness());
+        if (adapter == address(0)) revert Missing("randomness adapter");
+        if (adapter.code.length == 0) revert NotAContract("randomness adapter", adapter);
+
+        (bool ok, bytes memory out) = adapter.staticcall(abi.encodeWithSignature("fee()"));
+        if (!ok || out.length < 32) revert RandomnessSilent(adapter);
     }
 
     // ---------------------------------------------------------- plumbing
