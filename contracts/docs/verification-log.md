@@ -730,3 +730,109 @@ artık tuzak sayılıyor. Gerekçe, o ifadenin cheatcode'un ineceği çağrıdan
 önce değerlendirilmesi ve yerel bir helper'ın orada instance çağrısından daha
 güvenli olmaması. Yeni kural kasıtlı olarak bozulmuş üç örnek üzerinde
 doğrulandı; güvenli iki biçim temiz geçti.
+
+---
+
+## P4 — Monad testnet doğrulaması
+
+Zincir 10143, commit `ffc9110`. Çekirdek yeniden deploy edildi çünkü
+`DeliveryHub`'ın constructor'ı ve durum makinesi P4.3'te değişti; eski hub
+`openDispute`'u tanımıyor.
+
+### Adresler
+
+| Kontrat | Adres |
+|---|---|
+| ProtocolAccessManager | `0x296c8ee6ff71292b7e6bfe994bfd18cc52ba177f` |
+| ProtocolConfig | `0x776ad2882e428cec672368cbe33fdd464be8fb79` |
+| SettlementVault | `0xd74ea5d94fa8199428c64fae73e4ae4acc6a36af` |
+| CourierRegistry | `0x70cf474887600038ff19871cdf84b0f18c246909` |
+| DeliveryHub | `0xd7f1328488d78a4b05d174689c2be20684268bb0` |
+| ReputationRegistry | `0xc8e9ad6291bb52616281795b817d4cf56700b528` |
+| BadgeSBT | `0x522616dcc2daa16df02cc84049bb6eeee2f8a66c` |
+| Referral | `0xbf546eecd98a677e6c41b07fbe186851d7776405` |
+| RewardDistributor (V1) | `0x2210085de8c54a894ef6e6f4fc44c7905083a9ee` |
+| PythEntropyAdapter | `0x653e228296566c028edc6c8af0d852e263658800` |
+| JurorPool | `0x3c60d37b03b13806721117ea26a2d4eec75b67db` |
+| FallbackCommittee | `0x6d2e4f7b4bd440b926976f947ff83606e09fd921` |
+| DisputeCourt | `0xc9178d647fb1441b06adbe20c03d3c450f0f84f3` |
+
+### Yedek komite gerçek bir Safe (sec. 31)
+
+Safe v1.4.1'in kanonik kontratlarının Monad testnet'te kurulu olduğu doğrulandı;
+**gerçek bir 3-of-5 Safe** deploy edildi:
+`0xbAe0b2e065bDc569C0b5bbE9C2f8C002aA80985f`, `getThreshold() == 3`,
+`getOwners()` beş adres, `VERSION() == "1.4.1"`.
+
+ERC-1271 yolu zincirde uçtan uca denendi:
+
+| Deneme | Sonuç |
+|---|---|
+| Üç sahibin imzası | `0x1626ba7e` — kabul |
+| İki sahibin imzası | `GS020` — eşik uygulandı |
+| Başka bir mesaja atılmış üç imza | `GS026` — mesaja bağlılık uygulandı |
+
+> **Entegrasyon detayı, runbook'a girmeli:** sahipler **ham digest'i imzalamıyor**.
+> Safe, `getMessageHash(abi.encode(digest))` ile kendi sarmalayıcısını üretiyor ve
+> imzalar onun üzerine atılıyor; ayrıca imzalar sahip adresine göre **artan
+> sırada** dizilmeli. Ham digest'i imzalayan bir backend, Safe'in reddedeceği bir
+> imza üretir.
+
+### Uçtan uca senaryo
+
+`script/v1/DisputeScenario.s.sol`, teslimat 0 üzerinden:
+
+| Adım | Sonuç |
+|---|---|
+| Kurye stake | 13 MON |
+| Teslimat oluşturuldu (imzalı risk teklifi) | id 0 |
+| Teklif verildi, seçildi | terms version 1 |
+| İki taraflı fonlama | escrow 0.254 MON |
+| Teslim alma kanıtı | `InTransit` |
+| **İhtilaf açıldı** | dispute 0, hub `Disputed` |
+| sec. 28 cetveli tahsil edildi | 1.3 MON (0.3 ücret + 1 bond) |
+| Bond ödeyen kaydedildi | müşteri |
+| Uzun durak kuruldu | `stateDeadline` 30 gün sonrası |
+
+### Ret yolları
+
+Özel hatalar **selector** karşılaştırılarak doğrulandı; hata *adı* aramak önceki
+fazda üç yanlış "FAIL" üretmişti.
+
+| Deneme | Sonuç |
+|---|---|
+| Aynı teslimatı ikinci kez ihtilafa açmak | `DisputeAlreadyOpen` |
+| Kanıt penceresi kapanmadan çekiliş istemek | `DeadlineNotReached` |
+| Hüküm yokken `finalise` | `WrongPhase` |
+| Yaşayan ihtilafı `abandon` etmek | `DeliveryStillDisputed` |
+| Uzun durağı erken tetiklemek (`poke`) | `DeadlineNotReached` |
+| Yürüyen ihtilafa komite kararı | `WrongPhase` |
+| Komiteye sec. 30 dışı kod (7) imzalatmak | `RulingNotAllowed` |
+| Yabancının komite kararını yakması | `AccessControlUnauthorizedAccount` |
+
+### Testnet'te doğrulanamayanlar (dürüst sınır)
+
+sec. 28'in **jüri yolunun tamamı tek oturumda yapısal olarak koşulamaz.**
+Pencereler gün cinsinden — kanıt 3 gün, commit 1, reveal 1, itiraz 2 — ve canlı
+zincirde `vm.warp` yok. Üç turluk yol en az 22 gün sürer.
+
+Bu yüzden zincirde kanıtlanan, son tarihlerin **uygulandığı**; pencere geçtikten
+sonra ne olduğu yerelde `vm.warp` ile test ediliyor. Aynı sınır zaten config
+zaman kilidi, unpause gecikmesi ve kurye çekim cooldown'ı için de geçerli.
+
+Kapsam dışı kalanlar: panel oturtma (rastgelelik geldikten sonra), commit/reveal
+turu, itiraz tırmanması, hükmün paraya dönüşmesi, uzun durağın gerçekten
+ateşlenmesi. Hepsi yerelde ve invariant suite'inde kapsanıyor.
+
+### Zincirde kilitli kalanlar
+
+Senaryo ihtilafı açık bıraktığı için bir miktar test MON'u kilitli:
+
+| Nerede | Tutar | Ne zaman çözülür |
+|---|---:|---|
+| `SettlementVault` | 13.254 MON | 13 MON kurye stake'i (çıkış cooldown'ı ile geri alınır), 0.254 MON escrow hükümle ya da uzun durakla |
+| `DisputeCourt` | 1.3 MON | Uzun durak ateşlendikten sonra `abandon` ile ödeyene geri yazılır |
+
+Uzun durak **30 gün** sonra tetiklenebilir; o noktada `poke` + `abandon` ile
+ikisi de kurtarılabilir. Geri kalan test fonu deployer'a toplandı
+(165.4 MON).
