@@ -39,6 +39,7 @@ et → senaryoları koş → dokümante et.
 | P4.3 | İtirazlar, yedek komite, hüküm settlement'ı | Tamamlandı |
 | P5.1 | Invariant / arıza / adversarial suite | Tamamlandı |
 | P5.2 | Deploy sertleştirme + artefakt export | Tamamlandı |
+| P5.3 | Testnet E2E, cut-over, güvenlik incelemesi | Sürüyor: 2/3 akış zincirde geçti |
 
 ---
 
@@ -548,7 +549,7 @@ yolları yerelde `vm.warp` ile test edildi.
 `depositStake` önce "Signer had insufficient balance" ile reddedildi: kuryede
 32 MON, işlem 10 MON. Sebep baseline **sec. 43** — Monad gası harcanan değil,
 **`gasLimit × maxFeePerGas`** üzerinden peşin rezerve ediyor ve aracın otomatik
-tamponu fazla büyüktü. Açık `--gas-limit` ile çözüldü. Aynı kök sebep rol
+tamponu fazla büyüktü. Açık `--gas-limit` ile çözüldü. Aynı neden rol
 hesaplarını da işlem gönderemez hale getirmişti.
 
 **Deploy runbook'una girmesi gereken madde:** Monad'da gas limiti tampon değil,
@@ -649,7 +650,7 @@ altından escrow'u kapatır ve hüküm geldiğinde ortada para kalmazdı.
 | `Refuse` → müşteriye %100 | Panelin karar vermeyi reddetmesi; protokolün ifayı saptayamadığı her durumdaki cevabı escrow'u iade etmek. Kurye lehine okumak karar vermemeyi ödüllendirirdi |
 | İhtilaflı teslimatta protokol ücreti alınmıyor | İşler kötüleştikçe daha çok kazanmak yanlış teşvik |
 | Komite yalnızca `Failed` fazından çağrılabiliyor | Canlılık mekanizmasını veto hâline getirmemek için |
-| `disputeWindow` bir faz değil, uzun durak | Mahkeme tamamen sussa bile "çıkışı olmayan durum yok" kuralı ayakta kalsın diye. Üç tam turdan uzun olması config'te doğrulanıyor |
+| `disputeWindow` bir faz değil, son çıkış süresi | Mahkeme tamamen sussa bile "çıkışı olmayan durum yok" kuralı ayakta kalsın diye. Üç tam turdan uzun olması config'te doğrulanıyor |
 
 ### Yorum gerektiren yer: bond kime döner
 
@@ -684,7 +685,7 @@ Son üç satır ilk koşuda **0** veriyordu; bu fazın asıl çıktısı orası:
 - **Komite kararının tek kullanımlık olması mahkeme üzerinden ulaşılamıyor:**
   karar uygulandığı anda ihtilaf `Settled` oluyor ve faz makinesi ikinci çağrıyı
   zaten reddediyor. Koruma yine de silinmedi — `requireDecision` kamusal bir
-  giriş noktası ve kendi başına ayakta durmalı. Onun yerine `FallbackCommittee`
+  giriş noktası ve kendi başına geçerli olmalı. Onun yerine `FallbackCommittee`
   kendi birim suite'ini aldı (16 test) ve koruma orada doğrudan test ediliyor.
 - **`solvent` koruması hiçbir normal yoldan ulaşılamıyor**, invariant suite'i
   dahil: değer alan her fonksiyon aldığını sayıyor, ödeyen her fonksiyon
@@ -708,7 +709,7 @@ yanlış cevap vermesi, doğru cevabı geç almaktan kötüdür.
 ### Invariant suite'i
 
 `DisputeCourtInvariant` mahkemeyi dört bitiş yolunun tamamında rastgele
-sürüyor: jüri hükmü, itiraz sonrası hüküm, komite kararı ve hub'ın uzun durağı.
+sürüyor: jüri hükmü, itiraz sonrası hüküm, komite kararı ve hub'ın son çıkış süresi.
 
 - `invariant_ADisputedDeliveryEndsInExactlyOneTerminalState` — kabul kriteri
 - `invariant_VaultStaysSolvent`, `invariant_CourtStaysSolvent`
@@ -794,7 +795,7 @@ ERC-1271 yolu zincirde uçtan uca denendi:
 | **İhtilaf açıldı** | dispute 0, hub `Disputed` |
 | sec. 28 cetveli tahsil edildi | 1.3 MON (0.3 ücret + 1 bond) |
 | Bond ödeyen kaydedildi | müşteri |
-| Uzun durak kuruldu | `stateDeadline` 30 gün sonrası |
+| Son çıkış süresi kuruldu | `stateDeadline` 30 gün sonrası |
 
 ### Ret yolları
 
@@ -807,7 +808,7 @@ fazda üç yanlış "FAIL" üretmişti.
 | Kanıt penceresi kapanmadan çekiliş istemek | `DeadlineNotReached` |
 | Hüküm yokken `finalise` | `WrongPhase` |
 | Yaşayan ihtilafı `abandon` etmek | `DeliveryStillDisputed` |
-| Uzun durağı erken tetiklemek (`poke`) | `DeadlineNotReached` |
+| Son çıkış süresini erken tetiklemek (`poke`) | `DeadlineNotReached` |
 | Yürüyen ihtilafa komite kararı | `WrongPhase` |
 | Komiteye sec. 30 dışı kod (7) imzalatmak | `RulingNotAllowed` |
 | Yabancının komite kararını yakması | `AccessControlUnauthorizedAccount` |
@@ -823,8 +824,7 @@ sonra ne olduğu yerelde `vm.warp` ile test ediliyor. Aynı sınır zaten config
 zaman kilidi, unpause gecikmesi ve kurye çekim cooldown'ı için de geçerli.
 
 Kapsam dışı kalanlar: panel oturtma (rastgelelik geldikten sonra), commit/reveal
-turu, itiraz tırmanması, hükmün paraya dönüşmesi, uzun durağın gerçekten
-ateşlenmesi. Hepsi yerelde ve invariant suite'inde kapsanıyor.
+turu, itiraz tırmanması, hükmün paraya dönüşmesi, son çıkış süresinin gerçekten dolması. Hepsi yerelde ve invariant suite'inde kapsanıyor.
 
 ### Zincirde kilitli kalanlar
 
@@ -832,10 +832,10 @@ Senaryo ihtilafı açık bıraktığı için bir miktar test MON'u kilitli:
 
 | Nerede | Tutar | Ne zaman çözülür |
 |---|---:|---|
-| `SettlementVault` | 13.254 MON | 13 MON kurye stake'i (çıkış cooldown'ı ile geri alınır), 0.254 MON escrow hükümle ya da uzun durakla |
-| `DisputeCourt` | 1.3 MON | Uzun durak ateşlendikten sonra `abandon` ile ödeyene geri yazılır |
+| `SettlementVault` | 13.254 MON | 13 MON kurye stake'i (çıkış cooldown'ı ile geri alınır), 0.254 MON escrow hükümle ya da son çıkış süresiyle |
+| `DisputeCourt` | 1.3 MON | Son çıkış süresi dolduktan sonra `abandon` ile ödeyene geri yazılır |
 
-Uzun durak **30 gün** sonra tetiklenebilir; o noktada `poke` + `abandon` ile
+Son çıkış süresi **30 gün** sonra dolar; o noktada `poke` + `abandon` ile
 ikisi de kurtarılabilir. Geri kalan test fonu deployer'a toplandı
 (165.4 MON).
 
@@ -866,7 +866,7 @@ engelliyor. Mutasyonla doğrulandı — `_requireState` kaldırıldığında tes
 ### Zincirde test edilmeyen üç senaryo
 
 Indexer kesintisi, RPC arızası ve backend retry'ı **kasten** yazılmadı: kontrat
-bu üçünün hiçbirini gözlemleyemez, Solidity testi tiyatro olurdu. `testing.md`
+bu üçünün hiçbirini gözlemleyemez, Solidity testi göstermelik olurdu. `testing.md`
 sorumluluğu backend'e yazıyor.
 
 ### Haritanın bayatlamasına karşı koruma
@@ -944,3 +944,73 @@ Mutasyon harness'ı iki kez, doğrulama script'i bir kez. Üçünde de belirti a
 `docs/deployment.md`: sıra, rol tablosu, Safe kurulumu (fallbackHandler'ın neden
 `CompatibilityFallbackHandler` olmak zorunda olduğu dahil), canlı denetim,
 kaynak doğrulama ve Monad'ın gas rezervasyonu.
+
+---
+
+## P5.3 — sec. 46 uçtan uca akışları
+
+### Akış 1: mutlu yol — zincirde geçti
+
+Teslimat 2: oluştur → teklif → seç → iki taraflı fonla → teslim al → teslim et →
+onayla → talep et.
+
+| Adım | Sonuç |
+|---|---|
+| Escrow | 0.508 MON |
+| `confirmDelivery` (sec. 16: erken onay) | Durum 8 = `Completed` |
+| Kuryeye alacak | 0.4 MON |
+| `claim()` | Alacak sıfırlandı, bakiye 0.4 MON arttı |
+
+### Akış 2: başarısız teslimat → iade — zincirde geçti
+
+Teslimat 5: aynı yol, teslim yerine iade.
+
+| Adım | Sonuç |
+|---|---|
+| `requestReturn` | Durum 6 = `ReturnRequired` |
+| `confirmReturn` **gönderenin `MONOSFER.RETURN` imzasıyla** | Durum 9 = `Returned` |
+| Kuryeye iade ücreti | 0.1 MON |
+| Kapsam serbest | 1 MON |
+| Kabul nonce'u (invariant sec. 33-7) | Yandı; tekrar sunum `WrongState` ile reddedildi |
+
+Bu, denetimin **#2 numaralı HIGH** bulgusunun zincirdeki karşılığı: iade ücreti
+artık kuryenin tek taraflı beyanıyla değil, gönderenin imzasıyla ödeniyor.
+
+### Akış 3: ihtilaf → jüri → itiraz → çözüm — **koşulmadı**
+
+Pencereler gün cinsinden ve canlı zincirde `vm.warp` yok. Pencereleri alt sınıra
+(10 dakika) çekilmiş ayrı bir kurulumla **koşulabilir** — iki turluk yol yaklaşık
+80 dakika sürer. Yapılmadı; kalan iş olarak duruyor.
+
+---
+
+## Monad'a özgü iki bulgu
+
+### 1. Makbuzdaki `gasUsed` her zaman `gasLimit`'e eşit
+
+Başarılı bir işlemde de öyle: Safe deploy'u `gasLimit=900000 gasUsed=900000`
+raporladı ve durumu 1'di. Yani **makbuzdan "out of gas" teşhisi konamaz.**
+
+Bunu iki kez yanlış teşhis ettim: `gasUsed == gasLimit` gördüğüm için "gas
+yetmedi" dedim, oysa aynı eşitlik başarılı işlemlerde de var. sec. 43'ün "gas
+peşin rezerve edilir" kuralının makbuza yansıması bu.
+
+### 2. `forge script --broadcast` ile `cast send` aynı çağrıda ayrışıyor
+
+`fundAsCustomer` dört ayrı koşuda düştü. Her seferinde:
+
+- simülasyon geçiyordu,
+- `cast call` hem işlemin bloğunda hem bir önceki blokta **başarılı** dönüyordu,
+- zincirin kendi `eth_estimateGas`'ı 156 569 diyordu,
+- gas limiti 234 853'ten 626 276'ya çıkarıldığında da düştü.
+
+Aynı çağrı `cast send --gas-limit 400000` ile **ilk denemede** geçti.
+
+Kök nedeni saptayamadım ve saptamış gibi yazmıyorum. Kesin olan: bu ağda
+değer taşıyan işlemleri `cast send` ile açık `--gas-limit` vererek göndermek
+çalışıyor, `forge script` tahminine bırakmak çalışmıyor. Deploy runbook'u zaten
+açık `--gas-limit` diyordu; bu, aynı kuralın E2E tarafındaki karşılığı.
+
+> Yan bulgu: `cast run` bu işlemleri **başarılı** olarak yeniden oynatıyor.
+> Önceki bir fazda da aynı şey olmuştu. Zincirde düşen bir işlemin replay'i
+> kanıt değildir.

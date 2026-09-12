@@ -40,7 +40,7 @@ Bunun sebebi tek cümlelik: eğer `poke` ihtilaf sırasında da çalışsaydı, 
 jürinin altından escrow'u kapatır ve hüküm geldiğinde ortada para kalmazdı.
 
 `Disputed` yine de bir son tarih taşıyor. `disputeWindow` (baseline: 30 gün) bir
-faz değil, **uzun durak**: mahkeme tamamen susarsa bile "çıkışı olmayan durum
+faz değil, **son çıkış süresi**: mahkeme tamamen susarsa bile "çıkışı olmayan durum
 yok" kuralı ayakta kalsın diye var. Üç tam turun ve itiraz pencerelerinin
 toplamından (yaklaşık 21,75 gün) uzun olması `ProtocolConfig`'te doğrulanıyor —
 yoksa ihtilaf duruşmanın ortasında sona erebilirdi.
@@ -187,7 +187,7 @@ attestation imzacılarıyla aynı gerekçe: anahtarları ele geçirilmiş bir ko
 
 Kabul kriteri buydu. İki mekanizma birlikte karşılıyor:
 
-1. **Hub'ın uzun durağı.** `disputeWindow` dolduğunda `poke` teslimatı
+1. **Hub'ın son çıkış süresi.** `disputeWindow` dolduğunda `poke` teslimatı
    `Resolved`'a taşır, escrow müşteriye döner, teminat **kesilmeden** serbest
    kalır — kesme bir tespit gerektirir ve ortada tespit yoktur (sec. 13, sec. 26).
 2. **Mahkemenin `abandon`'ı.** Hub teslimatı başka bir yoldan kapattıysa ortada
@@ -195,7 +195,7 @@ Kabul kriteri buydu. İki mekanizma birlikte karşılıyor:
    sonuçlanmamış bir duruşmanın ücreti hak edilmiş değildir. Çağrısı izinsiz —
    aksi hâlde komitesiz kalmış bir `Failed` dava bond'ları sonsuza dek tutardı.
 
-Ters yön de doğru: uzun durak **erken ateşlenemez**. Çalışan bir jürinin altından
+Ters yön de doğru: son çıkış süresi **erken dolmuş sayılmaz**. Çalışan bir jürinin altından
 teslimatı kapatmaya çalışan `poke`, `DeadlineNotReached` ile reddedilir.
 
 ---
@@ -236,7 +236,7 @@ görülerek doğrulandı.
 - İtiraz eden de, ihtilafı açan da teslimatın tarafı olmak zorunda
 
 Invariant suite'i dört bitiş yolunu (jüri hükmü, itiraz sonrası hüküm, komite
-kararı, hub'ın uzun durağı) rastgele sırayla ve aynı ihtilaf üzerinde
+kararı, hub'ın son çıkış süresi) rastgele sırayla ve aynı ihtilaf üzerinde
 çakıştırarak sürüyor — "tam olarak bir kez" ancak bir şey iki kez kapatmaya
 çalışırken anlamlı.
 

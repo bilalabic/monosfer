@@ -8,7 +8,7 @@
 
 ---
 
-## Testin "ısırdığı" nasıl gösteriliyor
+## Bir testin gerçekten çalıştığı nasıl gösteriliyor
 
 Bir testin geçmesi, test ettiği şeyi gerçekten tuttuğu anlamına gelmiyor. Bu
 depoda standart şu: **iddiayı taşıyan kodu boz, testin kırmızıya döndüğünü gör.**
@@ -82,7 +82,7 @@ teslimatı tutarken müşterinin `confirmDelivery` ile jürinin arkasından kury
 | RPC sağlayıcı arızası | **Backend / frontend.** Kontratın RPC'den haberi yok. |
 | Backend retry mükerrer istek üretir | **Backend.** Zincir tarafında karşılığı nonce ve durum makinesi; ikisi de test edilmiş durumda (33-7, 33-6). |
 
-Bunlar için Solidity testi yazmak tiyatro olurdu: kontrat bu üç arızanın hiçbirini
+Bunlar için Solidity testi yazmak göstermelik olurdu: kontrat bu üç arızanın hiçbirini
 gözlemleyemez. Sorumluluk backend'e yazıldı, buraya değil.
 
 ---

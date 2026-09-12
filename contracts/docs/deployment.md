@@ -117,7 +117,7 @@ Operatörün verdiği listeyi karşılaştırmak yetmez: listede farklı görün
 adresten biri sonradan ikinci bir kritik rol almış olabilir. Kontrol, bilinen her
 adayın zincirdeki rollerini okuyup ikisini birden taşıyanı arar.
 
-> Bu kontrolün gerçekten ısırdığı testnet'te kanıtlandı: `CONFIG_ADMIN`'e geçici
+> Bu kontrolün gerçekten bir şey yakaladığı testnet'te kanıtlandı: `CONFIG_ADMIN`'e geçici
 > olarak `EMERGENCY_ROLE` verildi, denetleyici
 > `CriticalRolesShared("CONFIG_ADMIN_ROLE", "EMERGENCY_ROLE", 0x88aB…)` ile
 > düştü, rol geri alınınca temiz geçti.
@@ -131,7 +131,7 @@ bash tools/verify-sources.sh              # gonder ve sonucu geri oku
 bash tools/verify-sources.sh --check-only # yalnizca durumu raporla
 ```
 
-Adresler `deployments/<chainId>.json`'dan okunur; manifest tek gerçek kaynak
+Adresler `deployments/<chainId>.json`'dan okunur; manifest tek yetkili kaynak
 (sec. 6). Script **gönderim makbuzuna güvenmez**: her adres API'den geri okunur.
 
 > İlk sürümü tek bir `sleep 3` ile sonucu okuyordu ve on üç kontratın sekizini
@@ -155,7 +155,7 @@ sec. 43 — Monad gası **harcanan** üzerinden değil, `gasLimit × maxFeePerGa
 bakiyesi yeten bir hesap "insufficient balance" ile reddedilir.
 
 Çözüm: değer gönderen işlemlerde açık `--gas-limit`. Bu, P0.4'te kurye
-`depositStake`'ini ve rol hesaplarını işlem gönderemez hâle getiren kök sebepti.
+`depositStake`'ini ve rol hesaplarını işlem gönderemez hâle getiren asıl nedendi.
 
 ---
 

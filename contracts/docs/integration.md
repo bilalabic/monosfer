@@ -5,7 +5,7 @@
 
 ---
 
-## 1. Tek gerçek kaynak
+## 1. Tek yetkili kaynak
 
 Adresler ve ABI'lar **üretilir**, elle yazılmaz. Elle tutulan her kopya zamanla
 diğerlerinden ayrışır; bu katman kopyayı ortadan kaldırarak sorunu kaynağında
@@ -16,7 +16,7 @@ diğerlerinden ayrışır; bu katman kopyayı ortadan kaldırarak sorunu kaynağ
 ## 2. Yaklaşım (D3: katmanlı)
 
 ```text
-contracts/deployments/<chainId>.json     tek gerçek kaynak (commit'li, incelenebilir)
+contracts/deployments/<chainId>.json     tek yetkili kaynak (commit'li, incelenebilir)
             +
 forge build ciktisi (out/)               ABI'lar
             ↓
