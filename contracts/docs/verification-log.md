@@ -8,8 +8,14 @@
 yaz → yerelde test et → tutarsızlık tara → gate'leri koş → Monad testnet'e deploy
 et → senaryoları koş → dokümante et.
 
-**Kapı seti (7):** `forge build` · `forge fmt --check` · `forge test` ·
-`forge snapshot --check` · `slither` · 2× legacy deploy dry-run.
+**Kapı seti (10):** `forge build` · `forge fmt --check` · `forge test` ·
+cheatcode taraması · `forge snapshot --check` · `exports --check` ·
+2× legacy deploy dry-run · test haritası kontrolü · `slither`.
+
+Son üçü sonradan eklendi. Cheatcode taraması ve `exports --check` **P5.3'ün genel
+kontrolünde** fark edildi: ikisi de yerelde koşuluyordu ama CI'da yoktu. Dokuz kez
+hata yakalamış bir kontrolün yalnızca birinin hatırlamasına bağlı olması, kontrolün
+kendisi kadar değerli değil.
 
 ---
 

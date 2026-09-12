@@ -219,7 +219,7 @@ Dürüst sınırlar:
 
 ## 10. Test kapsamı
 
-`DisputeCourt` suite'inde 57, `FallbackCommittee` suite'inde 16 test, ayrıca
+`DisputeCourt` suite'inde 58, `FallbackCommittee` suite'inde 16 test, ayrıca
 `DisputeCourtInvariant`'ta beş invariant. Mutasyon kanıtları
 `verification-log.md`'de; her iddia kodu bozup testin kırmızıya döndüğü
 görülerek doğrulandı.

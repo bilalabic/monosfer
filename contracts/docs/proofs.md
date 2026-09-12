@@ -258,7 +258,7 @@ doğruladı"dır. Doğrudan yol, teslimata alıcı alanı eklenmesini gerektirir
 
 ## 15. Test kapsamı
 
-27 birim/fuzz testi. Altı kontrolün her biri tek tek koddan çıkarılarak ölçüldü:
+25 birim/fuzz testi. Altı kontrolün her biri tek tek koddan çıkarılarak ölçüldü:
 
 | Kaldırılan | Kırılan test |
 |---|---|

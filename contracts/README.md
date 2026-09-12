@@ -28,6 +28,10 @@ edilir, yetkiler tek bir rol yöneticisinden gelir.
 | `BadgeSBT` | Devredilemez rozetler (ERC-721 + ERC-5192) | [badges](docs/badges.md) |
 | `RewardDistributor` | Epoch bütçeli Merkle ödül dağıtımı | [rewards](docs/rewards.md) |
 | `Referral` | Tek referans eden, tek ödül, döngüsüz | [rewards](docs/rewards.md) |
+| `JurorPool` | Juror stake'i, eşit ağırlık, çekiliş anında donan aday kümesi | [dispute](docs/dispute.md) |
+| `DisputeCourt` | Kanıt, jüri çekilişi, commit/reveal, 3→5→7 itiraz, hüküm | [dispute](docs/dispute.md) |
+| `FallbackCommittee` | sec. 31 son çare: Safe, ERC-1271, yalnızca sınırlı hüküm kodu | [dispute](docs/dispute.md) |
+| `PythEntropyAdapter` | Jüri çekilişi için rastgelelik (sec. 29) | [dispute](docs/dispute.md) |
 
 Sıradaki fazlar (`ReputationRegistry`, `DisputeCourt`, …):
 [`docs/implementation-plan-v1.0.md`](docs/implementation-plan-v1.0.md).

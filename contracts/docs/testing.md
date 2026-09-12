@@ -4,7 +4,7 @@
 > zorunluluğu, onu tutan somut bir test adına bağlıyor. Test adı verilemiyorsa
 > satır **boşluk** diye işaretlenir — "yeşil suite" bir kanıt değildir.
 
-**Güncel durum:** 461 test, 25 suite, 30 invariant fonksiyonu (5 stateful suite).
+**Güncel durum:** 468 test, 26 suite, 30 invariant fonksiyonu (5 stateful suite).
 
 ---
 

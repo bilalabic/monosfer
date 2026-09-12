@@ -62,4 +62,4 @@ Sürümlü belgeler; içerik revize edilirse sürüm numarası artar.
 | P4.3 | İtirazlar, yedek komite, hüküm settlement'ı | **Tamamlandı** |
 | P5.1 | Invariant / arıza / adversarial suite | **Tamamlandı** |
 | P5.2 | Deploy sertleştirme + artefakt export | **Tamamlandı** |
-| P5.3 | Testnet E2E, cut-over, güvenlik incelemesi | Bekliyor |
+| P5.3 | Testnet E2E, cut-over, güvenlik incelemesi | Sürüyor: sec. 46 akışlarından 2/3 zincirde geçti |
