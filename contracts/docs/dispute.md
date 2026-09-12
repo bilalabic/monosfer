@@ -242,7 +242,22 @@ kararı, hub'ın uzun durağı) rastgele sırayla ve aynı ihtilaf üzerinde
 
 ---
 
-## 11. Backend ve frontend
+## 11. Komite imzası nasıl toplanır
+
+Safe'in ERC-1271'i **ham digest'i değil**, kendi sarmalayıcısını doğrular:
+
+```text
+safeMessageHash = Safe.getMessageHash(abi.encode(committee.hashDecision(decision)))
+```
+
+Komite üyeleri **bunu** imzalar, ve imzalar sahip adresine göre **artan sırada**
+birleştirilir. Ham digest'i imzalayan bir backend, Safe'in `GS026` ile
+reddedeceği bir imza üretir. Monad testnet'te üçü de doğrulandı: üç imza kabul,
+iki imza `GS020`, başka mesaja imza `GS026`.
+
+---
+
+## 12. Backend ve frontend
 
 - **Backend:** komite koordinasyonu ve **yedek kullanıldığında alarm**. sec. 31
   son çare canlılık mekanizması; rutin yönetim değil. Kullanımı istisna olarak
