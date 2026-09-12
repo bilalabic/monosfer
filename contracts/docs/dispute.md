@@ -240,6 +240,13 @@ kararı, hub'ın son çıkış süresi) rastgele sırayla ve aynı ihtilaf üzer
 çakıştırarak sürüyor — "tam olarak bir kez" ancak bir şey iki kez kapatmaya
 çalışırken anlamlı.
 
+### Zincirde koşuldu
+
+Yol tamamı Monad testnet'te, pencereleri alt sınıra çekilmiş bir kurulumda
+uçtan uca koşuldu: gerçek Pyth Entropy ile iki çekiliş, 3 ve 5 kişilik paneller,
+tur 1 `Customer100`, itiraz, tur 2 `Courier100`, ve escrow ile bond'ların
+kuruşu kuruşuna dağıtımı. Ayrıntı: `verification-log.md`.
+
 ---
 
 ## 11. Komite imzası nasıl toplanır

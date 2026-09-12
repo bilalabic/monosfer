@@ -45,7 +45,8 @@ kendisi kadar değerli değil.
 | P4.3 | İtirazlar, yedek komite, hüküm settlement'ı | Tamamlandı |
 | P5.1 | Invariant / arıza / adversarial suite | Tamamlandı |
 | P5.2 | Deploy sertleştirme + artefakt export | Tamamlandı |
-| P5.3 | Testnet E2E, cut-over, güvenlik incelemesi | Sürüyor: 2/3 akış zincirde geçti |
+| P5.3 | Testnet E2E | **Tamamlandı: 3/3 akış zincirde geçti** |
+| P5.3 | Cut-over + güvenlik incelemesi | Bekliyor: frontend/backend ile eşzamanlı |
 
 ---
 
@@ -834,16 +835,24 @@ turu, itiraz tırmanması, hükmün paraya dönüşmesi, son çıkış süresini
 
 ### Zincirde kilitli kalanlar
 
-Senaryo ihtilafı açık bıraktığı için bir miktar test MON'u kilitli:
+Akış 3 bittikten sonra toplama yapıldı: juror stake'leri çekildi, escrow ve
+bond'lar talep edildi, hesaplar deployer'a boşaltıldı. **Deployer 142.9 MON.**
 
 | Nerede | Tutar | Ne zaman çözülür |
 |---|---:|---|
-| `SettlementVault` | 13.254 MON | 13 MON kurye stake'i (çıkış cooldown'ı ile geri alınır), 0.254 MON escrow hükümle ya da son çıkış süresiyle |
-| `DisputeCourt` | 1.3 MON | Son çıkış süresi dolduktan sonra `abandon` ile ödeyene geri yazılır |
+| Ana `SettlementVault` | ~26.3 MON | 13 MON kurye stake'i (çıkış cooldown'ı), kalanı açık ihtilafın escrow'u ve talep edilmemiş alacaklar |
+| Ana `DisputeCourt` | 1.3 MON | Açık ihtilafın ücret ve bond'u; son çıkış süresi (30 gün) dolunca `poke` + `abandon` |
+| Rig'in ilk mahkemesi | 1.3 MON | Ölü adaptörle açılan ihtilaf; rig'in son çıkış süresi 2.5 saat |
 
-Son çıkış süresi **30 gün** sonra dolar; o noktada `poke` + `abandon` ile
-ikisi de kurtarılabilir. Geri kalan test fonu deployer'a toplandı
-(165.4 MON).
+### Toplama sırasında çıkan iki şey
+
+- **`withdraw` 300 000 gas ile düştü, 500 000 ile geçti.** Simülasyon ikisinde de
+  başarılıydı. Monad'ın gas rezervasyonu, tahmine güvenmemek gerektiğini bir kez
+  daha gösterdi.
+- **Hazine `claim()`'i "Signer had insufficient balance" ile reddedildi**: hesapta
+  0.045 MON vardı, `gasLimit × maxFeePerGas` 0.12 MON rezervasyon istiyordu.
+  sec. 43'ün aynı kuralı — bakiyesi işlemi karşılayan bir hesap, rezervasyon
+  yüzünden işlem gönderemiyor.
 
 ---
 
@@ -982,11 +991,51 @@ Teslimat 5: aynı yol, teslim yerine iade.
 Bu, denetimin **#2 numaralı HIGH** bulgusunun zincirdeki karşılığı: iade ücreti
 artık kuryenin tek taraflı beyanıyla değil, gönderenin imzasıyla ödeniyor.
 
-### Akış 3: ihtilaf → jüri → itiraz → çözüm — **koşulmadı**
+### Akış 3: ihtilaf → jüri → itiraz → çözüm — zincirde geçti
 
-Pencereler gün cinsinden ve canlı zincirde `vm.warp` yok. Pencereleri alt sınıra
-(10 dakika) çekilmiş ayrı bir kurulumla **koşulabilir** — iki turluk yol yaklaşık
-80 dakika sürer. Yapılmadı; kalan iş olarak duruyor.
+Baseline pencereleriyle bu yol en az yirmi iki gün sürer ve canlı zincirde
+`vm.warp` yok. Bu yüzden pencereleri **alt sınıra (10 dakika)** çekilmiş ayrı bir
+kurulum kuruldu: `DeployCompressed`. Kurallar, imzalar, ödemeler ve rastgelelik
+sağlayıcısı değişmedi; yalnızca süreler farklı. Kurulum, gerçek bir kurulum
+sanılmasın diye açık bir onay değişkeni istemeden çalışmıyor.
+
+| Aşama | Zincirdeki sonuç |
+|---|---|
+| İhtilaf açıldı | Teslimat 1 → `Disputed`, sec. 28 cetveli 1.3 MON |
+| **Çekiliş (gerçek Pyth Entropy)** | requestId **3879**, callback 10 sn içinde |
+| Tur 1 paneli | **3 juror**, donmuş aday kümesinden |
+| Commit / reveal | 3/3 taahhüt, 3/3 açılma |
+| **Tur 1 hükmü** | `Customer100` |
+| İtiraz | 2.5 MON (0.5 ücret + 2 bond), ödeyen kurye |
+| **Çekiliş 2** | requestId **3880** |
+| Tur 2 paneli | **5 juror** — sec. 28'in 3→5 tırmanması |
+| Commit / reveal | 5/5, 5/5 |
+| **Tur 2 hükmü** | `Courier100` — tur 1'i bozdu |
+| `finalise` | Teslimat → `Resolved`, ihtilaf → `Settled` |
+
+### Paranın nereye gittiği
+
+| Kime | Tutar | Neden |
+|---|---:|---|
+| Kurye (escrow) | 0.508 MON | `Courier100` → müşteri payı %0 |
+| Müşteri (tur 1 bond) | 1.000 MON | Katılım bond'u her hâlükârda iade |
+| Kurye (tur 2 bond) | 2.000 MON | **İtiraz hükmü değiştirdi → iade** |
+| Hazine (ücretler) | 0.800 MON | 0.3 + 0.5 |
+| **Toplam** | **3.800 MON** | Mahkemenin borcuna **birebir** eşit |
+
+Son satır iki şeyi birden söylüyor: mahkeme tuttuğundan fazlasını dağıtmadı ve
+azını da bırakmadı; `feesHeld` sıfırlandı.
+
+**Bond kuralı zincirde doğrulandı.** sec. 28 bond'ların akıbetini söylemiyor;
+"itiraz bond'u ancak büyük panel küçüğünü bozarsa iade edilir" bizim okumamızdı
+ve `dispute.md` bölüm 6'da açıkça yorum diye işaretlenmişti. Tur 2 kasten tur 1'i
+bozacak şekilde oy verdi ve iade yolu gözlemlendi.
+
+### Sıkıştırılmış pencerelerin kanıtlamadığı şey
+
+Bir pencerenin **doğru uzunlukta** olup olmadığı. Üç günlük kanıt penceresinin
+yeterli olup olmaması bir ürün sorusu; bu koşu yalnızca mekanizmanın pencere
+uzunluğundan bağımsız çalıştığını gösteriyor.
 
 ---
 
