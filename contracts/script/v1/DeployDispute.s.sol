@@ -43,6 +43,8 @@ contract DeployDisputeScript is Script {
     error AddressMissing(string what);
     error WrongChain(uint256 expected, uint256 actual);
     error CommitteeMustBeAContract(address committee);
+    error EntropyNotAContract(address entropy);
+    error EntropyDoesNotAnswer(address entropy);
 
     function run() external {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
@@ -61,6 +63,15 @@ contract DeployDisputeScript is Script {
         // fallback: the baseline rules it out explicitly, so a missing address
         // stops the deployment rather than degrading it.
         address entropy = _required("PYTH_ENTROPY");
+        // And a non-zero address is not the same as a working one. An earlier
+        // deployment of this layer was wired to Entropy's *implementation*
+        // rather than its proxy: a real contract, 16KB of code, every call
+        // reverting. Nothing noticed until the first draw was requested, weeks
+        // of work later. So the provider is asked for its fee here, and a
+        // provider that cannot answer stops the deployment.
+        if (entropy.code.length == 0) revert EntropyNotAContract(entropy);
+        (bool answers,) = entropy.staticcall(abi.encodeWithSignature("getFeeV2()"));
+        if (!answers) revert EntropyDoesNotAnswer(entropy);
 
         // sec. 31: a Safe, not a key. A contract is the weakest check that can
         // be made on chain, and it is still worth making — it catches the

@@ -5,7 +5,7 @@
 
 ---
 
-## 1. Tek gerçek kaynak
+## 1. Tek yetkili kaynak
 
 Adresler ve ABI'lar **üretilir**, elle yazılmaz. Elle tutulan her kopya zamanla
 diğerlerinden ayrışır; bu katman kopyayı ortadan kaldırarak sorunu kaynağında
@@ -16,7 +16,7 @@ diğerlerinden ayrışır; bu katman kopyayı ortadan kaldırarak sorunu kaynağ
 ## 2. Yaklaşım (D3: katmanlı)
 
 ```text
-contracts/deployments/<chainId>.json     tek gerçek kaynak (commit'li, incelenebilir)
+contracts/deployments/<chainId>.json     tek yetkili kaynak (commit'li, incelenebilir)
             +
 forge build ciktisi (out/)               ABI'lar
             ↓
@@ -146,7 +146,8 @@ Yeni bir ağ eklemek: o `chainId` için bir manifest dosyası koy, üreticiyi ç
 - **Frontend/backend bağlama.** `frontend/app/config/chain.ts` ve `frontend/.env`
   hâlâ eski sabit adresleri taşıyor. Bunları export paketine bağlamak
   `contracts/` dışına çıkar; **onayınız bekleniyor**.
-- **CI otomasyonu.** `contracts:exports:check` henüz `contracts.yml`'de değil;
-  CI'a dokunulmaması istendiği için eklenmedi.
-- **Deploy sonrası otomatik güncelleme.** Manifest şu an deploy sonrası
-  `broadcast/` kayıtlarından üretiliyor; bunu deploy script'ine bağlamak P5.2'de.
+- **Deploy sonrası otomatik güncelleme.** Manifest hâlâ deploy sonrası
+  `broadcast/` kayıtlarından elle üretiliyor. P5.2'de deploy script'ine
+  bağlanacağı yazılmıştı; **bağlanmadı** — P5.2 canlı denetime ve kaynak
+  doğrulamasına gitti. İnsan adımı duruyor ve sürüklenmenin doğduğu yer orası;
+  `exports --check` artık CI'da olduğu için sürükleme en azından sessiz kalmıyor.

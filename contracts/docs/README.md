@@ -9,6 +9,7 @@ Sistem geliştikçe güncellenir; sürüm/tarih taşımazlar.
 
 | Doküman | İçerik |
 |---|---|
+| [`deployment.md`](deployment.md) | Deploy runbook: sıra, roller, canlı denetim, kaynak doğrulama |
 | [`governance.md`](governance.md) | Rol matrisi, zaman kilitleri, pause runbook, parametre sınırları |
 | [`settlement.md`](settlement.md) | Pull-payment modeli, ödeme gücü, reentrancy, pause davranışı |
 | [`courier-registry.md`](courier-registry.md) | Stake bölünmesi, çıkış yolu, C0/C1/C2, custody limiti |
@@ -20,6 +21,7 @@ Sistem geliştikçe güncellenir; sürüm/tarih taşımazlar.
 | [`proofs.md`](proofs.md) | Teslim alma kabulü, iade kanıtı ve PoD attestation: altı kontrol, nonce, ERC-1271 |
 | [`dispute.md`](dispute.md) | Jüri yaşam döngüsü, 3→5→7 itiraz, hüküm settlement'ı, yedek komite |
 | [`integration.md`](integration.md) | Frontend/backend için adres + ABI + tip paylaşımı |
+| [`testing.md`](testing.md) | sec. 33 invariant'ları ve sec. 47 arıza senaryolarının test haritası |
 | [`static-analysis-baseline.md`](static-analysis-baseline.md) | Devralınan kontratların kabul edilen Slither bulguları ve `forge lint` dağılımı |
 
 ## Analiz ve plan
@@ -58,4 +60,7 @@ Sürümlü belgeler; içerik revize edilirse sürüm numarası artar.
 | P4.1 | `IRandomnessAdapter` + `PythEntropyAdapter` | **Tamamlandı** |
 | P4.2 | `DisputeCourt` çekirdeği — kanıt, çekiliş, commit/reveal | **Tamamlandı** |
 | P4.3 | İtirazlar, yedek komite, hüküm settlement'ı | **Tamamlandı** |
-| P5 | Invariant/failure suite, deploy sertleştirme, cut-over | Bekliyor |
+| P5.1 | Invariant / arıza / adversarial suite | **Tamamlandı** |
+| P5.2 | Deploy sertleştirme + artefakt export | **Tamamlandı** |
+| P5.3 | Testnet E2E (sec. 46, üç akış) | **Tamamlandı** |
+| P5.3 | Cut-over + güvenlik incelemesi | Bekliyor: frontend/backend ile eşzamanlı |

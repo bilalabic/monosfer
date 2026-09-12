@@ -67,6 +67,13 @@ jobs:
       - name: Test
         run: forge test -vvv
 
+      - name: Scan for consumed cheatcodes
+        # A Foundry cheatcode applies to the next *call*, so a contract call in
+        # the argument or `{value:}` expression swallows it and the test passes
+        # for the wrong reason. This has happened nine times in this repository;
+        # every one was found by a person, which is exactly why it belongs here.
+        run: python3 tools/cheatcode-scan.py
+
       - name: Check gas snapshot
         # Fails if any committed gas number moved. Intentional gas changes
         # require regenerating .gas-snapshot in the same pull request so the
@@ -86,6 +93,12 @@ jobs:
         # 1% still catches what this gate is for: on a 40k-gas unit test that is
         # 400 gas, so an unintended cold SLOAD (2100) does not slip through.
         run: forge snapshot --check --no-match-test "testFuzz|invariant_" --tolerance 1
+
+      - name: Check the generated exports are current
+        # `exports/` is what the apps import (sec. 6). If it drifts from the
+        # manifest and the ABIs, both apps are calling yesterday's contracts and
+        # nothing says so until something reverts.
+        run: node tools/build-exports.mjs --check
 
       - name: Deploy dry-run (legacy Delivera)
         env:
@@ -116,6 +129,12 @@ jobs:
 
       - name: Install Slither
         run: pip install --quiet slither-analyzer==0.11.6
+
+      - name: Check the testing map resolves
+        # docs/testing.md claims that every sec. 33 invariant and sec. 47 failure
+        # scenario has a named test. A renamed test would leave the claim looking
+        # true while pointing at nothing, so the names are resolved mechanically.
+        run: python3 tools/testing-map-check.py
 
       - name: Run Slither
         # Config lives in contracts/slither.config.json: legacy paths are

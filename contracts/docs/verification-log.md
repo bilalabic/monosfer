@@ -8,8 +8,14 @@
 yaz → yerelde test et → tutarsızlık tara → gate'leri koş → Monad testnet'e deploy
 et → senaryoları koş → dokümante et.
 
-**Kapı seti (7):** `forge build` · `forge fmt --check` · `forge test` ·
-`forge snapshot --check` · `slither` · 2× legacy deploy dry-run.
+**Kapı seti (10):** `forge build` · `forge fmt --check` · `forge test` ·
+cheatcode taraması · `forge snapshot --check` · `exports --check` ·
+2× legacy deploy dry-run · test haritası kontrolü · `slither`.
+
+Son üçü sonradan eklendi. Cheatcode taraması ve `exports --check` **P5.3'ün genel
+kontrolünde** fark edildi: ikisi de yerelde koşuluyordu ama CI'da yoktu. Dokuz kez
+hata yakalamış bir kontrolün yalnızca birinin hatırlamasına bağlı olması, kontrolün
+kendisi kadar değerli değil.
 
 ---
 
@@ -17,7 +23,7 @@ et → senaryoları koş → dokümante et.
 
 | | |
 |---|---|
-| Test | **461/461** (25 suite) |
+| Test | **468/468** (26 suite) |
 | Gate | **7/7** |
 | Invariant | **30** (5 suite) |
 | Legacy kaynaklar | **8/8 byte-byte değişmedi** |
@@ -34,9 +40,13 @@ et → senaryoları koş → dokümante et.
 | P2.1 | Teslim alma kanıtı | Tamamlandı |
 | P2.2 | Teslim etme kanıtı (PoD) | Tamamlandı |
 | P3 | İtibar, rozetler, ödüller, referans | Tamamlandı |
-| P4.1 | `JurorPool` + rastgelelik adaptörü | Yerelde tamam, testnet sırada |
-| P4.2 | `DisputeCourt` (commit/reveal) | Yerelde tamam, testnet sırada |
-| P4.3 | İtirazlar, yedek komite, hüküm settlement'ı | Yerelde tamam, testnet sırada |
+| P4.1 | `JurorPool` + rastgelelik adaptörü | Tamamlandı |
+| P4.2 | `DisputeCourt` (commit/reveal) | Tamamlandı |
+| P4.3 | İtirazlar, yedek komite, hüküm settlement'ı | Tamamlandı |
+| P5.1 | Invariant / arıza / adversarial suite | Tamamlandı |
+| P5.2 | Deploy sertleştirme + artefakt export | Tamamlandı |
+| P5.3 | Testnet E2E | **Tamamlandı: 3/3 akış zincirde geçti** |
+| P5.3 | Cut-over + güvenlik incelemesi | Bekliyor: frontend/backend ile eşzamanlı |
 
 ---
 
@@ -546,7 +556,7 @@ yolları yerelde `vm.warp` ile test edildi.
 `depositStake` önce "Signer had insufficient balance" ile reddedildi: kuryede
 32 MON, işlem 10 MON. Sebep baseline **sec. 43** — Monad gası harcanan değil,
 **`gasLimit × maxFeePerGas`** üzerinden peşin rezerve ediyor ve aracın otomatik
-tamponu fazla büyüktü. Açık `--gas-limit` ile çözüldü. Aynı kök sebep rol
+tamponu fazla büyüktü. Açık `--gas-limit` ile çözüldü. Aynı neden rol
 hesaplarını da işlem gönderemez hale getirmişti.
 
 **Deploy runbook'una girmesi gereken madde:** Monad'da gas limiti tampon değil,
@@ -647,7 +657,7 @@ altından escrow'u kapatır ve hüküm geldiğinde ortada para kalmazdı.
 | `Refuse` → müşteriye %100 | Panelin karar vermeyi reddetmesi; protokolün ifayı saptayamadığı her durumdaki cevabı escrow'u iade etmek. Kurye lehine okumak karar vermemeyi ödüllendirirdi |
 | İhtilaflı teslimatta protokol ücreti alınmıyor | İşler kötüleştikçe daha çok kazanmak yanlış teşvik |
 | Komite yalnızca `Failed` fazından çağrılabiliyor | Canlılık mekanizmasını veto hâline getirmemek için |
-| `disputeWindow` bir faz değil, uzun durak | Mahkeme tamamen sussa bile "çıkışı olmayan durum yok" kuralı ayakta kalsın diye. Üç tam turdan uzun olması config'te doğrulanıyor |
+| `disputeWindow` bir faz değil, son çıkış süresi | Mahkeme tamamen sussa bile "çıkışı olmayan durum yok" kuralı ayakta kalsın diye. Üç tam turdan uzun olması config'te doğrulanıyor |
 
 ### Yorum gerektiren yer: bond kime döner
 
@@ -682,7 +692,7 @@ Son üç satır ilk koşuda **0** veriyordu; bu fazın asıl çıktısı orası:
 - **Komite kararının tek kullanımlık olması mahkeme üzerinden ulaşılamıyor:**
   karar uygulandığı anda ihtilaf `Settled` oluyor ve faz makinesi ikinci çağrıyı
   zaten reddediyor. Koruma yine de silinmedi — `requireDecision` kamusal bir
-  giriş noktası ve kendi başına ayakta durmalı. Onun yerine `FallbackCommittee`
+  giriş noktası ve kendi başına geçerli olmalı. Onun yerine `FallbackCommittee`
   kendi birim suite'ini aldı (16 test) ve koruma orada doğrudan test ediliyor.
 - **`solvent` koruması hiçbir normal yoldan ulaşılamıyor**, invariant suite'i
   dahil: değer alan her fonksiyon aldığını sayıyor, ödeyen her fonksiyon
@@ -706,7 +716,7 @@ yanlış cevap vermesi, doğru cevabı geç almaktan kötüdür.
 ### Invariant suite'i
 
 `DisputeCourtInvariant` mahkemeyi dört bitiş yolunun tamamında rastgele
-sürüyor: jüri hükmü, itiraz sonrası hüküm, komite kararı ve hub'ın uzun durağı.
+sürüyor: jüri hükmü, itiraz sonrası hüküm, komite kararı ve hub'ın son çıkış süresi.
 
 - `invariant_ADisputedDeliveryEndsInExactlyOneTerminalState` — kabul kriteri
 - `invariant_VaultStaysSolvent`, `invariant_CourtStaysSolvent`
@@ -792,7 +802,7 @@ ERC-1271 yolu zincirde uçtan uca denendi:
 | **İhtilaf açıldı** | dispute 0, hub `Disputed` |
 | sec. 28 cetveli tahsil edildi | 1.3 MON (0.3 ücret + 1 bond) |
 | Bond ödeyen kaydedildi | müşteri |
-| Uzun durak kuruldu | `stateDeadline` 30 gün sonrası |
+| Son çıkış süresi kuruldu | `stateDeadline` 30 gün sonrası |
 
 ### Ret yolları
 
@@ -805,7 +815,7 @@ fazda üç yanlış "FAIL" üretmişti.
 | Kanıt penceresi kapanmadan çekiliş istemek | `DeadlineNotReached` |
 | Hüküm yokken `finalise` | `WrongPhase` |
 | Yaşayan ihtilafı `abandon` etmek | `DeliveryStillDisputed` |
-| Uzun durağı erken tetiklemek (`poke`) | `DeadlineNotReached` |
+| Son çıkış süresini erken tetiklemek (`poke`) | `DeadlineNotReached` |
 | Yürüyen ihtilafa komite kararı | `WrongPhase` |
 | Komiteye sec. 30 dışı kod (7) imzalatmak | `RulingNotAllowed` |
 | Yabancının komite kararını yakması | `AccessControlUnauthorizedAccount` |
@@ -821,18 +831,285 @@ sonra ne olduğu yerelde `vm.warp` ile test ediliyor. Aynı sınır zaten config
 zaman kilidi, unpause gecikmesi ve kurye çekim cooldown'ı için de geçerli.
 
 Kapsam dışı kalanlar: panel oturtma (rastgelelik geldikten sonra), commit/reveal
-turu, itiraz tırmanması, hükmün paraya dönüşmesi, uzun durağın gerçekten
-ateşlenmesi. Hepsi yerelde ve invariant suite'inde kapsanıyor.
+turu, itiraz tırmanması, hükmün paraya dönüşmesi, son çıkış süresinin gerçekten dolması. Hepsi yerelde ve invariant suite'inde kapsanıyor.
 
 ### Zincirde kilitli kalanlar
 
-Senaryo ihtilafı açık bıraktığı için bir miktar test MON'u kilitli:
+Akış 3 bittikten sonra toplama yapıldı: juror stake'leri çekildi, escrow ve
+bond'lar talep edildi, hesaplar deployer'a boşaltıldı. **Deployer 142.9 MON.**
 
 | Nerede | Tutar | Ne zaman çözülür |
 |---|---:|---|
-| `SettlementVault` | 13.254 MON | 13 MON kurye stake'i (çıkış cooldown'ı ile geri alınır), 0.254 MON escrow hükümle ya da uzun durakla |
-| `DisputeCourt` | 1.3 MON | Uzun durak ateşlendikten sonra `abandon` ile ödeyene geri yazılır |
+| Ana `SettlementVault` | ~26.3 MON | 13 MON kurye stake'i (çıkış cooldown'ı), kalanı açık ihtilafın escrow'u ve talep edilmemiş alacaklar |
+| Ana `DisputeCourt` | 1.3 MON | Açık ihtilafın ücret ve bond'u; son çıkış süresi (30 gün) dolunca `poke` + `abandon` |
+| Rig'in ilk mahkemesi | 1.3 MON | Ölü adaptörle açılan ihtilaf; rig'in son çıkış süresi 2.5 saat |
 
-Uzun durak **30 gün** sonra tetiklenebilir; o noktada `poke` + `abandon` ile
-ikisi de kurtarılabilir. Geri kalan test fonu deployer'a toplandı
-(165.4 MON).
+### Toplama sırasında çıkan iki şey
+
+- **`withdraw` 300 000 gas ile düştü, 500 000 ile geçti.** Simülasyon ikisinde de
+  başarılıydı. Monad'ın gas rezervasyonu, tahmine güvenmemek gerektiğini bir kez
+  daha gösterdi.
+- **Hazine `claim()`'i "Signer had insufficient balance" ile reddedildi**: hesapta
+  0.045 MON vardı, `gasLimit × maxFeePerGas` 0.12 MON rezervasyon istiyordu.
+  sec. 43'ün aynı kuralı — bakiyesi işlemi karşılayan bir hesap, rezervasyon
+  yüzünden işlem gönderemiyor.
+
+---
+
+## P5.1 — Invariant, arıza ve adversarial suite
+
+Planın problem tanımı ("bugün 5 test, sıfır fuzz, sıfır invariant") P0 öncesini
+anlatıyordu; bu faz sıfırdan kapsam değil, **konsolidasyon ve boşluk kapatma**.
+
+### Yöntem: iddiayı teste bağla, bağlayamazsan boşluk de
+
+sec. 33'ün 18 maddesi ve sec. 47'nin 22 senaryosu tek tek tarandı. Kriter,
+davranışın *erişilebilir* olması değil, onu tutan **adlandırılmış bir test**
+gösterilebilmesiydi.
+
+| Bulgu | Sonuç |
+|---|---|
+| 33-5 (ihtilaflı teslimat başarı yolundan settle olamaz) | Hiç testi yoktu — eklendi |
+| 33-9 (pickup anında teminat yerinde) | Hiç testi yoktu — eklendi |
+| 33-11 (revert eden alıcı bloke edemez) | Vault seviyesinde vardı, teslimat seviyesinde yoktu — eklendi |
+| sec. 47: müşteri fonlamaz / kurye kapsam vermez / iade onaylanmaz / alıcı bulunamaz | Dördü de boşluktu — eklendi |
+
+33-5 en çok önem taşıyanı: P4.3 ile ortaya çıktı ve mahkeme teslimatı tutarken
+müşterinin `confirmDelivery` ile jürinin arkasından ödeme yaptırabilmesini
+engelliyor. Mutasyonla doğrulandı — `_requireState` kaldırıldığında test kırmızı.
+
+### Zincirde test edilmeyen üç senaryo
+
+Indexer kesintisi, RPC arızası ve backend retry'ı **kasten** yazılmadı: kontrat
+bu üçünün hiçbirini gözlemleyemez, Solidity testi göstermelik olurdu. `testing.md`
+sorumluluğu backend'e yazıyor.
+
+### Haritanın bayatlamasına karşı koruma
+
+`docs/testing.md` 65 test adı anıyor. Bir test yeniden adlandırılırsa satır hâlâ
+kapsam gibi *okunur* ama hiçbir şeye işaret etmez — bu deponun kendi işinde
+tekrar tekrar yakaladığı arıza. Bu yüzden `tools/testing-map-check.py` adları
+mekanik olarak çözüyor ve CI'a eklendi. Kendisi de kasten bozulmuş bir adla
+sınandı.
+
+### Cheatcode tuzağının dokuzuncu örneği
+
+`vm.expectRevert(abi.encodeWithSelector(..., hub.deliveryOf(id).stateDeadline))`
+— argüman içindeki `deliveryOf` çağrısı cheatcode'u tüketiyor. **Bu sefer
+tarayıcı yakaladı**; P4.3'te sertleştirilen kural işe yaradı.
+
+---
+
+## P5.2 — Deploy sertleştirme
+
+Planın işaret ettiği README iddiası ("gitignore'lanmış ve var olmayan deploy
+kaydı") daha önceki bir fazda zaten düzeltilmişti; `deployments/10143.json`
+commit'li ve referans veriliyor. Geriye iki gerçek boşluk kaldı.
+
+### Boşluk 1: kablolamayı hiçbir şey denetlemiyordu
+
+`DeployCore` **girdilerini** doğruluyor — verilen rol adresleri ayrı ve sıfır
+değil. Daha fazlasını yapamaz, çünkü o noktada hiçbir rol verilmemiştir; rolleri
+admin multisig sonradan verir ve bu kasten böyledir (sec. 32.11: deploy eden
+anahtar sistemi çalıştıramaz).
+
+Bu, "kontratlar var" ile "kontratlar kablolanmış" arasında kimsenin bakmadığı
+bir aralık bırakıyordu. Yanlış adrese verilmiş rol, unutulmuş rol, geçen haftanın
+registry'sine bakan hub, birinin EOA'sına bağlanmış komite — hepsi temiz deploy
+olur ve sonra üretimde, başka bir hata gibi görünerek patlar.
+
+`script/v1/VerifyDeployment.s.sol` canlı sistemi okuyup bunların hiçbirinde
+geçmiyor. Broadcast etmiyor, her zaman koşulabilir.
+
+**Kasten bozuk girdilerle sınandı:**
+
+| Deneme | Denetleyicinin cevabı |
+|---|---|
+| Eski deployment'ın registry'si | `Misconfigured("hub.registry", …)` |
+| Komite yerine bir EOA | `NotAContract("FALLBACK_COMMITTEE", …)` |
+| Yanlış `CONFIG_ADMIN` | `RoleMissing("CONFIG_ADMIN_ROLE", …)` |
+| Eksik adres | `Missing("JUROR_POOL")` |
+| **Zincirde paylaşılmış kritik rol** | `CriticalRolesShared("CONFIG_ADMIN_ROLE", "EMERGENCY_ROLE", 0x88aB…)` |
+
+Son satır zincirde gerçekten yapıldı: `CONFIG_ADMIN`'e geçici olarak
+`EMERGENCY_ROLE` verildi, denetleyici düştü, rol geri alındı, tekrar temiz geçti.
+
+İlk yazdığım hâlde ayrışma kontrolü **operatörün verdiği listeyi**
+karşılaştırıyordu ve rol kontrollerinden *sonra* çalışıyordu; bu yüzden paylaşım
+denemesi yanlış hatayla (`RoleMissing`) düştü. İkisi de düzeltildi: kontrol artık
+zincire soruyor — listede farklı görünen bir adres sonradan ikinci bir kritik rol
+almış olabilir — ve önce çalışıyor, çünkü paylaşılan anahtar daha ciddi bulgu.
+
+### Boşluk 2: kaynaklar doğrulanmamıştı
+
+Monad testnet'in Sourcify örneği chain 10143'ü destekliyor. **13/13 V1 kontratı
+doğrulandı** (`match`).
+
+`tools/verify-sources.sh` adresleri manifestten okuyor ve **gönderim makbuzuna
+güvenmiyor**: her adres API'den geri okunuyor. İlk sürümü tek bir `sleep 3` ile
+sonucu okuyordu ve sekiz kontratı "başarısız" diye raporladı — hepsi aslında
+doğrulanmıştı. Sınırlı yoklamaya çevrildi.
+
+Bu, bu oturumda üçüncü kez aynı hata: **bir işin sonucunu bitmeden okumak.**
+Mutasyon harness'ı iki kez, doğrulama script'i bir kez. Üçünde de belirti aynıydı
+— sessizce yanlış bir "başarısız".
+
+### Runbook
+
+`docs/deployment.md`: sıra, rol tablosu, Safe kurulumu (fallbackHandler'ın neden
+`CompatibilityFallbackHandler` olmak zorunda olduğu dahil), canlı denetim,
+kaynak doğrulama ve Monad'ın gas rezervasyonu.
+
+---
+
+## P5.3 — sec. 46 uçtan uca akışları
+
+### Akış 1: mutlu yol — zincirde geçti
+
+Teslimat 2: oluştur → teklif → seç → iki taraflı fonla → teslim al → teslim et →
+onayla → talep et.
+
+| Adım | Sonuç |
+|---|---|
+| Escrow | 0.508 MON |
+| `confirmDelivery` (sec. 16: erken onay) | Durum 8 = `Completed` |
+| Kuryeye alacak | 0.4 MON |
+| `claim()` | Alacak sıfırlandı, bakiye 0.4 MON arttı |
+
+### Akış 2: başarısız teslimat → iade — zincirde geçti
+
+Teslimat 5: aynı yol, teslim yerine iade.
+
+| Adım | Sonuç |
+|---|---|
+| `requestReturn` | Durum 6 = `ReturnRequired` |
+| `confirmReturn` **gönderenin `MONOSFER.RETURN` imzasıyla** | Durum 9 = `Returned` |
+| Kuryeye iade ücreti | 0.1 MON |
+| Kapsam serbest | 1 MON |
+| Kabul nonce'u (invariant sec. 33-7) | Yandı; tekrar sunum `WrongState` ile reddedildi |
+
+Bu, denetimin **#2 numaralı HIGH** bulgusunun zincirdeki karşılığı: iade ücreti
+artık kuryenin tek taraflı beyanıyla değil, gönderenin imzasıyla ödeniyor.
+
+### Akış 3: ihtilaf → jüri → itiraz → çözüm — zincirde geçti
+
+Baseline pencereleriyle bu yol en az yirmi iki gün sürer ve canlı zincirde
+`vm.warp` yok. Bu yüzden pencereleri **alt sınıra (10 dakika)** çekilmiş ayrı bir
+kurulum kuruldu: `DeployCompressed`. Kurallar, imzalar, ödemeler ve rastgelelik
+sağlayıcısı değişmedi; yalnızca süreler farklı. Kurulum, gerçek bir kurulum
+sanılmasın diye açık bir onay değişkeni istemeden çalışmıyor.
+
+| Aşama | Zincirdeki sonuç |
+|---|---|
+| İhtilaf açıldı | Teslimat 1 → `Disputed`, sec. 28 cetveli 1.3 MON |
+| **Çekiliş (gerçek Pyth Entropy)** | requestId **3879**, callback 10 sn içinde |
+| Tur 1 paneli | **3 juror**, donmuş aday kümesinden |
+| Commit / reveal | 3/3 taahhüt, 3/3 açılma |
+| **Tur 1 hükmü** | `Customer100` |
+| İtiraz | 2.5 MON (0.5 ücret + 2 bond), ödeyen kurye |
+| **Çekiliş 2** | requestId **3880** |
+| Tur 2 paneli | **5 juror** — sec. 28'in 3→5 tırmanması |
+| Commit / reveal | 5/5, 5/5 |
+| **Tur 2 hükmü** | `Courier100` — tur 1'i bozdu |
+| `finalise` | Teslimat → `Resolved`, ihtilaf → `Settled` |
+
+### Paranın nereye gittiği
+
+| Kime | Tutar | Neden |
+|---|---:|---|
+| Kurye (escrow) | 0.508 MON | `Courier100` → müşteri payı %0 |
+| Müşteri (tur 1 bond) | 1.000 MON | Katılım bond'u her hâlükârda iade |
+| Kurye (tur 2 bond) | 2.000 MON | **İtiraz hükmü değiştirdi → iade** |
+| Hazine (ücretler) | 0.800 MON | 0.3 + 0.5 |
+| **Toplam** | **3.800 MON** | Mahkemenin borcuna **birebir** eşit |
+
+Son satır iki şeyi birden söylüyor: mahkeme tuttuğundan fazlasını dağıtmadı ve
+azını da bırakmadı; `feesHeld` sıfırlandı.
+
+**Bond kuralı zincirde doğrulandı.** sec. 28 bond'ların akıbetini söylemiyor;
+"itiraz bond'u ancak büyük panel küçüğünü bozarsa iade edilir" bizim okumamızdı
+ve `dispute.md` bölüm 6'da açıkça yorum diye işaretlenmişti. Tur 2 kasten tur 1'i
+bozacak şekilde oy verdi ve iade yolu gözlemlendi.
+
+### Sıkıştırılmış pencerelerin kanıtlamadığı şey
+
+Bir pencerenin **doğru uzunlukta** olup olmadığı. Üç günlük kanıt penceresinin
+yeterli olup olmaması bir ürün sorusu; bu koşu yalnızca mekanizmanın pencere
+uzunluğundan bağımsız çalıştığını gösteriyor.
+
+---
+
+## Monad'a özgü iki bulgu
+
+### 1. Makbuzdaki `gasUsed` her zaman `gasLimit`'e eşit
+
+Başarılı bir işlemde de öyle: Safe deploy'u `gasLimit=900000 gasUsed=900000`
+raporladı ve durumu 1'di. Yani **makbuzdan "out of gas" teşhisi konamaz.**
+
+Bunu iki kez yanlış teşhis ettim: `gasUsed == gasLimit` gördüğüm için "gas
+yetmedi" dedim, oysa aynı eşitlik başarılı işlemlerde de var. sec. 43'ün "gas
+peşin rezerve edilir" kuralının makbuza yansıması bu.
+
+### 2. `forge script --broadcast` ile `cast send` aynı çağrıda ayrışıyor
+
+`fundAsCustomer` dört ayrı koşuda düştü. Her seferinde:
+
+- simülasyon geçiyordu,
+- `cast call` hem işlemin bloğunda hem bir önceki blokta **başarılı** dönüyordu,
+- zincirin kendi `eth_estimateGas`'ı 156 569 diyordu,
+- gas limiti 234 853'ten 626 276'ya çıkarıldığında da düştü.
+
+Aynı çağrı `cast send --gas-limit 400000` ile **ilk denemede** geçti.
+
+Kök nedeni saptayamadım ve saptamış gibi yazmıyorum. Kesin olan: bu ağda
+değer taşıyan işlemleri `cast send` ile açık `--gas-limit` vererek göndermek
+çalışıyor, `forge script` tahminine bırakmak çalışmıyor. Deploy runbook'u zaten
+açık `--gas-limit` diyordu; bu, aynı kuralın E2E tarafındaki karşılığı.
+
+> Yan bulgu: `cast run` bu işlemleri **başarılı** olarak yeniden oynatıyor.
+> Önceki bir fazda da aynı şey olmuştu. Zincirde düşen bir işlemin replay'i
+> kanıt değildir.
+
+---
+
+## Rastgelelik adaptörü ölü bir adrese bağlanmıştı
+
+Akış 3'ü koşmaya başlayınca `requestDraw` düştü: adaptörün `fee()`'si revert
+ediyordu.
+
+**Sebep:** `PythEntropyAdapter`'a Pyth Entropy'nin **proxy'si yerine
+implementation'ı** verilmişti — `0x36825bf3…`. Gerçek bir kontrat, 16 KB kod;
+ama UUPS implementation'ı hiç başlatılmadığı için her çağrı revert ediyor.
+Teşhis: `proxiableUUID()` cevap veriyor ve `owner()` sıfır — bir proxy olsaydı
+ikisi de böyle olmazdı.
+
+Doğrusu `0x825c0390f379c631f3cf11a82a37d20bddf93c07`; `getFeeV2()` 0.128 MON
+döndürüyor, varsayılan sağlayıcı `0x6CC14824…`.
+
+### Bunu hiçbir kontrol yakalamadı
+
+| Kontrol | Neden kaçırdı |
+|---|---|
+| `DeployDispute` | Yalnızca `PYTH_ENTROPY != address(0)` bakıyordu |
+| `VerifyDeployment` | Rastgelelik adaptörüne **hiç bakmıyordu** |
+
+İkincisi daha rahatsız edici: o denetleyici "komite birinin EOA'sına bağlanmış"
+türü hataları yakalasın diye yazılmıştı ve aynı sınıftan bir hatayı
+kapsamıyordu. Sıfır olmamak, çalışmak değildir.
+
+Adres kullanılırken komut satırına *"as verified live in P4.1"* yorumu
+düşülmüştü. **Bu doğrulanmamış bir iddiaydı** — hatırlandığı sanılan bir şey
+kanıtlanmış gibi yazılmıştı. P4.1'in kaydı yalnızca bizim adaptörümüzün adresini
+tutuyor, altındaki sağlayıcıyı değil; bu yüzden iddia kontrol de edilemiyordu.
+
+### Düzeltme
+
+- `DeployDispute` artık sağlayıcıya `getFeeV2()` soruyor; cevap vermezse deploy
+  durur. Ölü adresle denendi: `EntropyDoesNotAnswer(0x36825bf3…)`.
+- `VerifyDeployment` artık mahkemenin adaptörünü okuyup `fee()` soruyor.
+- Doğru adresle yeni bir adaptör ve mahkeme deploy edildi.
+
+### Kayda geçmesi gereken kural
+
+Bir dış bağımlılığın adresi, **o adrese bir soru sorulmadan** manifestte
+doğrulanmış sayılmamalı. Kod uzunluğu da yetmez: bu adreste 16 KB kod vardı.
