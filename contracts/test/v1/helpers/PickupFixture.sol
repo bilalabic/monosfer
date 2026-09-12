@@ -66,6 +66,21 @@ abstract contract PickupFixture is Test {
         });
     }
 
+    /**
+     * @notice A well-formed *return* acceptance for `deliveryId`, valid for one hour.
+     * @dev Identical in shape to a pickup acceptance and different in exactly one
+     *      field, which is the point: the action is what keeps the two apart, so a
+     *      test that swaps one for the other is testing the separation itself.
+     */
+    function buildReturnAcceptance(uint256 deliveryId, address courier)
+        internal
+        view
+        returns (PickupProof.Acceptance memory acceptance)
+    {
+        acceptance = buildAcceptanceWithExpiry(deliveryId, courier, uint64(block.timestamp) + 1 hours, 1);
+        acceptance.action = PickupProof.RETURN_ACTION;
+    }
+
     /// @notice Sign `acceptance` with `key`.
     function signAcceptance(DeliveryHub hub, PickupProof.Acceptance memory acceptance, uint256 key)
         internal

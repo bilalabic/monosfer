@@ -84,17 +84,68 @@ ayrı ayrı değil.
 
 ## 7. Döngüler aramayla değil, yapıyla imkânsız
 
-Her cüzdan referans ormanındaki derinliğini saklar: kök 0, referans edilen cüzdan
-referans edenin derinliği artı bir. Kayıt, referans edenin derinliğinin
-`MAX_DEPTH` (32) altında olmasını ister — bu her zinciri sınırlar. Bu sınır
-içinde kontrat, önerilen referans edenden yukarı yürüyerek kayıt olan cüzdanın
-zaten bir ata olmadığını doğrular.
+İki kural yeterli, ikisi de gezinme gerektirmiyor:
 
-Yürüyüş **eksiksizdir**, çünkü bir zincir tavandan uzun olamaz; ve gası **aynı
-tavanla sınırlıdır**. Sınırsız yürümek bariz uygulama olurdu ve kayıt maliyetini
-başkasının ağacının derinliğine bağlardı.
+1. Bir cüzdan referans edenini **en fazla bir kez** yazar (`referrerOf` tek
+   yazımlık).
+2. Bir cüzdan yalnızca **kendisini henüz kimse referans etmemişken** referans
+   eden atayabilir.
 
-## 8. Ödüller talep edilir, itilmez
+İkisi birlikte şunu söylüyor: bir cüzdana **giren** kenar, ondan **çıkan** ilk
+kenardan önce sabitlenir. Döngü için W'den W'nin kendi alt ağacındaki birine
+kenar gerekir; ama W'nin alt ağacı varsa W'nin bir referansı var demektir ve
+2. kural kaydı baştan reddeder. Döngü **önerilemez**, dolayısıyla aranacak bir şey
+de yoktur.
+
+Aynı ikili `depthOf` değerini de kesin tutuyor. Derinlik bir kez, referans edenin
+o andaki derinliğinden yazılır; referans edenin derinliği ise 2. kural sayesinde
+çoktan donmuştur.
+
+### Neden yalnızca ata yürüyüşü yetmiyordu
+
+Önceki uygulama önerilen referans edenden yukarı yürüyüp kayıt olanın zaten ata
+olmadığına bakıyordu. Yürüyüş `MAX_DEPTH` (32) ile sınırlıydı ve bu sınırın
+yeterli olması **her derinliğin gerçek olmasına** dayanıyordu — ki değildi:
+derinlik bir kez yazılıp bir daha güncellenmediği için, alt ağacı olan bir cüzdan
+sonradan referans eden alırsa o alt ağaç derinliğini artık kök olmayan bir kökten
+saymaya devam ediyordu. Her biri yirmilik iki zincir, kayıtlı en büyük derinlik
+hâlâ yirmi bir görünürken kırk birlik tek zincire bağlanabiliyordu — hem
+`MAX_DEPTH`'in, hem de yürüyüşün bakacağı yerin ötesinde.
+
+Kullanıcıya düşen kural basit: **referans etmeden önce kendi referans edenini
+yaz.** sec. 25 zaten bu sırayı anlatıyor; kayıt bir onboarding adımı.
+
+## 8. Nitelenmeyi kim bildirir
+
+`recordQualification` yalnızca eylemi **gören** kontrat tarafından çağrılır ve
+`REFERRAL_REPORTER_ROLE` ister. Bu rol `REPUTATION_REPORTER_ROLE`'den ayrı: biri
+puan yazar, diğeri referans kesesinden para taahhüt eder; tek rol olsaydı birini
+geri almak diğerini de geri alırdı.
+
+| Eylem | Bildiren | Nerede |
+|---|---|---|
+| İlk tamamlanan teslimat (müşteri) | `DeliveryHub` | `_complete` |
+| İlk tamamlanan teslimat (kurye) | `DeliveryHub` | `_complete` |
+| İlk sonuçlanan jüri turu | `DisputeCourt` | `closeReveal` |
+
+Jüri tarafında bildirim `closeReveal`'de; commit ya da reveal anında değil.
+sec. 25 **sonuçlanan** turu istiyor, ve commit edip susan bir juror hizmet
+vermemiştir — ödüllendirilmez, kesilir.
+
+### Çağrı neden low-level
+
+`recordQualification` daha önce nitelenmiş bir cüzdanda `AlreadyQualified` ile
+revert eder — yani ilk teslimattan sonraki **her** teslimatta. Bu revert yukarı
+taşınsaydı bir cüzdanın ikinci teslimatı hiç settle olamazdı. sec. 25 kuralı
+doğrudan koyuyor: referans hatası settlement'ı bloke etmemeli. Bu yüzden çağrı
+low-level yapılıyor, başarısızlık `ReferralReportFailed` olayıyla kayda geçiyor ve
+settlement devam ediyor.
+
+Aynı gerekçe jüri tarafında daha da bağlayıcı: panel süpürmesi tek bir tekrar
+juror yüzünden revert etseydi, ihtilaf `Reveal` fazında asılı kalır ve **diğer
+bütün jurorların** teminatı kilitli kalırdı.
+
+## 9. Ödüller talep edilir, itilmez
 
 Nitelenme referans edenin bakiyesini alacaklandırır; referans eden kendisi çeker.
 
@@ -109,13 +160,13 @@ kontratıdır ve referans bütçesi boş diye başarısız olmamalıdır.
 
 ---
 
-## 9. Test kapsamı
+## 10. Test kapsamı
 
-38 test (19 ödül + 19 referans). Mutasyon testi:
+41 test (19 ödül + 22 referans). Mutasyon testi:
 
 | Kaldırılan | Kırılan test |
 |---|---|
-| Döngü tespiti | 6 |
+| Döngü koruması (2. kural) | 5, biri gerçek bir döngü kurarak |
 | Epoch bütçe tavanı (sec. 33-12) | 2 |
 | Root dondurma | 2 |
 | Talep penceresi | 2 |
@@ -129,9 +180,15 @@ kabul etmeyen referans eden kimseyi bekletmez, zorla gönderilen değer kimsenin
 bütçesi olmaz, fuzz ile talepler hiçbir girdi kombinasyonunda epoch bütçesini
 aşmaz.
 
+Nitelenme kablolaması ayrıca `ReputationWiring` suite'inde kanıtlanıyor: tamamlanan
+bir teslimat iki tarafı da niteler, ikinci teslimat aynı referans edene ikinci kez
+ödemez, ve hub'ın reporter rolü geri alındığında settlement yine tamamlanır —
+`ReferralReportFailed` olayı sayılarak. Hub bildirimi koddan çıkarıldığında bu
+üç testten üçü de kırmızıya döner.
+
 ---
 
-## 10. Backend'in sorumlulukları
+## 11. Backend'in sorumlulukları
 
 - **Merkle ağacı üretimi ve epoch otomasyonu backend'e ait** (sec. 23). Root'un
   doğruluğu zincir dışı bir sorumluluktur ve kendi test yükünü taşır.

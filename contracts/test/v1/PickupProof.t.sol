@@ -8,6 +8,7 @@ import {SettlementVault} from "../../src/v1/vault/SettlementVault.sol";
 import {CourierRegistry} from "../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../src/v1/hub/DeliveryHub.sol";
 import {ReputationRegistry} from "../../src/v1/reputation/ReputationRegistry.sol";
+import {Referral} from "../../src/v1/rewards/Referral.sol";
 import {CoverageQuote} from "../../src/v1/risk/CoverageQuote.sol";
 import {PickupProof} from "../../src/v1/proof/PickupProof.sol";
 import {PickupProofVerifier} from "../../src/v1/proof/PickupProofVerifier.sol";
@@ -55,6 +56,7 @@ contract PickupProofTest is QuoteFixture, PickupFixture {
     CourierRegistry internal registry;
     DeliveryHub internal hub;
     ReputationRegistry internal reputation;
+    Referral internal referral;
 
     address internal admin = address(0xA11CE);
     address internal treasury = address(0x7EA5);
@@ -82,13 +84,15 @@ contract PickupProofTest is QuoteFixture, PickupFixture {
         vault = new SettlementVault(manager);
         registry = new CourierRegistry(manager, config, vault);
         reputation = new ReputationRegistry(manager);
-        hub = new DeliveryHub(manager, config, registry, vault, reputation, BID_DEPOSIT);
+        referral = new Referral(manager);
+        hub = new DeliveryHub(manager, config, registry, vault, reputation, referral, BID_DEPOSIT);
 
         vm.startPrank(admin);
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(registry));
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(hub));
         manager.grantRole(manager.REGISTRY_CONTROLLER_ROLE(), address(hub));
         manager.grantRole(manager.REPUTATION_REPORTER_ROLE(), address(hub));
+        manager.grantRole(manager.REFERRAL_REPORTER_ROLE(), address(hub));
         vm.stopPrank();
 
         uint256 deposit = config.courierBaseDeposit();
@@ -429,7 +433,7 @@ contract PickupProofTest is QuoteFixture, PickupFixture {
         PickupProof.Acceptance memory a = buildAcceptance(id, courier);
         bytes32 here = hub.hashPickupAcceptance(a);
 
-        DeliveryHub other = new DeliveryHub(manager, config, registry, vault, reputation, BID_DEPOSIT);
+        DeliveryHub other = new DeliveryHub(manager, config, registry, vault, reputation, referral, BID_DEPOSIT);
         assertTrue(here != other.hashPickupAcceptance(a), "same acceptance must not hash equal on another deployment");
 
         (, string memory name, string memory version, uint256 chainId, address verifyingContract,,) = hub.eip712Domain();

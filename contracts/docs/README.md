@@ -12,12 +12,13 @@ Sistem geliştikçe güncellenir; sürüm/tarih taşımazlar.
 | [`governance.md`](governance.md) | Rol matrisi, zaman kilitleri, pause runbook, parametre sınırları |
 | [`settlement.md`](settlement.md) | Pull-payment modeli, ödeme gücü, reentrancy, pause davranışı |
 | [`courier-registry.md`](courier-registry.md) | Stake bölünmesi, çıkış yolu, C0/C1/C2, custody limiti |
-| [`delivery-lifecycle.md`](delivery-lifecycle.md) | 11 durumlu makine, her durumun çıkışı, teklifler, fonlama, uzlaşma |
+| [`delivery-lifecycle.md`](delivery-lifecycle.md) | 13 durumlu makine, her durumun çıkışı, teklifler, fonlama, uzlaşma |
 | [`risk-quote.md`](risk-quote.md) | İmzalı kapsam teklifi, kapsam bandı, tekrar koruması, teminat bölünmesi |
 | [`reputation.md`](reputation.md) | 0-1000 puan, ayrı güven seviyesi, sec. 19 ağırlıkları, sürümleme |
 | [`badges.md`](badges.md) | Devredilemez rozetler, ERC-5192, talep/verme ayrımı |
 | [`rewards.md`](rewards.md) | Epoch bütçesi, Merkle talep, geri alma, referans kuralları |
-| [`proofs.md`](proofs.md) | Teslim alma kabulü ve PoD attestation: altı kontrol, nonce, ERC-1271 |
+| [`proofs.md`](proofs.md) | Teslim alma kabulü, iade kanıtı ve PoD attestation: altı kontrol, nonce, ERC-1271 |
+| [`dispute.md`](dispute.md) | Jüri yaşam döngüsü, 3→5→7 itiraz, hüküm settlement'ı, yedek komite |
 | [`integration.md`](integration.md) | Frontend/backend için adres + ABI + tip paylaşımı |
 | [`static-analysis-baseline.md`](static-analysis-baseline.md) | Devralınan kontratların kabul edilen Slither bulguları ve `forge lint` dağılımı |
 
@@ -49,10 +50,12 @@ Sürümlü belgeler; içerik revize edilirse sürüm numarası artar.
 | P1.3 | İmzalı risk teklifi ve kapsam matematiği | **Tamamlandı** |
 | P2.1 | Teslim alma kanıtı (EIP-712 / ERC-1271) | **Tamamlandı** |
 | P2.2 | PoD attestation (cüzdansız alıcı) | **Tamamlandı** |
-| P2.3 | İtiraz penceresi ve izinsiz finalize | Mekanizma **tamamlandı** (P1.1 içinde); ihtilaf girişi P4'e bağlı |
-| P2.4 | İade akışı | Durumlar ve rezerv ödemesi **tamamlandı** (P1.1 içinde); iade kanıtı P2.2'ye bağlı |
+| P2.3 | İtiraz penceresi ve izinsiz finalize | **Tamamlandı**; ihtilaf girişi P4.3 ile bağlandı |
+| P2.4 | İade akışı | **Tamamlandı**; iade kanıtı `MONOSFER.RETURN` aksiyonuyla eklendi |
 | P3.1 | `ReputationRegistry` — puan, güven, sürümleme | **Tamamlandı** |
 | P3.2 | `BadgeSBT` (ERC-721 + ERC-5192) | **Tamamlandı** |
 | P3.3 | Ödül dağıtımı v2 + referans | **Tamamlandı** |
-| P4 | İhtilaf, jüri, randomness | Sırada |
+| P4.1 | `IRandomnessAdapter` + `PythEntropyAdapter` | **Tamamlandı** |
+| P4.2 | `DisputeCourt` çekirdeği — kanıt, çekiliş, commit/reveal | **Tamamlandı** |
+| P4.3 | İtirazlar, yedek komite, hüküm settlement'ı | **Tamamlandı** |
 | P5 | Invariant/failure suite, deploy sertleştirme, cut-over | Bekliyor |

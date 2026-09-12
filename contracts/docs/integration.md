@@ -116,6 +116,20 @@ için gereken temeldir.
 kaldırılacaktır. Geçiş süresince mevcut uygulamanın çalışmaya devam etmesi için
 export ediliyorlar.
 
+## P4 ile eklenenler
+
+`DisputeCourt`, `JurorPool` ve `FallbackCommittee` artık `exports/`'te. Frontend
+itiraz durumunu `DisputeCourt.disputeOf` ve `panelOf` ile okur; backend
+`ResolvedByCommittee` ve `DisputeSettled` olaylarını dinler.
+
+> **Uyarı:** sec. 31 yedek komitesinin **her kullanımı alarm üretmeli.** Son çare
+> canlılık mekanizması rutin yönetim değildir; `ResolvedByCommittee` olayı
+> operasyon ekibine bildirim olarak gitmeli.
+
+Henüz `exports/`'te olmayanlar: `ReputationRegistry`, `BadgeSBT`, `Referral`,
+`RewardDistributor` (V1 sürümü). P3 kontratları; entegrasyon ihtiyacı doğduğunda
+`tools/build-exports.mjs` içindeki `EXPORTED` listesine eklenmeleri yeterli.
+
 ### `commit` alanı neden önemli
 
 Kaynak doğrulaması **o commit'ten** build edilerek yapılır, `main`'in ucundan

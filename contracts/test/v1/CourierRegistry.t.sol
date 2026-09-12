@@ -471,4 +471,59 @@ contract CourierRegistryTest is Test {
         registry.reserveCollateral(courier, 1 ether);
         assertEq(registry.courierOf(courier).reserved, 0);
     }
+
+    /**
+     * @dev Leaving has to be a door, not a trap. The vault settles a lock when
+     *      its last wei leaves and will not reopen a settled id, so a courier who
+     *      withdrew everything could never stake again from the same address —
+     *      the only id they could produce was spent. `test_CourierCanAlwaysFullyExit`
+     *      stopped at the withdrawal and never asked what came next.
+     */
+    function test_CourierCanReturnAfterAFullExit() public {
+        uint256 deposit = config.courierBaseDeposit();
+        vm.deal(courier, deposit * 4);
+
+        vm.prank(courier);
+        registry.depositStake{value: deposit}();
+        bytes32 firstLock = registry.stakeLockId(courier);
+
+        vm.prank(courier);
+        registry.requestWithdrawal(deposit);
+        vm.warp(block.timestamp + config.courierWithdrawalCooldown() + 1);
+        vm.prank(courier);
+        registry.executeWithdrawal();
+        vm.prank(courier);
+        vault.claim();
+
+        assertEq(registry.courierOf(courier).stake, 0, "fully out");
+
+        // And back in again.
+        vm.prank(courier);
+        registry.depositStake{value: deposit}();
+
+        assertEq(registry.courierOf(courier).stake, deposit, "staked again");
+        assertTrue(registry.stakeLockId(courier) != firstLock, "under a fresh lock id");
+        assertEq(vault.lockAmount(registry.stakeLockId(courier)), deposit, "and the vault holds it");
+    }
+
+    /// @dev A partial withdrawal must not disturb the lock the rest still sits in.
+    function test_PartialWithdrawalKeepsTheSameLock() public {
+        uint256 deposit = config.courierBaseDeposit();
+        vm.deal(courier, deposit * 4);
+
+        vm.prank(courier);
+        registry.depositStake{value: deposit * 2}();
+        bytes32 lockBefore = registry.stakeLockId(courier);
+
+        vm.prank(courier);
+        registry.requestWithdrawal(deposit);
+        vm.warp(block.timestamp + config.courierWithdrawalCooldown() + 1);
+        vm.prank(courier);
+        registry.executeWithdrawal();
+
+        vm.prank(courier);
+        registry.depositStake{value: deposit}();
+
+        assertEq(registry.stakeLockId(courier), lockBefore, "still the same lock");
+    }
 }

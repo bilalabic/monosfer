@@ -45,6 +45,11 @@ const EXPORTED = {
   SettlementVault: "SettlementVault.sol",
   CourierRegistry: "CourierRegistry.sol",
   DeliveryHub: "DeliveryHub.sol",
+  // V1 dispute layer (P4). The frontend needs the court for appeal status and
+  // the backend needs the committee to coordinate a fallback (sec. 31).
+  DisputeCourt: "DisputeCourt.sol",
+  JurorPool: "JurorPool.sol",
+  FallbackCommittee: "FallbackCommittee.sol",
   // Legacy: frozen under decision D1, retired at P5.3. Exported so the existing
   // app keeps working until the cut-over.
   Delivera: "Delivera.sol",

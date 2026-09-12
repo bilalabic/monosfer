@@ -51,7 +51,8 @@ kalır.
 | `AwaitingFunding` | `Cancelled` | Fonlayan taraf iade alır (sec. 10) |
 | `ReadyForPickup` | `Cancelled` | Devir gerçekleşmedi; escrow müşteriye, teminat kesintisiz serbest |
 | `InTransit` | `ReturnRequired` | Kurye pakete sahip; iade etmeli |
-| `ReturnRequired` | `Returned` | Deterministik; müşteri tam iade alır |
+| `ReturnRequired` | `Returned` | Onayla: gönderen imzalı iade kabulü, `returnAsk` kuryeye. Zaman aşımıyla: müşteri tam iade alır |
+| `Disputed` | `Resolved` | Mahkemenin hükmü escrow'u bölüştürür; zaman aşımıyla müşteri tam iade alır (sec. 30) |
 | `DeliveredPending` | `Completed` | İzinsiz finalize edici (sec. 16) |
 
 Garanti şudur: **hiçbir katılımcı parasını geri almak için karşı tarafın
@@ -125,6 +126,9 @@ serbest bırakılıp yeniden alınmaz.
 
 Onaylanmış iadede `returnAsk` kuryeye ödenir, kalanı müşteriye. Zaman aşımına
 uğramış iadede müşteri tam iade alır ve kurye teminatı kesilmeden serbest kalır.
+
+Onay yolu gönderenin `MONOSFER.RETURN` aksiyonlu imzalı kabulünü ister (sec. 17);
+kuryenin tek taraflı beyanı yeterli değil. Ayrıntı: `proofs.md`, "İade Kanıtı".
 
 Uzlaşma değeri itmez, yalnızca `claimable` yazar — bkz.
 [`settlement.md`](settlement.md).

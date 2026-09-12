@@ -28,16 +28,30 @@ import {ProtocolAccessManager} from "../access/ProtocolAccessManager.sol";
  *
  *      ## Cycles are impossible by construction, not by search
  *
- *      Every wallet stores its depth in the referral forest: a root is 0, and a
- *      referred wallet is its referrer's depth plus one. Registration requires
- *      the referrer's depth to be below `MAX_DEPTH`, which bounds every chain.
- *      Within that bound the contract walks up from the proposed referrer to
- *      check that the registering wallet is not already an ancestor — the walk is
- *      complete, because a chain cannot be longer than the cap, and its gas is
- *      bounded by the same cap.
+ *      Two rules do all the work, and neither costs a traversal:
  *
- *      Walking without a bound would be the obvious implementation and would make
- *      registration cost grow with the depth of somebody else's tree.
+ *        1. A wallet names its referrer at most once — `referrerOf` is
+ *           write-once.
+ *        2. A wallet may only name a referrer while nobody has yet named *it*.
+ *
+ *      Together these say that the edge into a wallet is fixed before any edge
+ *      out of it exists. A cycle needs an edge from some wallet W to one of W's
+ *      own descendants; but W having a descendant means W already has a referee,
+ *      and rule 2 refuses the registration outright. So a cycle can never be
+ *      proposed, and there is nothing to search for.
+ *
+ *      The same pair keeps `depthOf` exact. A depth is written once, from the
+ *      referrer's depth at that moment, and the referrer's own depth is by then
+ *      already frozen by rule 2. An implementation that only walked ancestors
+ *      would not have this: a wallet that acquired a referrer after growing a
+ *      subtree would leave that whole subtree measuring its depth from a root
+ *      that is no longer the root, so two chains of twenty could be joined into a
+ *      chain of forty-one while the deepest recorded depth still read
+ *      twenty-one — past `MAX_DEPTH`, and past where a bounded walk would look.
+ *
+ *      The rule this imposes on users is simply that you name your referrer
+ *      before you refer anyone, which is the order sec. 25 describes anyway:
+ *      registration is an onboarding step.
  */
 contract Referral is ReentrancyGuard {
     // --------------------------------------------------------------------
@@ -62,6 +76,9 @@ contract Referral is ReentrancyGuard {
 
     mapping(address => address) public referrerOf;
     mapping(address => uint8) public depthOf;
+
+    /// @notice How many wallets named this one as their referrer.
+    mapping(address => uint32) public refereeCount;
     mapping(address => bool) public qualified;
     mapping(address => uint256) public claimable;
 
@@ -85,10 +102,10 @@ contract Referral is ReentrancyGuard {
     error ZeroAddress();
     error ZeroAmount();
     error SelfReferral();
+    error RefereesAlreadyAttached(address wallet, uint32 referees);
     error AlreadyRegistered(address wallet);
     error ReferrerUnknown(address referrer);
     error ChainTooDeep(uint8 depth);
-    error CircularReferral(address wallet, address referrer);
     error AlreadyQualified(address wallet);
     error NothingToClaim(address referrer);
     error PayoutFailed(address to, uint256 amount);
@@ -109,7 +126,7 @@ contract Referral is ReentrancyGuard {
     }
 
     modifier onlyReporter() {
-        accessManager.requireRole(accessManager.REPUTATION_REPORTER_ROLE(), msg.sender);
+        accessManager.requireRole(accessManager.REFERRAL_REPORTER_ROLE(), msg.sender);
         _;
     }
 
@@ -132,21 +149,17 @@ contract Referral is ReentrancyGuard {
         if (referrer == address(0)) revert ZeroAddress();
         if (referrer == msg.sender) revert SelfReferral();
         if (referrerOf[msg.sender] != address(0)) revert AlreadyRegistered(msg.sender);
+        // Rule 2. Once wallets hang below you, both your depth and your place in
+        // the forest are load-bearing for theirs. See the note at the top of this
+        // file for why this one check is the whole of the cycle defence.
+        if (refereeCount[msg.sender] != 0) revert RefereesAlreadyAttached(msg.sender, refereeCount[msg.sender]);
 
         uint8 referrerDepth = depthOf[referrer];
         if (referrerDepth >= MAX_DEPTH) revert ChainTooDeep(referrerDepth);
 
-        // Walk up from the proposed referrer. If the caller is already an
-        // ancestor, this registration would close a loop. The cap above makes
-        // the walk both bounded and exhaustive.
-        address cursor = referrer;
-        for (uint8 i = 0; i <= MAX_DEPTH && cursor != address(0); i++) {
-            if (cursor == msg.sender) revert CircularReferral(msg.sender, referrer);
-            cursor = referrerOf[cursor];
-        }
-
         referrerOf[msg.sender] = referrer;
         depthOf[msg.sender] = referrerDepth + 1;
+        refereeCount[referrer] += 1;
         emit Registered(msg.sender, referrer, referrerDepth + 1);
     }
 

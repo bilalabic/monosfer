@@ -71,6 +71,11 @@ contract CourierRegistry is ReentrancyGuard {
 
     mapping(address => Courier) private _couriers;
 
+    /// @notice Bumped when a courier fully exits, so their next stake gets a
+    ///         lock id the vault has not already settled.
+    mapping(address => uint32) private _stakeGeneration;
+    mapping(address => bool) private _lockOpened;
+
     uint256 public totalStaked;
     uint256 public totalReserved;
 
@@ -86,6 +91,7 @@ contract CourierRegistry is ReentrancyGuard {
     event CustodyClosed(address indexed courier, uint32 activeCustody);
     event QualifiedDeliveryRecorded(address indexed courier, uint32 total);
     event VerificationLevelSet(address indexed courier, VerificationLevel level);
+    event StakeGenerationAdvanced(address indexed courier, uint32 generation);
     event SuspensionSet(address indexed courier, bool suspended);
 
     error ZeroAddress();
@@ -143,8 +149,22 @@ contract CourierRegistry is ReentrancyGuard {
      *      lock ids, so without this a replacement registry could never open a
      *      lock for an existing courier.
      */
+    /**
+     * @dev The generation is what lets a courier come back.
+     *
+     *      The vault settles a lock when its last wei leaves, and refuses to
+     *      reopen a settled id — correctly, since reusing an id would let one
+     *      lock's history be mistaken for another's. But the id was derived from
+     *      the courier's address alone, so a courier who withdrew everything
+     *      could never stake again: the only id they can produce is spent.
+     *      Leaving was reachable; returning was not, and nothing said so.
+     *
+     *      A counter bumped on full exit gives them a fresh id and keeps every
+     *      property the address in the id was there for, including the one added
+     *      earlier — two registries sharing a vault still derive different ids.
+     */
     function stakeLockId(address courier) public view returns (bytes32) {
-        return keccak256(abi.encodePacked("MONOSFER_COURIER_STAKE", address(this), courier));
+        return keccak256(abi.encodePacked("MONOSFER_COURIER_STAKE", address(this), courier, _stakeGeneration[courier]));
     }
 
     // --------------------------------------------------------------------
@@ -178,6 +198,14 @@ contract CourierRegistry is ReentrancyGuard {
         uint256 newStake = uint256(c.stake) + amount;
         if (newStake > type(uint96).max) revert AmountTooLarge(newStake);
 
+        // Zero stake plus a lock we have opened before means it was drained and
+        // settled, so this courier needs a fresh id rather than a dead one.
+        if (c.stake == 0 && _lockOpened[courier] && vault.lockAmount(stakeLockId(courier)) == 0) {
+            _stakeGeneration[courier] += 1;
+            _lockOpened[courier] = false;
+            emit StakeGenerationAdvanced(courier, _stakeGeneration[courier]);
+        }
+
         bytes32 lockId = stakeLockId(courier);
         bool isFirstLock = vault.lockAmount(lockId) == 0;
 
@@ -193,6 +221,7 @@ contract CourierRegistry is ReentrancyGuard {
         emit StakeDeposited(courier, amount, newStake);
 
         if (isFirstLock) {
+            _lockOpened[courier] = true;
             vault.lock{value: amount}(lockId, courier);
         } else {
             vault.topUpLock{value: amount}(lockId);

@@ -81,6 +81,11 @@ abstract contract PickupProofVerifier is EIP712 {
         return PickupProof.PICKUP_ACTION;
     }
 
+    /// @notice The action value a return acceptance must carry (sec. 17).
+    function returnAction() external pure returns (bytes32) {
+        return PickupProof.RETURN_ACTION;
+    }
+
     /**
      * @notice Validate an acceptance, burn its nonce and return its digest.
      * @dev Burns before returning, so a reentrant caller cannot spend the same
@@ -99,11 +104,28 @@ abstract contract PickupProofVerifier is EIP712 {
         PickupProof.Acceptance calldata acceptance,
         bytes calldata signature
     ) internal returns (bytes32 digest) {
+        return _consumeAcceptance(deliveryId, courier, signer, PickupProof.PICKUP_ACTION, acceptance, signature);
+    }
+
+    /**
+     * @notice Validate an acceptance for a named action and burn its nonce.
+     * @dev The action is a parameter rather than a constant so the outbound
+     *      handover and the return each bind their own, and neither signature can
+     *      stand in for the other.
+     */
+    function _consumeAcceptance(
+        uint256 deliveryId,
+        address courier,
+        address signer,
+        bytes32 expectedAction,
+        PickupProof.Acceptance calldata acceptance,
+        bytes calldata signature
+    ) internal returns (bytes32 digest) {
         if (acceptance.deliveryId != deliveryId) {
             revert PickupProofWrongDelivery(deliveryId, acceptance.deliveryId);
         }
-        if (acceptance.action != PickupProof.PICKUP_ACTION) {
-            revert PickupProofWrongAction(PickupProof.PICKUP_ACTION, acceptance.action);
+        if (acceptance.action != expectedAction) {
+            revert PickupProofWrongAction(expectedAction, acceptance.action);
         }
         if (acceptance.courier != courier) revert PickupProofWrongCourier(courier, acceptance.courier);
         if (block.timestamp > acceptance.expiresAt) revert PickupProofExpired(acceptance.expiresAt);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
+import {Vm} from "forge-std/Vm.sol";
 import {ProtocolAccessManager} from "../../src/v1/access/ProtocolAccessManager.sol";
 import {ProtocolConfig} from "../../src/v1/config/ProtocolConfig.sol";
 import {BaselineParams} from "../../src/v1/config/BaselineParams.sol";
@@ -8,6 +9,7 @@ import {SettlementVault} from "../../src/v1/vault/SettlementVault.sol";
 import {CourierRegistry} from "../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../src/v1/hub/DeliveryHub.sol";
 import {ReputationRegistry} from "../../src/v1/reputation/ReputationRegistry.sol";
+import {Referral} from "../../src/v1/rewards/Referral.sol";
 import {CoverageQuote} from "../../src/v1/risk/CoverageQuote.sol";
 import {PickupProof} from "../../src/v1/proof/PickupProof.sol";
 import {DeliveryProof} from "../../src/v1/proof/DeliveryProof.sol";
@@ -29,10 +31,16 @@ contract ReputationWiringTest is QuoteFixture, PickupFixture, PodFixture {
     SettlementVault internal vault;
     CourierRegistry internal registry;
     ReputationRegistry internal reputation;
+    Referral internal referral;
     DeliveryHub internal hub;
 
     address internal admin = address(0xA11CE);
     address internal treasury = address(0x7EA5);
+    address internal treasurer = address(0x7EA57);
+    address internal customerReferrer = address(0xDEF1);
+    address internal courierReferrer = address(0xDEF2);
+
+    uint128 internal constant REFERRAL_REWARD = 0.5 ether;
 
     address internal customer;
     uint256 internal constant COURIER_KEY = 0xC0DE10;
@@ -55,14 +63,23 @@ contract ReputationWiringTest is QuoteFixture, PickupFixture, PodFixture {
         vault = new SettlementVault(manager);
         registry = new CourierRegistry(manager, config, vault);
         reputation = new ReputationRegistry(manager);
-        hub = new DeliveryHub(manager, config, registry, vault, reputation, BID_DEPOSIT);
+        referral = new Referral(manager);
+        hub = new DeliveryHub(manager, config, registry, vault, reputation, referral, BID_DEPOSIT);
 
         vm.startPrank(admin);
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(registry));
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(hub));
         manager.grantRole(manager.REGISTRY_CONTROLLER_ROLE(), address(hub));
         manager.grantRole(manager.REPUTATION_REPORTER_ROLE(), address(hub));
+        manager.grantRole(manager.REFERRAL_REPORTER_ROLE(), address(hub));
+        manager.grantRole(manager.TREASURER_ROLE(), treasurer);
         vm.stopPrank();
+
+        vm.prank(treasurer);
+        referral.setRewardAmount(REFERRAL_REWARD);
+        vm.deal(treasurer, 100 ether);
+        vm.prank(treasurer);
+        referral.fund{value: 10 ether}();
 
         vm.deal(customer, 1_000 ether);
         vm.deal(courier, 1_000 ether);
@@ -304,5 +321,90 @@ contract ReputationWiringTest is QuoteFixture, PickupFixture, PodFixture {
         hub.selectCourier(id, courier, version);
 
         assertEq(reputation.recordOf(courier).assignments, 0, "and the write did not land");
+    }
+
+    // ------------------------------------------------ sec. 25: qualification
+
+    /**
+     * @dev sec. 25 pays a referrer when the wallet they brought in *does*
+     *      something, and a completed delivery is the canonical act for both
+     *      sides of it. The registry had this function and no caller for a
+     *      while, which is a subtler kind of missing feature than a missing
+     *      function: everything compiles, every test passes, and no referrer is
+     *      ever paid.
+     */
+    function test_ACompletedDeliveryQualifiesBothSides() public {
+        vm.prank(customer);
+        referral.register(customerReferrer);
+        vm.prank(courier);
+        referral.register(courierReferrer);
+
+        uint256 id = _toInTransit();
+        _complete(id);
+
+        assertTrue(referral.qualified(customer), "the customer ordered");
+        assertTrue(referral.qualified(courier), "the courier carried");
+        assertEq(referral.claimable(customerReferrer), REFERRAL_REWARD, "and each referrer is owed once");
+        assertEq(referral.claimable(courierReferrer), REFERRAL_REWARD);
+    }
+
+    /// @dev One reward per wallet, not one per delivery (sec. 25).
+    function test_ASecondDeliveryPaysTheReferrerNothingMore() public {
+        vm.prank(customer);
+        referral.register(customerReferrer);
+
+        _complete(_toInTransit());
+        assertEq(referral.claimable(customerReferrer), REFERRAL_REWARD);
+
+        uint256 second = _toInTransit();
+        _complete(second);
+
+        assertEq(uint8(hub.deliveryOf(second).state), uint8(DeliveryHub.State.Completed), "and it still settles");
+        assertEq(referral.claimable(customerReferrer), REFERRAL_REWARD, "paid once, not twice");
+    }
+
+    /**
+     * @dev sec. 25 states it outright: a referral failure must never block
+     *      settlement. Revoking the hub's reporter role is the operational shape
+     *      of that failure -- every qualification call now reverts -- and money
+     *      must keep moving regardless.
+     */
+    function test_ABrokenReferralCannotBlockSettlement() public {
+        vm.prank(customer);
+        referral.register(customerReferrer);
+
+        bytes32 role = manager.REFERRAL_REPORTER_ROLE();
+        vm.prank(admin);
+        manager.revokeRole(role, address(hub));
+
+        uint256 id = _toInTransit();
+        _complete(id);
+
+        assertEq(uint8(hub.deliveryOf(id).state), uint8(DeliveryHub.State.Completed), "settled anyway");
+        assertEq(vault.claimableOf(courier), ASK, "and the courier was paid");
+        assertFalse(referral.qualified(customer), "the qualification is simply lost");
+        assertEq(referral.claimable(customerReferrer), 0);
+    }
+
+    /// @dev And the loss is visible rather than silent.
+    function test_AFailedQualificationIsObservable() public {
+        bytes32 role = manager.REFERRAL_REPORTER_ROLE();
+        vm.prank(admin);
+        manager.revokeRole(role, address(hub));
+
+        uint256 id = _toInTransit();
+        _deliver(id);
+
+        vm.recordLogs();
+        vm.prank(customer);
+        hub.confirmDelivery(id);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 topic = keccak256("ReferralReportFailed(address,bytes)");
+        uint256 failures;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics[0] == topic) failures++;
+        }
+        assertEq(failures, 2, "one for the customer, one for the courier");
     }
 }

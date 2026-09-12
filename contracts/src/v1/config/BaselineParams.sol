@@ -39,6 +39,19 @@ library BaselineParams {
             // is long enough for a customer to get round to it and short enough
             // that a rating still describes a delivery they remember.
             ratingWindow: 7 days,
+            // sec. 28 gives the phases, not their lengths. Evidence gets the
+            // longest window because gathering it happens off-chain and involves
+            // people; the draw is a machine waiting on a provider; commit and
+            // reveal are each a single transaction a juror has to remember to
+            // send, so a day apiece.
+            evidenceWindow: 3 days,
+            drawWindow: 6 hours,
+            commitWindow: 1 days,
+            revealWindow: 1 days,
+            appealWindow: 2 days,
+            // Three full rounds plus three appeal windows come to 21.75 days;
+            // 30 gives the court room without letting an escrow sit forever.
+            disputeWindow: 30 days,
             challengeWindow: 24 hours, // sec. 48
             courierWithdrawalCooldown: 24 hours, // sec. 48
             riskQuoteValidity: 5 minutes, // sec. 48
@@ -48,7 +61,13 @@ library BaselineParams {
             courierBaseDeposit: 10 ether, // sec. 48: 10 MON
             minJurorStake: 10 ether, // sec. 48: 10 MON
             jurorLockPerCase: 2 ether, // sec. 48: 2 MON
-            nonRevealSlash: 1 ether // sec. 48: 1 MON
+            nonRevealSlash: 1 ether, // sec. 48: 1 MON
+            arbitrationFeeFirst: 0.3 ether, // sec. 28
+            arbitrationFeeAppeal1: 0.5 ether, // sec. 28
+            arbitrationFeeAppeal2: 0.7 ether, // sec. 28
+            disputeBondFirst: 1 ether, // sec. 28
+            disputeBondAppeal1: 2 ether, // sec. 28
+            disputeBondAppeal2: 4 ether // sec. 28
         });
     }
 }

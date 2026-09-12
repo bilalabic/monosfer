@@ -574,6 +574,25 @@
   },
   {
     "type": "event",
+    "name": "StakeGenerationAdvanced",
+    "inputs": [
+      {
+        "name": "courier",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "generation",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "SuspensionSet",
     "inputs": [
       {

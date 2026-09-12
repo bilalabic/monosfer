@@ -60,6 +60,20 @@ contract ProtocolAccessManager is AccessControlDefaultAdminRules {
     ///         design: it cannot mint the history-based badges.
     bytes32 public constant BADGE_AWARDER_ROLE = keccak256("MONOSFER_BADGE_AWARDER_ROLE");
 
+    /// @notice May seat, release and slash jurors. Held by `DisputeCourt` alone;
+    ///         an EOA with this role could take a juror's stake at will.
+    bytes32 public constant DISPUTE_COURT_ROLE = keccak256("MONOSFER_DISPUTE_COURT_ROLE");
+
+    /**
+     * @notice Held by the contracts that witness a wallet qualifying for a
+     *         referral reward (sec. 25).
+     * @dev Separate from `REPUTATION_REPORTER_ROLE` even though the same
+     *      contracts hold both today. They authorise different things — one
+     *      writes a score, the other commits money out of the referral purse —
+     *      and a single role would mean revoking either revokes both.
+     */
+    bytes32 public constant REFERRAL_REPORTER_ROLE = keccak256("MONOSFER_REFERRAL_REPORTER_ROLE");
+
     /// @notice Delay between scheduling an unpause and being able to execute it.
     uint256 public constant UNPAUSE_DELAY = 6 hours;
 

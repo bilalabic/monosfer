@@ -17,9 +17,9 @@ et → senaryoları koş → dokümante et.
 
 | | |
 |---|---|
-| Test | **154/154** |
+| Test | **461/461** (25 suite) |
 | Gate | **7/7** |
-| Invariant | **21** (4 suite) |
+| Invariant | **30** (5 suite) |
 | Legacy kaynaklar | **8/8 byte-byte değişmedi** |
 | Toolchain | Foundry `1.8.1`, OpenZeppelin `5.7.0`, Slither `0.11.6` |
 
@@ -31,7 +31,12 @@ et → senaryoları koş → dokümante et.
 | P0.4 | `CourierRegistry` | Tamamlandı |
 | P1.1 | `DeliveryHub` | Tamamlandı |
 | P1.3 | İmzalı risk teklifi, kapsam | Tamamlandı |
-| P2 | Pickup/PoD kanıtları | Sırada |
+| P2.1 | Teslim alma kanıtı | Tamamlandı |
+| P2.2 | Teslim etme kanıtı (PoD) | Tamamlandı |
+| P3 | İtibar, rozetler, ödüller, referans | Tamamlandı |
+| P4.1 | `JurorPool` + rastgelelik adaptörü | Yerelde tamam, testnet sırada |
+| P4.2 | `DisputeCourt` (commit/reveal) | Yerelde tamam, testnet sırada |
+| P4.3 | İtirazlar, yedek komite, hüküm settlement'ı | Yerelde tamam, testnet sırada |
 
 ---
 
@@ -465,6 +470,10 @@ dayanıyor.
 | 13 | **Kendini referans** | `SelfReferral` ile reddedildi |
 | 14 | **Döngüsel referans** | `CircularReferral` ile reddedildi |
 
+> `CircularReferral` o günkü koddaki hatanın adı. Denetim geçişinde ata yürüyüşü
+> kaldırıldı; döngü artık `RefereesAlreadyAttached` ile, bir adım önce reddediliyor.
+> Gerekçesi: `rewards.md`, bölüm 7.
+
 ### Doğrulama sırasında çıkan iki şey
 
 - **`forge script` bir işlemi zincirde düşürdü ama `cast run` ile yeniden
@@ -542,3 +551,182 @@ hesaplarını da işlem gönderemez hale getirmişti.
 
 **Deploy runbook'una girmesi gereken madde:** Monad'da gas limiti tampon değil,
 peşin ödenen bir rezervasyondur.
+
+---
+
+## Denetim geçişi — P4 öncesi
+
+P4 kodu yazıldıktan sonra, faza devam etmeden önce V1 yüzeyinin tamamı bağımsız
+bir denetimden geçirildi. Altı bulgu ve iki ek not çıktı. Hepsi bu bölümde
+kapatıldı; **her düzeltme, düzeltmeyi geri alıp testin kırmızıya döndüğü
+görülerek** kanıtlandı.
+
+| # | Ağırlık | Bulgu | Durum |
+|---|---|---|---|
+| 1 | Critical | Sıfır tutarlı payout bacağı settlement'ı kalıcı olarak kilitliyordu | Kapatıldı |
+| 2 | High | `confirmReturn` kanıtsız ödüyordu | Kapatıldı |
+| 3 | High | Kapsam < bid depozitosu olduğunda teminat serbest kalmıyordu | Kapatıldı |
+| 4 | Medium | Tam çıkıştan sonra kurye geri dönemiyordu (`LockAlreadyExists`) | Kapatıldı |
+| 5 | Medium | `Referral` deploy ediliyordu ama `recordQualification`'ı kimse çağırmıyordu | Kapatıldı |
+| 6 | Low | Referans döngü koruması eksikti | Kapatıldı |
+| — | — | `JurorPool`: koltuk muhasebesi config'i serbest bırakma anında okuyordu | Kapatıldı |
+| — | — | `seatPanel`: tek adaylı snapshot'ta sıfıra bölme paniği | Kapatıldı |
+
+### Mutasyon kanıtları
+
+Bir düzeltmenin gerçekten test edildiğini, testin yeşil olması değil; kodu
+bozduğunda **kırmızıya dönmesi** gösterir. Her satır çalıştırıldı:
+
+| Mutasyon | Kırılan test |
+|---|---|
+| Sıfır bacak filtresi kaldırıldı + teminat serbest bırakma daraltıldı | 5/6 (`SettlementEdges`) |
+| Stake generation sayacı kaldırıldı | `test_CourierCanReturnAfterAFullExit` |
+| `confirmReturn` kanıt kontrolü kaldırıldı | 3 |
+| İade beklenen aksiyonu `PICKUP_ACTION` yapıldı | 4 |
+| Koltuk tutarı serbest bırakma anında config'den okundu | 3 (`JurorPool`) |
+| Draw başına tek koltuk koruması kaldırıldı | 1 |
+| `DeliveryHub` nitelenme bildirimini bıraktı | 3 (`ReputationWiring`) |
+| Referans 2. kuralı kaldırıldı | 5 — biri fuzz ile gerçek bir döngü kurdu |
+| Stride aramadan sabit 3 yapıldı (aralarında asal değil) | 4 (`DisputeCourt`) |
+| `size > 1` koruması kaldırıldı | 1 — panik yerine `PanelTooSmall` |
+| Snapshot yerine canlı havuz okundu | 1 (`DisputeCourt`) + 4 (`JurorPool`) |
+
+### Testleri güçlendiren düzeltmeler
+
+Denetim üç testi **vacuous** olarak işaretledi; hiçbiri kendi iddiasını
+kanıtlamıyordu:
+
+- `test_TerminalStateCannotReopen` üç kez çıplak `vm.expectRevert()` kullanıyordu
+  — herhangi bir revert'i, hatta ilgisiz bir sebeple durum kontrolünden önce
+  atılanı bile kabul eder. Üçü de adlandırılmış `WrongState` seçicisine bağlandı.
+- sec. 33-13 mutasyonları hiçbir testi kırmıyordu. Sebep: stride'ın taşıdığı iddia
+  tekrarsızlık değil **kapsama**; tekrarı zaten `isSeated` reddediyor. Kapsama ise
+  ancak aday sayısı **bileşik** olduğunda gözlemlenebilir hale geliyor — 3 ve 5
+  adayla her stride asallık tesadüfüyle aralarında asal çıkıyor. Dokuz aday /
+  dokuz koltuk, sec. 28'in izin verdiği en küçük tek ve bileşik durum.
+- sec. 33-18 için tek bir geç gelen yeterli değildi; canlı havuzdan çekilse bile
+  o tek kişi seçilmeyebilirdi. Yeni test, draw talep edildikten sonra **aday
+  kümesinin tamamını** değiştiriyor.
+
+### Tasarım kararı: yürüyüş yerine değişmez
+
+Bulgu 6'nın düzeltmesi ata yürüyüşünü **kaldırdı**. Yeni kural (alt ağacı olan
+cüzdan referans eden atayamaz) döngüyü önerilemez hale getiriyor; yürüyüş bunun
+üzerine ulaşılamaz kod olarak kalıyordu. Aynı gerekçeyle `seatPanel`'deki
+`size < wanted` erken çıkışı da kaldırıldı: mutasyon testi onu kaldırmanın hiçbir
+testi kırmadığını gösterdi, çünkü asıl işi yapan `size > 1` koruması.
+
+### Statik analiz
+
+Slither `0.11.6`, `fail_on: medium` — **medium ve üstü bulgu yok**. Bu geçişte
+düzeltilenler: `_successPayouts` ve `_winner` içindeki başlatılmamış yereller
+(açık başlangıç değeri verildi), `_panel` ve `_snapshots` mapping'leri için
+`uninitialized-state` yanlış pozitifi (gerekçeli tek satırlık bastırma).
+`seatPanel` ayrıca `nonReentrant` oldu — döngü içinde dış çağrı yapan bir
+fonksiyonun korunmaması için sebep yok.
+
+---
+
+## P4.3 — İtirazlar, yedek komite, hüküm settlement'ı
+
+P4.1 ve P4.2 jüriyi kurmuştu ama hüküm paraya dönüşmüyordu: `DisputeCourt`
+`Ruled` fazında duruyor, `DeliveryHub` ihtilaftan haberdar olmuyordu. Bu faz iki
+kontratı birbirine bağladı ve sec. 28'in tırmanmasıyla sec. 31'in yedeğini ekledi.
+
+### Değişen şey, tek cümlede
+
+İhtilaf açıldığında teslimat `Disputed`'a geçiyor ve **deterministik çıkışlar
+askıya alınıyor**. Sebep: `poke` ihtilaf sırasında da çalışsaydı, saat jürinin
+altından escrow'u kapatır ve hüküm geldiğinde ortada para kalmazdı.
+
+### Yapıyı taşıyan kararlar
+
+| Karar | Gerekçe |
+|---|---|
+| Her tur `keccak256(disputeId, round)` altında | İtiraz ikinci bir panel çeker; iki tur birbirinin koltuklarını, taahhütlerini ve sayımını görmemeli. Aynı anahtar havuzun draw id'si, böylece birinci turda oturan juror ikinci tur için eşit şartlarda yeniden çekilebilir |
+| `Refuse` → müşteriye %100 | Panelin karar vermeyi reddetmesi; protokolün ifayı saptayamadığı her durumdaki cevabı escrow'u iade etmek. Kurye lehine okumak karar vermemeyi ödüllendirirdi |
+| İhtilaflı teslimatta protokol ücreti alınmıyor | İşler kötüleştikçe daha çok kazanmak yanlış teşvik |
+| Komite yalnızca `Failed` fazından çağrılabiliyor | Canlılık mekanizmasını veto hâline getirmemek için |
+| `disputeWindow` bir faz değil, uzun durak | Mahkeme tamamen sussa bile "çıkışı olmayan durum yok" kuralı ayakta kalsın diye. Üç tam turdan uzun olması config'te doğrulanıyor |
+
+### Yorum gerektiren yer: bond kime döner
+
+sec. 28 "Participation / Appeal Bond" diyor ama akıbetini söylemiyor. Uygulanan
+kural: **birinci turun bond'u her hâlükârda iade edilir** (katılım bedeli, haklı
+çıkma bahsi değil); **itiraz bond'u** büyük panel küçüğünden farklı karar verirse
+iade edilir, aynı kararı tekrarlarsa hazineye yazılır. Dinlenmek için ödemekle
+geciktirmek için ödemek arasındaki fark budur. Bu bir okuma tercihi;
+`dispute.md` bölüm 6'da açıkça yorum olarak işaretlendi.
+
+### Mutasyon kanıtları
+
+| Mutasyon | Kırılan test |
+|---|---|
+| `open` hub'ı hiç kilitlemiyor | 30 |
+| İtiraz penceresi beklenmiyor | 12 |
+| Turlar aynı depoyu paylaşıyor | 10 |
+| Komite sınırsız kod imzalayabiliyor | 6 |
+| `Refuse` kurye lehine sayılıyor | 2 |
+| Başarısız itiraz da bond'unu geri alıyor | 2 |
+| Dördüncü tur açılıyor | 2 |
+| `poke` ihtilaflı teslimatı da kapatıyor | 2 |
+| Komite kararı tekrar kullanılabiliyor | 2 |
+| İtiraz edenin taraf olma zorunluluğu kaldırıldı | 2 |
+| Aynı teslimat iki kez ihtilafa açılabiliyor | 2 |
+| Ödeme gücü kontrolü yok | 2 |
+
+Son üç satır ilk koşuda **0** veriyordu; bu fazın asıl çıktısı orası:
+
+- **İtiraz eden taraf kontrolü test edilmemişti.** `open` için `NotAParty`
+  testi vardı, `appeal` için yoktu. `test_OnlyAPartyMayAppeal` eklendi.
+- **Komite kararının tek kullanımlık olması mahkeme üzerinden ulaşılamıyor:**
+  karar uygulandığı anda ihtilaf `Settled` oluyor ve faz makinesi ikinci çağrıyı
+  zaten reddediyor. Koruma yine de silinmedi — `requireDecision` kamusal bir
+  giriş noktası ve kendi başına ayakta durmalı. Onun yerine `FallbackCommittee`
+  kendi birim suite'ini aldı (16 test) ve koruma orada doğrudan test ediliyor.
+- **`solvent` koruması hiçbir normal yoldan ulaşılamıyor**, invariant suite'i
+  dahil: değer alan her fonksiyon aldığını sayıyor, ödeyen her fonksiyon
+  düşüyor, dolayısıyla bakiye hiçbir zaman borcun altına inmiyor. Bir güvenlik
+  ağının bir şey yakaladığını kanıtlamanın dürüst yolu ağı denemektir; bakiye
+  `vm.deal` ile kasten bozuldu ve mahkemenin işlem yapmayı reddettiği gösterildi.
+
+### Harness'ın kendisi iki kez yanlış söyledi
+
+İlk mutasyon koşusu üç satırda **0** raporladı; hiçbiri gerçek değildi.
+
+1. Arka planda koşan `forge test` çıktısı kesiliyor, sonuç satırı hiç
+   yazılmıyordu — ve sonuç satırı olmayan bir koşu "hiçbir şey kırılmadı" gibi
+   okunuyordu. Harness artık tam bir koşu görmediyse sayı vermiyor.
+2. `// mutated away` ile başlayan argümanı MSYS bir Windows yoluna çeviriyor,
+   mutasyon bozuk kod üretiyordu. Başına boşluk koymak yetti.
+
+Bu yüzden mutasyon koşusu artık **önde** yapılıyor: arka plan koşusunun sessizce
+yanlış cevap vermesi, doğru cevabı geç almaktan kötüdür.
+
+### Invariant suite'i
+
+`DisputeCourtInvariant` mahkemeyi dört bitiş yolunun tamamında rastgele
+sürüyor: jüri hükmü, itiraz sonrası hüküm, komite kararı ve hub'ın uzun durağı.
+
+- `invariant_ADisputedDeliveryEndsInExactlyOneTerminalState` — kabul kriteri
+- `invariant_VaultStaysSolvent`, `invariant_CourtStaysSolvent`
+- `invariant_ASettledDisputeStaysSettled`
+- `invariant_NoDisputeEverReachesAFourthRound`
+
+**İlk koşuda invariant'ların hepsi geçti ve hiçbir şey kanıtlamadılar:** fuzzer
+bütçesinin çoğunu handler'ın getter'larına harcamış, tek bir ihtilaf bile
+açmamıştı. Vacuity guard'ı bunu yakaladı; `targetSelector` ile hedef kümesi
+yalnızca eylemlere daraltıldı.
+
+### Cheatcode tuzağının sekizinci örneği
+
+`court.open{value: _roundCost(1)}(deliveryId)` — `_roundCost` masum görünen bir
+internal helper ama içinde iki config getter'ı okuyor, dolayısıyla `vm.prank`'i
+tüketiyor. Tarayıcı bunu **yakalayamadı**, çünkü kural `lowercase.member(`
+şeklindeki instance çağrılarına bakıyordu.
+
+Tarayıcı sertleştirildi: `{value: ...}` ifadesinin içinde **herhangi bir çağrı**
+artık tuzak sayılıyor. Gerekçe, o ifadenin cheatcode'un ineceği çağrıdan hemen
+önce değerlendirilmesi ve yerel bir helper'ın orada instance çağrısından daha
+güvenli olmaması. Yeni kural kasıtlı olarak bozulmuş üç örnek üzerinde
+doğrulandı; güvenli iki biçim temiz geçti.

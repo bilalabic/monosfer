@@ -56,6 +56,19 @@
   },
   {
     "type": "function",
+    "name": "DISPUTE_COURT_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "EMERGENCY_ROLE",
     "inputs": [],
     "outputs": [
@@ -76,6 +89,19 @@
         "name": "",
         "type": "uint48",
         "internalType": "uint48"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "REFERRAL_REPORTER_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "stateMutability": "view"
