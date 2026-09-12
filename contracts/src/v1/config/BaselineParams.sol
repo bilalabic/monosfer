@@ -39,6 +39,15 @@ library BaselineParams {
             // is long enough for a customer to get round to it and short enough
             // that a rating still describes a delivery they remember.
             ratingWindow: 7 days,
+            // sec. 28 gives the phases, not their lengths. Evidence gets the
+            // longest window because gathering it happens off-chain and involves
+            // people; the draw is a machine waiting on a provider; commit and
+            // reveal are each a single transaction a juror has to remember to
+            // send, so a day apiece.
+            evidenceWindow: 3 days,
+            drawWindow: 6 hours,
+            commitWindow: 1 days,
+            revealWindow: 1 days,
             challengeWindow: 24 hours, // sec. 48
             courierWithdrawalCooldown: 24 hours, // sec. 48
             riskQuoteValidity: 5 minutes, // sec. 48

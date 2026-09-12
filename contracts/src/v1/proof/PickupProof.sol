@@ -60,6 +60,15 @@ library PickupProof {
      */
     bytes32 internal constant PICKUP_ACTION = keccak256("MONOSFER.PICKUP");
 
+    /**
+     * @notice The action value `confirmReturn` accepts.
+     * @dev A return hands the package back, and sec. 17 requires proof of that
+     *      before the return fee is paid. Its own action value is what stops an
+     *      acceptance gathered for the outbound handover from being replayed to
+     *      claim a return that never happened.
+     */
+    bytes32 internal constant RETURN_ACTION = keccak256("MONOSFER.RETURN");
+
     /// @dev keccak256 of the type string. Field order must match `Acceptance`.
     bytes32 internal constant TYPEHASH =
         keccak256("PickupAcceptance(uint256 deliveryId,address courier,bytes32 action,uint256 nonce,uint64 expiresAt)");

@@ -40,9 +40,11 @@ PickupAcceptance(uint256 deliveryId,address courier,bytes32 action,uint256 nonce
 Chain id ve doğrulayan kontrat struct alanı değil, **EIP-712 domain'i** ile
 bağlanır — bir kabul başka zincire veya başka deploy'a taşınamaz.
 
-`action` bugün tek bir değer alıyor (`keccak256("MONOSFER.PICKUP")`), ama sabit
-olarak var: iade devri ve teslim kanıtı kendi değerlerini alacak, böylece biri
-için toplanan imza diğerine geçemeyecek.
+`action` iki değer alıyor: teslim almada `keccak256("MONOSFER.PICKUP")`,
+iadede `keccak256("MONOSFER.RETURN")`. Aynı struct, aynı nonce alanı, tek fark bu
+— ve fark tam olarak şunu sağlıyor: gönderenin devir için verdiği imza, iade
+olmuş gibi tekrar sunulamıyor. Nonce alanı ortak olduğu için ikisi de tek
+kullanımlık; bir kabul harcandığında diğer adımda da geçersiz.
 
 ---
 
@@ -149,9 +151,48 @@ Invariant suite'inde `invariant_PickupAcceptanceNeverReplayed` (sec. 33-7) ve
 
 ---
 
+# İade Kanıtı (sec. 17)
+
+## 7. Kurye kendi kendine ödeme yapamaz
+
+`confirmReturn` tek başına bir durum geçişi değil: `returnAsk` müşterinin
+escrow'undan kuryeye ödenir ve mala karşılık duran kapsam serbest kalır. Yani
+kurye **kendisine** ödeme yaptırıyor.
+
+Bu yüzden kanıt isteniyor. `confirmPickup` gönderenin EIP-712 kabulünü,
+`submitDeliveryProof` servis imzalı attestation'ı ve 24 saatlik itiraz penceresini
+şart koşarken, paranın kuryeye kendi beyanıyla gittiği tek geçişin hiçbir şey
+istememesi tutarsızdı. Şimdi aynı typed data kullanılıyor, tek farkla:
+
+```solidity
+acceptance.action == keccak256("MONOSFER.RETURN")
+```
+
+## 8. Gönderen imzalamazsa ne olur
+
+Kurye mahsur kalmaz. `ReturnRequired` durumunun kendi son tarihi var; pencere
+dolduğunda `poke` teslimatı `Returned`'a taşır. Fark şurada: o yolda müşteri
+escrow'un tamamını geri alır ve iade ücreti ödenmez. İadenin gerçekten yapıldığını
+düşünen kurye ihtilaf mahkemesine gidebilir (sec. 26).
+
+Kısacası kaybolan şey kuryenin **kimsenin onaylamadığı** bir iade için ücret alma
+imkânı; iade ücretinin kendisi değil.
+
+## 9. Test kapsamı
+
+- Gönderen dışında birinin imzaladığı iade reddedilir
+- Teslim alma için toplanan imza iadede sunulunca `PickupProofWrongAction`
+- Ters yön de doğru: iade kabulü `confirmPickup`'a sunulunca reddedilir
+- Kullanılan iade kabulünün nonce'u yanar (sec. 33-7)
+
+Mutasyon kanıtı: kontrol satırı tamamen kaldırıldığında 3 test, beklenen aksiyon
+`PICKUP_ACTION` ile değiştirildiğinde 4 test kırmızıya döner.
+
+---
+
 # Teslim Etme Kanıtı (PoD)
 
-## 7. Neden alıcının imzası değil
+## 10. Neden alıcının imzası değil
 
 Bir teslimatta cüzdanı olduğu varsayılamayacak tek kişi alıcıdır. sec. 15 bu
 yüzden onun kanıtını sahip olmayabileceği bir anahtardan değil, protokolden
@@ -161,7 +202,7 @@ doğrular, PoD attestation servisi doğrulamanın geçtiğini imzalar.
 Zincir sırrı hiç görmez. `challengeHash` ona bir taahhüttür; bir ihtilafta hangi
 challenge'ın yanıtlandığı gösterilebilir, düz metin hiç yayımlanmadan.
 
-## 8. Attestation'ın bağladıkları
+## 11. Attestation'ın bağladıkları
 
 ```text
 PodAttestation(uint256 deliveryId,address courier,bytes32 proofType,
@@ -187,7 +228,7 @@ yaşardı — yani imzanın gereksiz kılmayı amaçladığı bileşende.
 anlamadan kabul edilemez; yeni tip eklemek bilinçli bir değişikliktir, imzacının
 tek taraflı sokabileceği bir şey değil.
 
-## 9. Ele geçirilmiş bir attestation imzacısı ne yapabilir
+## 12. Ele geçirilmiş bir attestation imzacısı ne yapabilir
 
 Bu anahtar teslimatı beyan edebilir, yani gerçek bir güven noktasıdır — risk
 teklifi imzacısından **bağımsız döner** (`SIGNER_ADMIN_ROLE`) ve deploy script'i
@@ -200,14 +241,14 @@ Döndürme, bekleyen attestation'ları anında geçersizleştirir: nonce'lar imz
 hesaba göre tutulur ve imza gönderim anında config'in adını verdiği imzacıya
 karşı doğrulanır.
 
-## 10. Backend'in üretmesi gerekenler
+## 13. Backend'in üretmesi gerekenler
 
 - Tip değerleri `hub.podProofTypes()` ile zincirden okunur, tahmin edilmez.
 - `hub.hashPodAttestation(attestation)` digest'i döndürür.
 - `hub.podNonceUsed(imzacı, nonce)` bir nonce'un harcanıp harcanmadığını söyler.
 - Düz metin OTP **hiçbir koşulda** zincire gönderilmez; yalnızca hash'i.
 
-## 11. Henüz yapılmayan
+## 14. Henüz yapılmayan
 
 sec. 15 cüzdanı olan bir alıcı için isteğe bağlı **doğrudan imza yolundan** da
 söz eder. Bugün uygulanmadı: bir teslimat zincirde alıcı adresi taşımıyor, bu
@@ -215,7 +256,7 @@ yüzden kontrat böyle bir imzayı kendisi doğrulayamaz. `POD_RECIPIENT_SIGNATU
 tipi kabul edilir ve anlamı "attestation servisi alıcının imzasını zincir dışında
 doğruladı"dır. Doğrudan yol, teslimata alıcı alanı eklenmesini gerektirir.
 
-## 12. Test kapsamı
+## 15. Test kapsamı
 
 27 birim/fuzz testi. Altı kontrolün her biri tek tek koddan çıkarılarak ölçüldü:
 

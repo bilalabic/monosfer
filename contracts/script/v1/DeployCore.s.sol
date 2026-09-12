@@ -80,7 +80,7 @@ contract DeployCoreScript is Script {
         BadgeSBT badge = new BadgeSBT(accessManager, reputation, registry, vm.envOr("BADGE_BASE_URI", string("")));
         RewardDistributor rewards = new RewardDistributor(accessManager, config);
         Referral referral = new Referral(accessManager);
-        DeliveryHub hub = new DeliveryHub(accessManager, config, registry, vault, reputation, bidDeposit);
+        DeliveryHub hub = new DeliveryHub(accessManager, config, registry, vault, reputation, referral, bidDeposit);
 
         vm.stopBroadcast();
 

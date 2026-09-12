@@ -10,6 +10,7 @@ import {SettlementVault} from "../../../src/v1/vault/SettlementVault.sol";
 import {CourierRegistry} from "../../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../../src/v1/hub/DeliveryHub.sol";
 import {ReputationRegistry} from "../../../src/v1/reputation/ReputationRegistry.sol";
+import {Referral} from "../../../src/v1/rewards/Referral.sol";
 import {CoverageQuote} from "../../../src/v1/risk/CoverageQuote.sol";
 import {DeliveryProof} from "../../../src/v1/proof/DeliveryProof.sol";
 import {PickupProof} from "../../../src/v1/proof/PickupProof.sol";
@@ -375,8 +376,16 @@ contract HubHandler is QuoteFixture, PickupFixture, PodFixture {
     function confirmReturn(uint256 dSeed) external {
         (uint256 id, bool ok) = _delivery(dSeed);
         if (!ok) return;
-        vm.prank(hub.deliveryOf(id).courier);
-        try hub.confirmReturn(id) {} catch {}
+        DeliveryHub.Delivery memory d = hub.deliveryOf(id);
+        if (d.courier == address(0)) return;
+
+        PickupProof.Acceptance memory a = buildReturnAcceptance(id, d.courier);
+        bytes memory sig = signAcceptance(hub, a, _customerKey(d.customer));
+
+        vm.prank(d.courier);
+        try hub.confirmReturn(id, a, sig) {
+            spentNonces[d.customer].push(a.nonce);
+        } catch {}
     }
 
     /// @dev Anyone may poke; the fuzzer uses a random address on purpose.
@@ -404,6 +413,7 @@ contract DeliveryHubInvariantTest is StdInvariant, QuoteFixture, PodFixture {
     CourierRegistry internal registry;
     DeliveryHub internal hub;
     ReputationRegistry internal reputation;
+    Referral internal referral;
     HubHandler internal handler;
 
     address internal admin = address(0xA11CE);
@@ -417,13 +427,15 @@ contract DeliveryHubInvariantTest is StdInvariant, QuoteFixture, PodFixture {
         vault = new SettlementVault(manager);
         registry = new CourierRegistry(manager, config, vault);
         reputation = new ReputationRegistry(manager);
-        hub = new DeliveryHub(manager, config, registry, vault, reputation, 1 ether);
+        referral = new Referral(manager);
+        hub = new DeliveryHub(manager, config, registry, vault, reputation, referral, 1 ether);
 
         vm.startPrank(admin);
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(registry));
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(hub));
         manager.grantRole(manager.REGISTRY_CONTROLLER_ROLE(), address(hub));
         manager.grantRole(manager.REPUTATION_REPORTER_ROLE(), address(hub));
+        manager.grantRole(manager.REFERRAL_REPORTER_ROLE(), address(hub));
         manager.grantRole(manager.VERIFIER_ROLE(), address(this));
         vm.stopPrank();
 

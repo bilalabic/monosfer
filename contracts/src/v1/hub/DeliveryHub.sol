@@ -8,6 +8,7 @@ import {ProtocolAccessManager} from "../access/ProtocolAccessManager.sol";
 import {ProtocolConfig} from "../config/ProtocolConfig.sol";
 import {CourierRegistry} from "../registry/CourierRegistry.sol";
 import {ReputationRegistry} from "../reputation/ReputationRegistry.sol";
+import {Referral} from "../rewards/Referral.sol";
 import {ISettlementVault} from "../interfaces/ISettlementVault.sol";
 import {DeliveryProof} from "../proof/DeliveryProof.sol";
 import {PickupProof} from "../proof/PickupProof.sol";
@@ -132,6 +133,15 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
     ISettlementVault public immutable vault;
     ReputationRegistry public immutable reputation;
 
+    /**
+     * @notice Where a first completed delivery is reported (sec. 25). May be zero.
+     * @dev The only dependency here that is allowed to be unset. A deployment
+     *      without a referral programme is a coherent deployment, and every other
+     *      address in this constructor is load-bearing for settlement while this
+     *      one is not.
+     */
+    Referral public immutable referral;
+
     uint256 public nextDeliveryId;
 
     mapping(uint256 => Delivery) private _deliveries;
@@ -174,6 +184,9 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
     event PickupConfirmed(uint256 indexed deliveryId, address indexed courier);
     event DeliveryProofSubmitted(uint256 indexed deliveryId, address indexed courier);
     event ReturnRequested(uint256 indexed deliveryId, address indexed by);
+
+    /// @notice A return was proved with the sender's signed acceptance (sec. 17).
+    event ReturnConfirmed(uint256 indexed deliveryId, address indexed courier);
     event Settled(uint256 indexed deliveryId, State finalState);
 
     // --------------------------------------------------------------------
@@ -181,6 +194,9 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
     // --------------------------------------------------------------------
 
     event ReputationReportFailed(bytes data);
+
+    /// @notice A referral qualification could not be recorded. Never fatal (sec. 25).
+    event ReferralReportFailed(address indexed wallet, bytes data);
 
     error ZeroAddress();
     error ZeroAmount();
@@ -220,6 +236,7 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
         CourierRegistry registry_,
         ISettlementVault vault_,
         ReputationRegistry reputation_,
+        Referral referral_,
         uint96 bidDeposit_
     ) {
         if (address(accessManager_) == address(0)) revert ZeroAddress();
@@ -234,6 +251,7 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
         registry = registry_;
         vault = vault_;
         reputation = reputation_;
+        referral = referral_;
         bidDeposit = bidDeposit_;
     }
 
@@ -558,12 +576,43 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
         emit ReturnRequested(deliveryId, msg.sender);
     }
 
-    /// @notice Courier confirms the package is back with the sender (sec. 17).
-    function confirmReturn(uint256 deliveryId) external nonReentrant whenNotPaused {
+    /**
+     * @notice Courier confirms the package is back with the sender (sec. 17).
+     * @dev This is the one transition where the courier pays *itself*: a
+     *      confirmed return releases the return fee out of the customer's escrow
+     *      and frees the coverage that answers for the goods. It therefore cannot
+     *      run on the courier's word alone, any more than `confirmPickup` can —
+     *      sec. 17 requires proof that the package actually came back, and the
+     *      sender's signature over `RETURN_ACTION` is that proof.
+     *
+     *      The acceptance carries its own action value, so the signature the
+     *      sender produced to authorise the outbound handover cannot be resubmitted
+     *      here to claim a return that never happened, and the shared nonce space
+     *      means neither can be replayed at all (invariant 33-7).
+     *
+     *      A sender who simply refuses to sign does not strand the courier: the
+     *      return window still expires into `Returned` through `poke`, and a
+     *      courier who believes the refusal is unjust has the dispute court
+     *      (sec. 26). What they no longer have is the ability to take the fee
+     *      without anyone agreeing that the package came back.
+     * @param deliveryId The delivery being returned.
+     * @param acceptance The sender's signed acceptance of the return handover.
+     * @param signature EOA or ERC-1271 signature over `hashPickupAcceptance`.
+     */
+    function confirmReturn(uint256 deliveryId, PickupProof.Acceptance calldata acceptance, bytes calldata signature)
+        external
+        nonReentrant
+        whenNotPaused
+    {
         Delivery storage d = _requireDelivery(deliveryId);
         _requireState(deliveryId, d, State.ReturnRequired);
         if (msg.sender != d.courier) revert NotCourier(msg.sender);
 
+        // Validated and the nonce burned before the state moves, so a rejected
+        // proof leaves the delivery exactly where it was.
+        _consumeAcceptance(deliveryId, d.courier, d.customer, PickupProof.RETURN_ACTION, acceptance, signature);
+
+        emit ReturnConfirmed(deliveryId, d.courier);
         registry.closeCustody(d.courier);
         _settleReturn(deliveryId, d, true);
     }
@@ -627,23 +676,42 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
 
     function _complete(uint256 deliveryId, Delivery storage d) internal {
         ISettlementVault.Payout[] memory payouts = _successPayouts(d);
+        address customer = d.customer;
+        address courier = d.courier;
+
         _releaseCourierCollateral(d);
         d.completedAt = SafeCast.toUint64(block.timestamp);
         _finish(deliveryId, d, State.Completed);
         emit Settled(deliveryId, State.Completed);
         vault.releaseLock(escrowLockId(deliveryId), payouts);
+
+        _qualify(customer, Referral.Role.Customer);
+        _qualify(courier, Referral.Role.Courier);
     }
 
     /// @dev sec. 18.1: ask to courier, fee to treasury, unused return reserve to customer.
+    /**
+     * @dev Only non-zero legs are emitted. The vault rejects a zero-amount payout
+     *      — rightly, since crediting nobody nothing is never intentional — and a
+     *      leg can legitimately be zero here: the protocol fee rounds to zero on a
+     *      small enough ask, and `protocolFeeBps` may be configured to zero
+     *      outright. Emitting it anyway made `_complete` revert forever, which
+     *      stranded the escrow and the courier's coverage with no way out for
+     *      anyone and no deadline left to trip.
+     */
     function _successPayouts(Delivery storage d) internal view returns (ISettlementVault.Payout[] memory payouts) {
-        uint256 n = 2;
-        if (d.returnReserve > 0) n = 3;
+        uint96 fee = d.protocolFee;
+        uint96 reserve = d.returnReserve;
+
+        uint256 n = 1;
+        if (fee > 0) n++;
+        if (reserve > 0) n++;
+
         payouts = new ISettlementVault.Payout[](n);
-        payouts[0] = ISettlementVault.Payout({to: d.courier, amount: d.courierAsk});
-        payouts[1] = ISettlementVault.Payout({to: config.treasury(), amount: d.protocolFee});
-        if (d.returnReserve > 0) {
-            payouts[2] = ISettlementVault.Payout({to: d.customer, amount: d.returnReserve});
-        }
+        uint256 k = 0;
+        payouts[k++] = ISettlementVault.Payout({to: d.courier, amount: d.courierAsk});
+        if (fee > 0) payouts[k++] = ISettlementVault.Payout({to: config.treasury(), amount: fee});
+        if (reserve > 0) payouts[k] = ISettlementVault.Payout({to: d.customer, amount: reserve});
     }
 
     /**
@@ -689,15 +757,28 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
         emit Settled(deliveryId, State.Cancelled);
 
         if (releaseCoverage) {
-            registry.releaseCollateral(courier, coverage);
+            // Same reasoning as `_releaseCourierCollateral`: the bid deposit was
+            // folded into the coverage, so the reservation is the larger of them.
+            registry.releaseCollateral(courier, coverage > bidDeposit ? coverage : bidDeposit);
         } else if (releaseBid) {
             registry.releaseCollateral(courier, bidDeposit);
         }
         if (hadEscrow) vault.refundLock(escrowLockId(deliveryId));
     }
 
+    /**
+     * @dev Releases what was actually reserved, which is not always the coverage.
+     *      `placeBid` locks `bidDeposit` and `fundAsCourier` tops it up to the
+     *      coverage rather than releasing and re-taking it, so the standing
+     *      reservation is `max(bidDeposit, coverage)`. Releasing only the coverage
+     *      left the difference locked forever whenever coverage was the smaller of
+     *      the two — the default for any modest parcel — and a courier with a
+     *      non-zero reservation can never deregister.
+     */
     function _releaseCourierCollateral(Delivery storage d) internal {
-        if (d.courierFunded) registry.releaseCollateral(d.courier, d.requiredCollateral);
+        if (!d.courierFunded) return;
+        uint96 reserved = d.requiredCollateral > bidDeposit ? d.requiredCollateral : bidDeposit;
+        registry.releaseCollateral(d.courier, reserved);
     }
 
     // --------------------------------------------------------------------
@@ -767,6 +848,28 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
     function _report(bytes memory data) internal {
         (bool ok,) = address(reputation).call(data);
         if (!ok) emit ReputationReportFailed(data);
+    }
+
+    /**
+     * @dev sec. 25: a first completed delivery is what earns the referrer their
+     *      reward, and both sides of it count -- the customer who ordered and the
+     *      courier who carried.
+     *
+     *      Reported through a low-level call for the same reason reputation is,
+     *      and with more at stake: `recordQualification` reverts outright on a
+     *      wallet that already qualified, which is the common case after the
+     *      first delivery. Letting that propagate would mean the second delivery
+     *      a wallet ever completes could not settle. sec. 25 states the rule
+     *      directly -- a referral failure must never block settlement -- so the
+     *      failure is recorded as an event and settlement carries on.
+     */
+    function _qualify(address wallet, Referral.Role role) internal {
+        if (address(referral) == address(0)) return;
+
+        bytes memory data = abi.encodeCall(Referral.recordQualification, (wallet, role));
+        // slither-disable-next-line low-level-calls
+        (bool ok,) = address(referral).call(data);
+        if (!ok) emit ReferralReportFailed(wallet, data);
     }
 
     function _requireDelivery(uint256 deliveryId) internal view returns (Delivery storage d) {

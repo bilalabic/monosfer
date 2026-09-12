@@ -9,6 +9,7 @@ import {SettlementVault} from "../../src/v1/vault/SettlementVault.sol";
 import {CourierRegistry} from "../../src/v1/registry/CourierRegistry.sol";
 import {DeliveryHub} from "../../src/v1/hub/DeliveryHub.sol";
 import {ReputationRegistry} from "../../src/v1/reputation/ReputationRegistry.sol";
+import {Referral} from "../../src/v1/rewards/Referral.sol";
 import {CoverageQuote} from "../../src/v1/risk/CoverageQuote.sol";
 import {RiskQuoteVerifier} from "../../src/v1/risk/RiskQuoteVerifier.sol";
 import {PickupProof} from "../../src/v1/proof/PickupProof.sol";
@@ -25,6 +26,7 @@ contract DeliveryHubTest is QuoteFixture, PickupFixture, PodFixture {
     CourierRegistry internal registry;
     DeliveryHub internal hub;
     ReputationRegistry internal reputation;
+    Referral internal referral;
 
     address internal admin = address(0xA11CE);
     address internal emergency = address(0xE4E4);
@@ -55,7 +57,8 @@ contract DeliveryHubTest is QuoteFixture, PickupFixture, PodFixture {
         vault = new SettlementVault(manager);
         registry = new CourierRegistry(manager, config, vault);
         reputation = new ReputationRegistry(manager);
-        hub = new DeliveryHub(manager, config, registry, vault, reputation, BID_DEPOSIT);
+        referral = new Referral(manager);
+        hub = new DeliveryHub(manager, config, registry, vault, reputation, referral, BID_DEPOSIT);
 
         vm.startPrank(admin);
         manager.grantRole(manager.EMERGENCY_ROLE(), emergency);
@@ -64,6 +67,7 @@ contract DeliveryHubTest is QuoteFixture, PickupFixture, PodFixture {
         manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(hub));
         manager.grantRole(manager.REGISTRY_CONTROLLER_ROLE(), address(hub));
         manager.grantRole(manager.REPUTATION_REPORTER_ROLE(), address(hub));
+        manager.grantRole(manager.REFERRAL_REPORTER_ROLE(), address(hub));
         vm.stopPrank();
 
         DEPOSIT = config.courierBaseDeposit();
@@ -462,14 +466,99 @@ contract DeliveryHubTest is QuoteFixture, PickupFixture, PodFixture {
         assertEq(vault.claimableOf(courier), ASK);
     }
 
+    /**
+     * @dev sec. 17: the return fee is the courier paying itself, so the sender has
+     *      to agree that the package came back. Anyone else's signature attests to
+     *      nothing the courier could not already claim by calling the function.
+     */
+    function test_ReturnWithoutTheSendersAcceptanceIsRefused() public {
+        uint256 id = _toReadyForPickup();
+        _pickup(id);
+        vm.prank(courier);
+        hub.requestReturn(id);
+
+        PickupProof.Acceptance memory acc = buildReturnAcceptance(id, courier);
+        bytes memory notTheSenders = signAcceptance(hub, acc, senderKey(1));
+        bytes32 digest = pickupDigest(hub, acc);
+
+        vm.expectRevert(abi.encodeWithSelector(PickupProofVerifier.PickupProofSignatureInvalid.selector, digest));
+        vm.prank(courier);
+        hub.confirmReturn(id, acc, notTheSenders);
+
+        assertEq(uint8(hub.deliveryOf(id).state), uint8(DeliveryHub.State.ReturnRequired), "still owed a return");
+        assertEq(vault.claimableOf(courier), 0, "and paid nothing");
+    }
+
+    /**
+     * @dev The sender signs an acceptance to hand the package over; that signature
+     *      must not double as agreement that it came back. sec. 12 asks for the
+     *      action check for exactly this reason.
+     */
+    function test_PickupAcceptanceCannotBeReplayedAsAReturn() public {
+        uint256 id = _toReadyForPickup();
+        PickupProof.Acceptance memory pickupAcc = buildAcceptance(id, courier);
+        bytes memory pickupSig = signAcceptance(hub, pickupAcc, senderKey(0));
+        vm.prank(courier);
+        hub.confirmPickup(id, pickupAcc, pickupSig);
+
+        vm.prank(courier);
+        hub.requestReturn(id);
+
+        // The sender's genuine signature, resubmitted verbatim at the return step.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PickupProofVerifier.PickupProofWrongAction.selector,
+                PickupProof.RETURN_ACTION,
+                PickupProof.PICKUP_ACTION
+            )
+        );
+        vm.prank(courier);
+        hub.confirmReturn(id, pickupAcc, pickupSig);
+    }
+
+    /// @dev And the separation holds in the other direction.
+    function test_ReturnAcceptanceCannotBeReplayedAsAPickup() public {
+        uint256 id = _toReadyForPickup();
+        PickupProof.Acceptance memory returnAcc = buildReturnAcceptance(id, courier);
+        bytes memory returnSig = signAcceptance(hub, returnAcc, senderKey(0));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PickupProofVerifier.PickupProofWrongAction.selector,
+                PickupProof.PICKUP_ACTION,
+                PickupProof.RETURN_ACTION
+            )
+        );
+        vm.prank(courier);
+        hub.confirmPickup(id, returnAcc, returnSig);
+    }
+
+    /// @dev invariant 33-7: a return acceptance is spent once, like any other.
+    function test_ReturnAcceptanceNonceIsBurnedOnUse() public {
+        uint256 id = _toReadyForPickup();
+        _pickup(id);
+        vm.prank(courier);
+        hub.requestReturn(id);
+
+        PickupProof.Acceptance memory acc = buildReturnAcceptance(id, courier);
+        bytes memory sig = signAcceptance(hub, acc, senderKey(0));
+        vm.prank(courier);
+        hub.confirmReturn(id, acc, sig);
+
+        assertTrue(hub.pickupNonceUsed(customer, acc.nonce), "the nonce is spent");
+    }
+
     /// @dev sec. 17: a confirmed return pays the return fee; the rest goes back.
     function test_ConfirmedReturn_PaysReturnFee() public {
         uint256 id = _toReadyForPickup();
         _pickup(id);
         vm.prank(courier);
         hub.requestReturn(id);
+
+        PickupProof.Acceptance memory acc = buildReturnAcceptance(id, courier);
+        bytes memory sig = signAcceptance(hub, acc, senderKey(0));
         vm.prank(courier);
-        hub.confirmReturn(id);
+        hub.confirmReturn(id, acc, sig);
 
         uint256 total = hub.customerFundingAmount(id);
         assertEq(uint8(hub.deliveryOf(id).state), uint8(DeliveryHub.State.Returned));
@@ -490,16 +579,31 @@ contract DeliveryHubTest is QuoteFixture, PickupFixture, PodFixture {
 
         assertTrue(hub.isTerminal(id));
 
-        vm.expectRevert();
+        // Named errors, not a bare `expectRevert`: a bare one passes on any
+        // revert at all, including one raised before the state check for an
+        // entirely unrelated reason, which would leave the claim unproven.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DeliveryHub.WrongState.selector, id, DeliveryHub.State.Completed, DeliveryHub.State.DeliveredPending
+            )
+        );
         vm.prank(customer);
         hub.confirmDelivery(id);
 
         vm.warp(block.timestamp + 365 days);
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DeliveryHub.WrongState.selector, id, DeliveryHub.State.Completed, DeliveryHub.State.Bidding
+            )
+        );
         hub.poke(id);
 
         (PickupProof.Acceptance memory a, bytes memory sig) = _acceptance(id, courier);
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DeliveryHub.WrongState.selector, id, DeliveryHub.State.Completed, DeliveryHub.State.ReadyForPickup
+            )
+        );
         vm.prank(courier);
         hub.confirmPickup(id, a, sig);
     }

@@ -55,7 +55,7 @@ contract ReferralTest is Test {
         ref = new Referral(manager);
 
         bytes32 treas = manager.TREASURER_ROLE();
-        bytes32 rep = manager.REPUTATION_REPORTER_ROLE();
+        bytes32 rep = manager.REFERRAL_REPORTER_ROLE();
         vm.startPrank(admin);
         manager.grantRole(treas, treasurer);
         manager.grantRole(rep, reporter);
@@ -103,8 +103,9 @@ contract ReferralTest is Test {
         vm.prank(bob);
         ref.register(alice);
 
+        // alice -> bob would close alice -> bob -> alice.
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(Referral.CircularReferral.selector, alice, bob));
+        vm.expectRevert(abi.encodeWithSelector(Referral.RefereesAlreadyAttached.selector, alice, uint32(1)));
         ref.register(bob);
     }
 
@@ -116,8 +117,65 @@ contract ReferralTest is Test {
 
         // alice -> carol would close alice -> carol -> bob -> alice.
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(Referral.CircularReferral.selector, alice, carol));
+        vm.expectRevert(abi.encodeWithSelector(Referral.RefereesAlreadyAttached.selector, alice, uint32(1)));
         ref.register(carol);
+    }
+
+    /**
+     * @dev The scenario the depth cap exists to prevent, spelled out: two chains
+     *      that are each legal on their own, joined at the roots. If a wallet
+     *      could take a referrer after growing a subtree, the joined chain would
+     *      be twice `MAX_DEPTH` long while every recorded depth still looked
+     *      lawful -- and nothing downstream that trusts `depthOf` would notice.
+     */
+    function test_TwoLawfulChainsCannotBeJoinedIntoAnUnlawfulOne() public {
+        address headA = _chain(10_000, 20);
+        address rootB = address(uint160(30_000));
+        address headB = _chain(30_000, 20);
+
+        assertEq(ref.depthOf(headA), 20, "each chain is legal on its own");
+        assertEq(ref.depthOf(headB), 20);
+
+        // Hanging chain B's root under chain A's head would make headB 41 deep.
+        vm.prank(rootB);
+        vm.expectRevert(abi.encodeWithSelector(Referral.RefereesAlreadyAttached.selector, rootB, uint32(1)));
+        ref.register(headA);
+
+        assertEq(ref.depthOf(headB), 20, "and chain B is where it was");
+    }
+
+    /// @dev Builds `length` registrations rooted at `base`, returning the deepest.
+    function _chain(uint160 base, uint8 length) internal returns (address head) {
+        head = address(base);
+        for (uint160 i = 1; i <= length; i++) {
+            address next = address(base + i);
+            vm.prank(next);
+            ref.register(head);
+            head = next;
+        }
+    }
+
+    /// @dev Referring someone is a one-way door: it settles where you sit.
+    function test_ReferringSomeoneClosesYourOwnRegistration() public {
+        vm.prank(bob);
+        ref.register(alice);
+
+        assertEq(ref.refereeCount(alice), 1);
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(Referral.RefereesAlreadyAttached.selector, alice, uint32(1)));
+        ref.register(carol);
+    }
+
+    /// @dev But registering first and referring afterwards is the ordinary path.
+    function test_RegisterFirstThenReferIsFine() public {
+        vm.prank(alice);
+        ref.register(carol);
+        vm.prank(bob);
+        ref.register(alice);
+
+        assertEq(ref.depthOf(carol), 0, "carol is the root");
+        assertEq(ref.depthOf(alice), 1);
+        assertEq(ref.depthOf(bob), 2, "and depth still counts from the real root");
     }
 
     function test_ChainDepthIsCapped() public {

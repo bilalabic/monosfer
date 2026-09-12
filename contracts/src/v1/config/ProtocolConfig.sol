@@ -59,6 +59,12 @@ contract ProtocolConfig {
         uint32 transitWindow; // beyond sec. 48
         uint32 returnWindow; // beyond sec. 48
         uint32 ratingWindow; // beyond sec. 48 — sec. 20 requires a bound, not a figure
+        // sec. 28 names the dispute phases but gives no durations. Bounded and
+        // timelocked like the other lifecycle windows.
+        uint32 evidenceWindow;
+        uint32 drawWindow;
+        uint32 commitWindow;
+        uint32 revealWindow;
         uint32 challengeWindow; // sec. 48: 24 h
         uint32 courierWithdrawalCooldown; // sec. 48: 24 h
         uint32 riskQuoteValidity; // sec. 48: 5 min
@@ -336,6 +342,46 @@ contract ProtocolConfig {
         return _params.rewardReclaimDelay;
     }
 
+    function minJurorStake() external view returns (uint128) {
+        return _params.minJurorStake;
+    }
+
+    function jurorLockPerCase() external view returns (uint128) {
+        return _params.jurorLockPerCase;
+    }
+
+    function nonRevealSlash() external view returns (uint128) {
+        return _params.nonRevealSlash;
+    }
+
+    function evidenceWindow() external view returns (uint32) {
+        return _params.evidenceWindow;
+    }
+
+    function drawWindow() external view returns (uint32) {
+        return _params.drawWindow;
+    }
+
+    function commitWindow() external view returns (uint32) {
+        return _params.commitWindow;
+    }
+
+    function revealWindow() external view returns (uint32) {
+        return _params.revealWindow;
+    }
+
+    function juryFirstSize() external view returns (uint8) {
+        return _params.juryFirstSize;
+    }
+
+    function juryAppeal1Size() external view returns (uint8) {
+        return _params.juryAppeal1Size;
+    }
+
+    function juryAppeal2Size() external view returns (uint8) {
+        return _params.juryAppeal2Size;
+    }
+
     /// @notice Coverage basis points for a risk tier. Tier 4 (R4) is disabled per sec. 49.
     function coverageBpsForTier(uint8 tier) external view returns (uint16) {
         if (tier == 1) return _params.coverageBpsR1;
@@ -508,6 +554,10 @@ contract ProtocolConfig {
         _validateLifecycleWindow(p.transitWindow, "transitWindow");
         _validateLifecycleWindow(p.returnWindow, "returnWindow");
         _validateLifecycleWindow(p.ratingWindow, "ratingWindow");
+        _validateLifecycleWindow(p.evidenceWindow, "evidenceWindow");
+        _validateLifecycleWindow(p.drawWindow, "drawWindow");
+        _validateLifecycleWindow(p.commitWindow, "commitWindow");
+        _validateLifecycleWindow(p.revealWindow, "revealWindow");
         if (p.challengeWindow < MIN_CHALLENGE_WINDOW || p.challengeWindow > MAX_CHALLENGE_WINDOW) {
             revert OutOfBounds("challengeWindow");
         }
