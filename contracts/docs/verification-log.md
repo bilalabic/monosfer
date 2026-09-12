@@ -38,6 +38,7 @@ et → senaryoları koş → dokümante et.
 | P4.2 | `DisputeCourt` (commit/reveal) | Tamamlandı |
 | P4.3 | İtirazlar, yedek komite, hüküm settlement'ı | Tamamlandı |
 | P5.1 | Invariant / arıza / adversarial suite | Tamamlandı |
+| P5.2 | Deploy sertleştirme + artefakt export | Tamamlandı |
 
 ---
 
@@ -881,3 +882,65 @@ sınandı.
 `vm.expectRevert(abi.encodeWithSelector(..., hub.deliveryOf(id).stateDeadline))`
 — argüman içindeki `deliveryOf` çağrısı cheatcode'u tüketiyor. **Bu sefer
 tarayıcı yakaladı**; P4.3'te sertleştirilen kural işe yaradı.
+
+---
+
+## P5.2 — Deploy sertleştirme
+
+Planın işaret ettiği README iddiası ("gitignore'lanmış ve var olmayan deploy
+kaydı") daha önceki bir fazda zaten düzeltilmişti; `deployments/10143.json`
+commit'li ve referans veriliyor. Geriye iki gerçek boşluk kaldı.
+
+### Boşluk 1: kablolamayı hiçbir şey denetlemiyordu
+
+`DeployCore` **girdilerini** doğruluyor — verilen rol adresleri ayrı ve sıfır
+değil. Daha fazlasını yapamaz, çünkü o noktada hiçbir rol verilmemiştir; rolleri
+admin multisig sonradan verir ve bu kasten böyledir (sec. 32.11: deploy eden
+anahtar sistemi çalıştıramaz).
+
+Bu, "kontratlar var" ile "kontratlar kablolanmış" arasında kimsenin bakmadığı
+bir aralık bırakıyordu. Yanlış adrese verilmiş rol, unutulmuş rol, geçen haftanın
+registry'sine bakan hub, birinin EOA'sına bağlanmış komite — hepsi temiz deploy
+olur ve sonra üretimde, başka bir hata gibi görünerek patlar.
+
+`script/v1/VerifyDeployment.s.sol` canlı sistemi okuyup bunların hiçbirinde
+geçmiyor. Broadcast etmiyor, her zaman koşulabilir.
+
+**Kasten bozuk girdilerle sınandı:**
+
+| Deneme | Denetleyicinin cevabı |
+|---|---|
+| Eski deployment'ın registry'si | `Misconfigured("hub.registry", …)` |
+| Komite yerine bir EOA | `NotAContract("FALLBACK_COMMITTEE", …)` |
+| Yanlış `CONFIG_ADMIN` | `RoleMissing("CONFIG_ADMIN_ROLE", …)` |
+| Eksik adres | `Missing("JUROR_POOL")` |
+| **Zincirde paylaşılmış kritik rol** | `CriticalRolesShared("CONFIG_ADMIN_ROLE", "EMERGENCY_ROLE", 0x88aB…)` |
+
+Son satır zincirde gerçekten yapıldı: `CONFIG_ADMIN`'e geçici olarak
+`EMERGENCY_ROLE` verildi, denetleyici düştü, rol geri alındı, tekrar temiz geçti.
+
+İlk yazdığım hâlde ayrışma kontrolü **operatörün verdiği listeyi**
+karşılaştırıyordu ve rol kontrollerinden *sonra* çalışıyordu; bu yüzden paylaşım
+denemesi yanlış hatayla (`RoleMissing`) düştü. İkisi de düzeltildi: kontrol artık
+zincire soruyor — listede farklı görünen bir adres sonradan ikinci bir kritik rol
+almış olabilir — ve önce çalışıyor, çünkü paylaşılan anahtar daha ciddi bulgu.
+
+### Boşluk 2: kaynaklar doğrulanmamıştı
+
+Monad testnet'in Sourcify örneği chain 10143'ü destekliyor. **13/13 V1 kontratı
+doğrulandı** (`match`).
+
+`tools/verify-sources.sh` adresleri manifestten okuyor ve **gönderim makbuzuna
+güvenmiyor**: her adres API'den geri okunuyor. İlk sürümü tek bir `sleep 3` ile
+sonucu okuyordu ve sekiz kontratı "başarısız" diye raporladı — hepsi aslında
+doğrulanmıştı. Sınırlı yoklamaya çevrildi.
+
+Bu, bu oturumda üçüncü kez aynı hata: **bir işin sonucunu bitmeden okumak.**
+Mutasyon harness'ı iki kez, doğrulama script'i bir kez. Üçünde de belirti aynıydı
+— sessizce yanlış bir "başarısız".
+
+### Runbook
+
+`docs/deployment.md`: sıra, rol tablosu, Safe kurulumu (fallbackHandler'ın neden
+`CompatibilityFallbackHandler` olmak zorunda olduğu dahil), canlı denetim,
+kaynak doğrulama ve Monad'ın gas rezervasyonu.

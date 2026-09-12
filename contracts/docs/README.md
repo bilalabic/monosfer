@@ -9,6 +9,7 @@ Sistem geliştikçe güncellenir; sürüm/tarih taşımazlar.
 
 | Doküman | İçerik |
 |---|---|
+| [`deployment.md`](deployment.md) | Deploy runbook: sıra, roller, canlı denetim, kaynak doğrulama |
 | [`governance.md`](governance.md) | Rol matrisi, zaman kilitleri, pause runbook, parametre sınırları |
 | [`settlement.md`](settlement.md) | Pull-payment modeli, ödeme gücü, reentrancy, pause davranışı |
 | [`courier-registry.md`](courier-registry.md) | Stake bölünmesi, çıkış yolu, C0/C1/C2, custody limiti |
@@ -60,5 +61,5 @@ Sürümlü belgeler; içerik revize edilirse sürüm numarası artar.
 | P4.2 | `DisputeCourt` çekirdeği — kanıt, çekiliş, commit/reveal | **Tamamlandı** |
 | P4.3 | İtirazlar, yedek komite, hüküm settlement'ı | **Tamamlandı** |
 | P5.1 | Invariant / arıza / adversarial suite | **Tamamlandı** |
-| P5.2 | Deploy sertleştirme + artefakt export | Sırada |
+| P5.2 | Deploy sertleştirme + artefakt export | **Tamamlandı** |
 | P5.3 | Testnet E2E, cut-over, güvenlik incelemesi | Bekliyor |
