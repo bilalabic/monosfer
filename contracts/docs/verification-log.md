@@ -17,7 +17,7 @@ et → senaryoları koş → dokümante et.
 
 | | |
 |---|---|
-| Test | **461/461** (25 suite) |
+| Test | **468/468** (26 suite) |
 | Gate | **7/7** |
 | Invariant | **30** (5 suite) |
 | Legacy kaynaklar | **8/8 byte-byte değişmedi** |
@@ -34,9 +34,10 @@ et → senaryoları koş → dokümante et.
 | P2.1 | Teslim alma kanıtı | Tamamlandı |
 | P2.2 | Teslim etme kanıtı (PoD) | Tamamlandı |
 | P3 | İtibar, rozetler, ödüller, referans | Tamamlandı |
-| P4.1 | `JurorPool` + rastgelelik adaptörü | Yerelde tamam, testnet sırada |
-| P4.2 | `DisputeCourt` (commit/reveal) | Yerelde tamam, testnet sırada |
-| P4.3 | İtirazlar, yedek komite, hüküm settlement'ı | Yerelde tamam, testnet sırada |
+| P4.1 | `JurorPool` + rastgelelik adaptörü | Tamamlandı |
+| P4.2 | `DisputeCourt` (commit/reveal) | Tamamlandı |
+| P4.3 | İtirazlar, yedek komite, hüküm settlement'ı | Tamamlandı |
+| P5.1 | Invariant / arıza / adversarial suite | Tamamlandı |
 
 ---
 
@@ -836,3 +837,47 @@ Senaryo ihtilafı açık bıraktığı için bir miktar test MON'u kilitli:
 Uzun durak **30 gün** sonra tetiklenebilir; o noktada `poke` + `abandon` ile
 ikisi de kurtarılabilir. Geri kalan test fonu deployer'a toplandı
 (165.4 MON).
+
+---
+
+## P5.1 — Invariant, arıza ve adversarial suite
+
+Planın problem tanımı ("bugün 5 test, sıfır fuzz, sıfır invariant") P0 öncesini
+anlatıyordu; bu faz sıfırdan kapsam değil, **konsolidasyon ve boşluk kapatma**.
+
+### Yöntem: iddiayı teste bağla, bağlayamazsan boşluk de
+
+sec. 33'ün 18 maddesi ve sec. 47'nin 22 senaryosu tek tek tarandı. Kriter,
+davranışın *erişilebilir* olması değil, onu tutan **adlandırılmış bir test**
+gösterilebilmesiydi.
+
+| Bulgu | Sonuç |
+|---|---|
+| 33-5 (ihtilaflı teslimat başarı yolundan settle olamaz) | Hiç testi yoktu — eklendi |
+| 33-9 (pickup anında teminat yerinde) | Hiç testi yoktu — eklendi |
+| 33-11 (revert eden alıcı bloke edemez) | Vault seviyesinde vardı, teslimat seviyesinde yoktu — eklendi |
+| sec. 47: müşteri fonlamaz / kurye kapsam vermez / iade onaylanmaz / alıcı bulunamaz | Dördü de boşluktu — eklendi |
+
+33-5 en çok önem taşıyanı: P4.3 ile ortaya çıktı ve mahkeme teslimatı tutarken
+müşterinin `confirmDelivery` ile jürinin arkasından ödeme yaptırabilmesini
+engelliyor. Mutasyonla doğrulandı — `_requireState` kaldırıldığında test kırmızı.
+
+### Zincirde test edilmeyen üç senaryo
+
+Indexer kesintisi, RPC arızası ve backend retry'ı **kasten** yazılmadı: kontrat
+bu üçünün hiçbirini gözlemleyemez, Solidity testi tiyatro olurdu. `testing.md`
+sorumluluğu backend'e yazıyor.
+
+### Haritanın bayatlamasına karşı koruma
+
+`docs/testing.md` 65 test adı anıyor. Bir test yeniden adlandırılırsa satır hâlâ
+kapsam gibi *okunur* ama hiçbir şeye işaret etmez — bu deponun kendi işinde
+tekrar tekrar yakaladığı arıza. Bu yüzden `tools/testing-map-check.py` adları
+mekanik olarak çözüyor ve CI'a eklendi. Kendisi de kasten bozulmuş bir adla
+sınandı.
+
+### Cheatcode tuzağının dokuzuncu örneği
+
+`vm.expectRevert(abi.encodeWithSelector(..., hub.deliveryOf(id).stateDeadline))`
+— argüman içindeki `deliveryOf` çağrısı cheatcode'u tüketiyor. **Bu sefer
+tarayıcı yakaladı**; P4.3'te sertleştirilen kural işe yaradı.

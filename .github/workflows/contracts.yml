@@ -117,6 +117,12 @@ jobs:
       - name: Install Slither
         run: pip install --quiet slither-analyzer==0.11.6
 
+      - name: Check the testing map resolves
+        # docs/testing.md claims that every sec. 33 invariant and sec. 47 failure
+        # scenario has a named test. A renamed test would leave the claim looking
+        # true while pointing at nothing, so the names are resolved mechanically.
+        run: python3 tools/testing-map-check.py
+
       - name: Run Slither
         # Config lives in contracts/slither.config.json: legacy paths are
         # filtered (their accepted baseline is documented in
