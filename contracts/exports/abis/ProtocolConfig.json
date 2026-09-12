@@ -103,6 +103,36 @@
             "internalType": "uint32"
           },
           {
+            "name": "evidenceWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "drawWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "commitWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "revealWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "appealWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "disputeWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "challengeWindow",
             "type": "uint32",
             "internalType": "uint32"
@@ -149,6 +179,36 @@
           },
           {
             "name": "nonRevealSlash",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeFirst",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeAppeal1",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeAppeal2",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondFirst",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondAppeal1",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondAppeal2",
             "type": "uint128",
             "internalType": "uint128"
           }
@@ -272,6 +332,32 @@
         "name": "",
         "type": "uint8",
         "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_DISPUTE_COST",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_DISPUTE_WINDOW",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
       }
     ],
     "stateMutability": "view"
@@ -603,6 +689,38 @@
   },
   {
     "type": "function",
+    "name": "appealWindow",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "arbitrationFee",
+    "inputs": [
+      {
+        "name": "round",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "biddingWindow",
     "inputs": [],
     "outputs": [
@@ -624,6 +742,19 @@
   {
     "type": "function",
     "name": "challengeWindow",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "commitWindow",
     "inputs": [],
     "outputs": [
       {
@@ -746,6 +877,64 @@
   },
   {
     "type": "function",
+    "name": "disputeBond",
+    "inputs": [
+      {
+        "name": "round",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "disputeWindow",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "drawWindow",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "evidenceWindow",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "executeParams",
     "inputs": [],
     "outputs": [],
@@ -780,6 +969,58 @@
   },
   {
     "type": "function",
+    "name": "jurorLockPerCase",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "juryAppeal1Size",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "juryAppeal2Size",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "juryFirstSize",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "maxActiveCustody",
     "inputs": [],
     "outputs": [
@@ -787,6 +1028,32 @@
         "name": "",
         "type": "uint8",
         "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "minJurorStake",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "nonRevealSlash",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint128",
+        "internalType": "uint128"
       }
     ],
     "stateMutability": "view"
@@ -887,6 +1154,36 @@
             "internalType": "uint32"
           },
           {
+            "name": "evidenceWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "drawWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "commitWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "revealWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "appealWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "disputeWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "challengeWindow",
             "type": "uint32",
             "internalType": "uint32"
@@ -933,6 +1230,36 @@
           },
           {
             "name": "nonRevealSlash",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeFirst",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeAppeal1",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeAppeal2",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondFirst",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondAppeal1",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondAppeal2",
             "type": "uint128",
             "internalType": "uint128"
           }
@@ -1037,6 +1364,36 @@
             "internalType": "uint32"
           },
           {
+            "name": "evidenceWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "drawWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "commitWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "revealWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "appealWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "disputeWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "challengeWindow",
             "type": "uint32",
             "internalType": "uint32"
@@ -1083,6 +1440,36 @@
           },
           {
             "name": "nonRevealSlash",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeFirst",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeAppeal1",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeAppeal2",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondFirst",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondAppeal1",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondAppeal2",
             "type": "uint128",
             "internalType": "uint128"
           }
@@ -1230,6 +1617,36 @@
             "internalType": "uint32"
           },
           {
+            "name": "evidenceWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "drawWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "commitWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "revealWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "appealWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "disputeWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "challengeWindow",
             "type": "uint32",
             "internalType": "uint32"
@@ -1276,6 +1693,36 @@
           },
           {
             "name": "nonRevealSlash",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeFirst",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeAppeal1",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeAppeal2",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondFirst",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondAppeal1",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondAppeal2",
             "type": "uint128",
             "internalType": "uint128"
           }
@@ -1353,6 +1800,19 @@
   {
     "type": "function",
     "name": "returnWindow",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "revealWindow",
     "inputs": [],
     "outputs": [
       {
@@ -1588,6 +2048,36 @@
             "internalType": "uint32"
           },
           {
+            "name": "evidenceWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "drawWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "commitWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "revealWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "appealWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "disputeWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "challengeWindow",
             "type": "uint32",
             "internalType": "uint32"
@@ -1634,6 +2124,36 @@
           },
           {
             "name": "nonRevealSlash",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeFirst",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeAppeal1",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeAppeal2",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondFirst",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondAppeal1",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondAppeal2",
             "type": "uint128",
             "internalType": "uint128"
           }
@@ -1744,6 +2264,36 @@
             "internalType": "uint32"
           },
           {
+            "name": "evidenceWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "drawWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "commitWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "revealWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "appealWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "disputeWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
             "name": "challengeWindow",
             "type": "uint32",
             "internalType": "uint32"
@@ -1790,6 +2340,36 @@
           },
           {
             "name": "nonRevealSlash",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeFirst",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeAppeal1",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "arbitrationFeeAppeal2",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondFirst",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondAppeal1",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "disputeBondAppeal2",
             "type": "uint128",
             "internalType": "uint128"
           }
@@ -1916,6 +2496,27 @@
     "type": "error",
     "name": "InvalidCoverageOrdering",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidDisputeEconomics",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidDisputeWindow",
+    "inputs": [
+      {
+        "name": "needed",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "given",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ]
   },
   {
     "type": "error",

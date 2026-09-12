@@ -52,6 +52,7 @@ kalır.
 | `ReadyForPickup` | `Cancelled` | Devir gerçekleşmedi; escrow müşteriye, teminat kesintisiz serbest |
 | `InTransit` | `ReturnRequired` | Kurye pakete sahip; iade etmeli |
 | `ReturnRequired` | `Returned` | Onayla: gönderen imzalı iade kabulü, `returnAsk` kuryeye. Zaman aşımıyla: müşteri tam iade alır |
+| `Disputed` | `Resolved` | Mahkemenin hükmü escrow'u bölüştürür; zaman aşımıyla müşteri tam iade alır (sec. 30) |
 | `DeliveredPending` | `Completed` | İzinsiz finalize edici (sec. 16) |
 
 Garanti şudur: **hiçbir katılımcı parasını geri almak için karşı tarafın

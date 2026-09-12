@@ -9,6 +9,15 @@ import {JurorPool} from "../../src/v1/dispute/JurorPool.sol";
 import {Referral} from "../../src/v1/rewards/Referral.sol";
 import {DisputeCourt} from "../../src/v1/dispute/DisputeCourt.sol";
 import {IRandomnessAdapter} from "../../src/v1/randomness/IRandomnessAdapter.sol";
+import {FallbackCommittee} from "../../src/v1/dispute/FallbackCommittee.sol";
+import {SettlementVault} from "../../src/v1/vault/SettlementVault.sol";
+import {CourierRegistry} from "../../src/v1/registry/CourierRegistry.sol";
+import {ReputationRegistry} from "../../src/v1/reputation/ReputationRegistry.sol";
+import {DeliveryHub} from "../../src/v1/hub/DeliveryHub.sol";
+import {CoverageQuote} from "../../src/v1/risk/CoverageQuote.sol";
+import {PickupProof} from "../../src/v1/proof/PickupProof.sol";
+import {QuoteFixture} from "./helpers/QuoteFixture.sol";
+import {PickupFixture} from "./helpers/PickupFixture.sol";
 
 /// @dev A randomness adapter under the test's control, so a draw can be made to
 ///      arrive, be delayed forever, or land on a chosen value.
@@ -59,19 +68,49 @@ contract StubRandomness is IRandomnessAdapter {
  *      panel (sec. 33-13), a juror who reveals a losing vote is never slashed
  *      (sec. 33-14), and a draw already requested cannot be steered (sec. 33-18).
  */
-contract DisputeCourtTest is Test {
+/// @dev A contract wallet that approves exactly one digest, so the ERC-1271 leg
+///      of sec. 31 is exercised against something that is not an EOA.
+contract StubSafe {
+    mapping(bytes32 => bool) public approved;
+
+    function approve(bytes32 digest) external {
+        approved[digest] = true;
+    }
+
+    function isValidSignature(bytes32 digest, bytes calldata) external view returns (bytes4) {
+        return approved[digest] ? bytes4(0x1626ba7e) : bytes4(0xffffffff);
+    }
+}
+
+contract DisputeCourtTest is QuoteFixture, PickupFixture {
     ProtocolAccessManager internal manager;
     ProtocolConfig internal config;
     JurorPool internal pool;
     Referral internal referral;
     StubRandomness internal rng;
     DisputeCourt internal court;
+    FallbackCommittee internal committee;
+    SettlementVault internal vault;
+    CourierRegistry internal registry;
+    ReputationRegistry internal reputation;
+    DeliveryHub internal hub;
 
     address internal admin = address(0xA11CE);
     address internal treasury = address(0x7EA5);
     address internal configAdmin = address(0xC0F1);
-    address internal customer = address(0xC057);
+    address internal signerAdmin = address(0x5164E);
     address internal outsider = address(0xBAD);
+
+    address internal customer;
+    address internal courier = address(0xC0DE);
+
+    uint256 internal constant SAFE_KEY = 0x5AFE;
+    address internal safeSigner;
+
+    uint96 internal constant BID_DEPOSIT = 1 ether;
+    uint96 internal constant DECLARED_VALUE = 20 ether;
+    uint96 internal constant ASK = 10 ether;
+    uint96 internal constant RETURN_ASK = 2 ether;
 
     uint256 internal MIN;
     uint256 internal SLASH;
@@ -79,26 +118,45 @@ contract DisputeCourtTest is Test {
     address[] internal jurorList;
 
     function setUp() public {
+        customer = senderAddress(0);
+        safeSigner = vm.addr(SAFE_KEY);
+
         manager = new ProtocolAccessManager(3 days, admin);
-        config = new ProtocolConfig(manager, 2 days, BaselineParams.baseline(), treasury, address(0x1), address(0x2));
+        config = new ProtocolConfig(
+            manager, 2 days, BaselineParams.baseline(), treasury, quoteSignerAddress(), address(0x2)
+        );
+        vault = new SettlementVault(manager);
+        registry = new CourierRegistry(manager, config, vault);
+        reputation = new ReputationRegistry(manager);
+        referral = new Referral(manager);
+        hub = new DeliveryHub(manager, config, registry, vault, reputation, referral, BID_DEPOSIT);
+
         pool = new JurorPool(manager, config);
         rng = new StubRandomness();
-        referral = new Referral(manager);
-        court = new DisputeCourt(manager, config, pool, IRandomnessAdapter(address(rng)), referral);
+        committee = new FallbackCommittee(manager, safeSigner);
+        court = new DisputeCourt(manager, config, pool, IRandomnessAdapter(address(rng)), referral, hub, committee);
 
-        bytes32 role = manager.DISPUTE_COURT_ROLE();
-        bytes32 reporter = manager.REFERRAL_REPORTER_ROLE();
-        bytes32 configRole = manager.CONFIG_ADMIN_ROLE();
         vm.startPrank(admin);
-        manager.grantRole(role, address(court));
-        manager.grantRole(reporter, address(court));
-        manager.grantRole(configRole, configAdmin);
+        manager.grantRole(manager.DISPUTE_COURT_ROLE(), address(court));
+        manager.grantRole(manager.REFERRAL_REPORTER_ROLE(), address(court));
+        manager.grantRole(manager.CONFIG_ADMIN_ROLE(), configAdmin);
+        manager.grantRole(manager.SIGNER_ADMIN_ROLE(), signerAdmin);
+        manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(registry));
+        manager.grantRole(manager.VAULT_CONTROLLER_ROLE(), address(hub));
+        manager.grantRole(manager.REGISTRY_CONTROLLER_ROLE(), address(hub));
+        manager.grantRole(manager.REPUTATION_REPORTER_ROLE(), address(hub));
+        manager.grantRole(manager.REFERRAL_REPORTER_ROLE(), address(hub));
         vm.stopPrank();
 
         MIN = config.minJurorStake();
         SLASH = config.nonRevealSlash();
 
-        vm.deal(customer, 100 ether);
+        vm.deal(customer, 1_000 ether);
+        vm.deal(courier, 1_000 ether);
+        uint256 stakeAmount = config.courierBaseDeposit() + 40 ether;
+        vm.prank(courier);
+        registry.depositStake{value: stakeAmount}();
+
         for (uint160 i = 0; i < 16; i++) {
             address j = address(uint160(0xD0000) + i);
             jurorList.push(j);
@@ -118,9 +176,45 @@ contract DisputeCourtTest is Test {
         }
     }
 
-    function _openAndSeat() internal returns (uint256 id) {
+    /// @dev A delivery in `InTransit`: funded, picked up, and disputable.
+    function _disputableDelivery() internal returns (uint256 deliveryId) {
+        CoverageQuote.Quote memory q = buildQuote(config, customer, 1, DECLARED_VALUE);
+        bytes memory qsig = signQuote(hub, q);
         vm.prank(customer);
-        id = court.open(1);
+        deliveryId = hub.createDelivery(q, qsig);
+
+        vm.prank(courier);
+        hub.placeBid(deliveryId, ASK, RETURN_ASK, 30, uint64(block.timestamp + 1 hours));
+        uint32 version = hub.bidOf(deliveryId, courier).termsVersion;
+        vm.prank(customer);
+        hub.selectCourier(deliveryId, courier, version);
+
+        uint256 amount = hub.customerFundingAmount(deliveryId);
+        vm.prank(customer);
+        hub.fundAsCustomer{value: amount}(deliveryId);
+        vm.prank(courier);
+        hub.fundAsCourier(deliveryId);
+
+        PickupProof.Acceptance memory acc = buildAcceptance(deliveryId, courier);
+        bytes memory asig = signAcceptance(hub, acc, senderKey(0));
+        vm.prank(courier);
+        hub.confirmPickup(deliveryId, acc, asig);
+    }
+
+    /// @dev Opens a paid dispute over a fresh delivery, as the customer.
+    function _open() internal returns (uint256 id) {
+        uint256 deliveryId = _disputableDelivery();
+        uint256 cost = _roundCost(1);
+        vm.prank(customer);
+        id = court.open{value: cost}(deliveryId);
+    }
+
+    function _roundCost(uint8 round) internal view returns (uint256) {
+        return uint256(config.arbitrationFee(round)) + config.disputeBond(round);
+    }
+
+    function _openAndSeat() internal returns (uint256 id) {
+        id = _open();
 
         vm.warp(block.timestamp + config.evidenceWindow() + 1);
         uint256 drawFee = rng.fee();
@@ -140,19 +234,24 @@ contract DisputeCourtTest is Test {
     // --------------------------------------------------------- the lifecycle
 
     function test_OpenStartsInEvidence() public {
+        uint256 deliveryId = _disputableDelivery();
+        // Cost read before the cheatcode: `_roundCost` reads config, and a call
+        // inside the `{value:}` expression is evaluated after `vm.prank` and
+        // consumes it.
+        uint256 cost = _roundCost(1);
         vm.prank(customer);
-        uint256 id = court.open(42);
+        uint256 id = court.open{value: cost}(deliveryId);
 
         DisputeCourt.Dispute memory d = court.disputeOf(id);
         assertEq(uint8(d.phase), uint8(DisputeCourt.Phase.Evidence));
-        assertEq(d.deliveryId, 42);
+        assertEq(d.deliveryId, deliveryId);
         assertEq(d.round, 1);
+        assertEq(uint8(hub.deliveryOf(deliveryId).state), uint8(DeliveryHub.State.Disputed), "the hub let go of it");
     }
 
     /// @dev sec. 34: only a commitment reaches the chain, never the material.
     function test_EvidenceIsOnlyAHash() public {
-        vm.prank(customer);
-        uint256 id = court.open(1);
+        uint256 id = _open();
 
         bytes32 commitment = keccak256("photo of the doorstep");
         vm.prank(customer);
@@ -161,8 +260,7 @@ contract DisputeCourtTest is Test {
     }
 
     function test_EvidenceClosesOnTime() public {
-        vm.prank(customer);
-        uint256 id = court.open(1);
+        uint256 id = _open();
         vm.warp(block.timestamp + config.evidenceWindow() + 1);
 
         vm.prank(customer);
@@ -172,8 +270,7 @@ contract DisputeCourtTest is Test {
 
     function test_DrawCannotStartBeforeEvidenceCloses() public {
         _addJurors(4);
-        vm.prank(customer);
-        uint256 id = court.open(1);
+        uint256 id = _open();
 
         vm.prank(customer);
         uint256 drawFee = rng.fee();
@@ -184,8 +281,7 @@ contract DisputeCourtTest is Test {
     /// @dev sec. 29: the fee is passed through, the surplus comes back.
     function test_DrawFeeIsPassedThroughAndExcessRefunded() public {
         _addJurors(4);
-        vm.prank(customer);
-        uint256 id = court.open(1);
+        uint256 id = _open();
         vm.warp(block.timestamp + config.evidenceWindow() + 1);
 
         uint256 before = customer.balance;
@@ -194,7 +290,9 @@ contract DisputeCourtTest is Test {
         court.requestDraw{value: drawFee + 1 ether}(id);
 
         assertEq(customer.balance, before - rng.fee(), "only the provider's fee left");
-        assertEq(address(court).balance, 0, "and the court keeps nothing");
+        // The court still holds the round's fee and bond, and nothing beyond them.
+        assertEq(address(court).balance, court.totalOwed(), "and the court keeps only what it owes");
+        assertEq(court.totalOwed(), _roundCost(1));
     }
 
     function test_PanelIsSeatedFromTheDraw() public {
@@ -214,8 +312,7 @@ contract DisputeCourtTest is Test {
      */
     function testFuzz_NoJurorTakesTwoSeats(bytes32 seed) public {
         _addJurors(5);
-        vm.prank(customer);
-        uint256 id = court.open(1);
+        uint256 id = _open();
         vm.warp(block.timestamp + config.evidenceWindow() + 1);
         uint256 drawFee = rng.fee();
         vm.prank(customer);
@@ -257,8 +354,7 @@ contract DisputeCourtTest is Test {
         _setJuryFirstSize(9);
         _addJurors(9);
 
-        vm.prank(customer);
-        uint256 id = court.open(1);
+        uint256 id = _open();
         vm.warp(block.timestamp + config.evidenceWindow() + 1);
         uint256 drawFee = rng.fee();
         vm.prank(customer);
@@ -299,8 +395,7 @@ contract DisputeCourtTest is Test {
     function test_ASingleCandidateFailsCleanlyRatherThanPanicking() public {
         _addJurors(1);
 
-        vm.prank(customer);
-        uint256 id = court.open(1);
+        uint256 id = _open();
         vm.warp(block.timestamp + config.evidenceWindow() + 1);
         uint256 drawFee = rng.fee();
         vm.prank(customer);
@@ -314,20 +409,21 @@ contract DisputeCourtTest is Test {
     /// @dev With nobody standing the draw is refused a step earlier still, so no
     ///      randomness is bought for a panel that could never be seated.
     function test_ADrawCannotBeRequestedWithNobodyStanding() public {
-        vm.prank(customer);
-        uint256 id = court.open(1);
+        uint256 id = _open();
         vm.warp(block.timestamp + config.evidenceWindow() + 1);
         uint256 drawFee = rng.fee();
 
-        vm.expectRevert(abi.encodeWithSelector(JurorPool.SnapshotEmpty.selector, id));
+        // The pool is told the round key, not the dispute id: each round of a
+        // dispute draws its own frozen set.
+        uint256 key = uint256(keccak256(abi.encode(id, uint8(1))));
+        vm.expectRevert(abi.encodeWithSelector(JurorPool.SnapshotEmpty.selector, key));
         vm.prank(customer);
         court.requestDraw{value: drawFee}(id);
     }
 
     function test_TooFewCandidatesFailsRatherThanRepeating() public {
         _addJurors(2);
-        vm.prank(customer);
-        uint256 id = court.open(1);
+        uint256 id = _open();
         vm.warp(block.timestamp + config.evidenceWindow() + 1);
         uint256 drawFee = rng.fee();
         vm.prank(customer);
@@ -343,8 +439,7 @@ contract DisputeCourtTest is Test {
     /// @dev Joining after the draw was requested does not get you onto the panel.
     function test_LatecomerCannotJoinAPendingDraw() public {
         _addJurors(3);
-        vm.prank(customer);
-        uint256 id = court.open(1);
+        uint256 id = _open();
         vm.warp(block.timestamp + config.evidenceWindow() + 1);
         uint256 drawFee = rng.fee();
         vm.prank(customer);
@@ -379,8 +474,7 @@ contract DisputeCourtTest is Test {
         _addJurors(3);
         address[3] memory original = [jurorList[0], jurorList[1], jurorList[2]];
 
-        vm.prank(customer);
-        uint256 id = court.open(1);
+        uint256 id = _open();
         vm.warp(block.timestamp + config.evidenceWindow() + 1);
         uint256 drawFee = rng.fee();
         vm.prank(customer);
@@ -694,8 +788,7 @@ contract DisputeCourtTest is Test {
     /// @dev sec. 29: a silent provider costs time, not a frozen case.
     function test_SilentProviderLetsTheDrawBeAbandoned() public {
         _addJurors(4);
-        vm.prank(customer);
-        uint256 id = court.open(1);
+        uint256 id = _open();
         vm.warp(block.timestamp + config.evidenceWindow() + 1);
         uint256 drawFee = rng.fee();
         vm.prank(customer);
@@ -709,8 +802,7 @@ contract DisputeCourtTest is Test {
 
     function test_DrawCannotBeAbandonedOnceRandomnessArrives() public {
         _addJurors(4);
-        vm.prank(customer);
-        uint256 id = court.open(1);
+        uint256 id = _open();
         vm.warp(block.timestamp + config.evidenceWindow() + 1);
         uint256 drawFee = rng.fee();
         vm.prank(customer);
@@ -724,8 +816,7 @@ contract DisputeCourtTest is Test {
 
     function test_PanelCannotBeSeatedBeforeRandomnessArrives() public {
         _addJurors(4);
-        vm.prank(customer);
-        uint256 id = court.open(1);
+        uint256 id = _open();
         vm.warp(block.timestamp + config.evidenceWindow() + 1);
         uint256 drawFee = rng.fee();
         vm.prank(customer);
@@ -787,5 +878,540 @@ contract DisputeCourtTest is Test {
         vm.prank(panel[0]);
         vm.expectRevert();
         court.revealVote(id, DisputeCourt.Ruling(revealedAs), bytes32(uint256(9)));
+    }
+
+    // --------------------------------------------- sec. 28: what a round costs
+
+    /// @dev Signs a committee decision with the EOA standing in for the Safe.
+    function _committeeSig(FallbackCommittee.Decision memory decision) internal view returns (bytes memory) {
+        FallbackCommittee.Decision[1] memory holder = [decision];
+        bytes32 digest = committee.hashDecision(holder[0]);
+        (uint8 v, bytes32 r, bytes32 sg) = vm.sign(SAFE_KEY, digest);
+        return abi.encodePacked(r, sg, v);
+    }
+
+    function _decision(uint256 disputeId, uint8 round, DisputeCourt.Ruling ruling)
+        internal
+        view
+        returns (FallbackCommittee.Decision memory)
+    {
+        return FallbackCommittee.Decision({
+            disputeId: disputeId, round: round, ruling: uint8(ruling), expiresAt: uint64(block.timestamp + 1 days)
+        });
+    }
+
+    /// @dev Drives a seated dispute to a ruling, everyone voting `ruling`.
+    function _rule(uint256 id, DisputeCourt.Ruling ruling) internal {
+        address[] memory panel = court.panelOf(id);
+        for (uint256 i = 0; i < panel.length; i++) {
+            _commit(id, panel[i], ruling, bytes32(uint256(i + 1)));
+        }
+        vm.warp(block.timestamp + config.commitWindow() + 1);
+        court.closeCommit(id);
+        for (uint256 i = 0; i < panel.length; i++) {
+            vm.prank(panel[i]);
+            court.revealVote(id, ruling, bytes32(uint256(i + 1)));
+        }
+        vm.warp(block.timestamp + config.revealWindow() + 1);
+        court.closeReveal(id);
+    }
+
+    /// @dev Requests and seats the panel for whatever round the dispute is on.
+    function _seatCurrentRound(uint256 id) internal {
+        vm.warp(block.timestamp + config.evidenceWindow() + 1);
+        uint256 drawFee = rng.fee();
+        vm.prank(customer);
+        court.requestDraw{value: drawFee}(id);
+        rng.deliver(court.disputeOf(id).drawRequestId, keccak256(abi.encode("r", court.disputeOf(id).round)));
+        court.seatPanel(id);
+    }
+
+    function test_OpeningChargesTheFirstRoundScheduleAndRefundsTheRest() public {
+        uint256 deliveryId = _disputableDelivery();
+        uint256 cost = _roundCost(1);
+        uint256 before = customer.balance;
+
+        vm.prank(customer);
+        uint256 id = court.open{value: cost + 3 ether}(deliveryId);
+
+        assertEq(customer.balance, before - cost, "overpayment is not a donation");
+        assertEq(court.totalOwed(), cost, "fee and bond are both owed to someone");
+        assertEq(court.bondOf(id, 1), config.disputeBond(1));
+        assertEq(court.bondPayerOf(id, 1), customer);
+    }
+
+    function test_UnderpayingTheScheduleIsRefused() public {
+        uint256 deliveryId = _disputableDelivery();
+        uint256 cost = _roundCost(1);
+
+        vm.expectRevert(abi.encodeWithSelector(DisputeCourt.PaymentTooLow.selector, cost, cost - 1));
+        vm.prank(customer);
+        court.open{value: cost - 1}(deliveryId);
+    }
+
+    /// @dev sec. 26: a dispute is between the two parties to a delivery.
+    function test_OnlyAPartyMayOpenADispute() public {
+        uint256 deliveryId = _disputableDelivery();
+        uint256 cost = _roundCost(1);
+        vm.deal(outsider, 100 ether);
+
+        vm.expectRevert(abi.encodeWithSelector(DisputeCourt.NotAParty.selector, outsider));
+        vm.prank(outsider);
+        court.open{value: cost}(deliveryId);
+    }
+
+    /**
+     * @dev The same rule as opening, and it was missing: an appeal escalates a
+     *      case the appellant is not in. Caught by a mutation that removed the
+     *      check and broke nothing.
+     */
+    function test_OnlyAPartyMayAppeal() public {
+        _addJurors(12);
+        uint256 id = _openAndSeat();
+        _rule(id, DisputeCourt.Ruling.Customer100);
+
+        uint256 cost2 = _roundCost(2);
+        vm.deal(outsider, 100 ether);
+
+        vm.expectRevert(abi.encodeWithSelector(DisputeCourt.NotAParty.selector, outsider));
+        vm.prank(outsider);
+        court.appeal{value: cost2}(id);
+
+        assertEq(court.disputeOf(id).round, 1, "and the round did not move");
+    }
+
+    function test_ADeliveryCanOnlyBeDisputedOnce() public {
+        uint256 deliveryId = _disputableDelivery();
+        uint256 cost = _roundCost(1);
+        vm.prank(customer);
+        uint256 id = court.open{value: cost}(deliveryId);
+
+        vm.expectRevert(abi.encodeWithSelector(DisputeCourt.DisputeAlreadyOpen.selector, deliveryId, id));
+        vm.prank(customer);
+        court.open{value: cost}(deliveryId);
+    }
+
+    /**
+     * @dev sec. 26 is explicit that a deterministic situation must not become a
+     *      jury case. A delivery still taking bids has nothing for a jury to
+     *      interpret, and the hub is the one that says so.
+     */
+    function test_ADeliveryWithNothingToJudgeCannotBeDisputed() public {
+        CoverageQuote.Quote memory q = buildQuote(config, customer, 1, DECLARED_VALUE);
+        bytes memory qsig = signQuote(hub, q);
+        vm.prank(customer);
+        uint256 deliveryId = hub.createDelivery(q, qsig);
+
+        uint256 cost = _roundCost(1);
+        vm.expectRevert(
+            abi.encodeWithSelector(DeliveryHub.NotDisputable.selector, deliveryId, DeliveryHub.State.Bidding)
+        );
+        vm.prank(customer);
+        court.open{value: cost}(deliveryId);
+    }
+
+    // ------------------------------------------------- sec. 28: the escalation
+
+    function test_AppealsEscalateThreeThenFiveThenSeven() public {
+        _addJurors(12);
+        uint256 id = _openAndSeat();
+
+        assertEq(court.panelSize(id), config.juryFirstSize(), "first panel is three");
+        _rule(id, DisputeCourt.Ruling.Customer100);
+
+        uint256 cost2 = _roundCost(2);
+        vm.prank(courier);
+        court.appeal{value: cost2}(id);
+        _seatCurrentRound(id);
+        assertEq(court.disputeOf(id).round, 2);
+        assertEq(court.panelSize(id), config.juryAppeal1Size(), "appeal one is five");
+        _rule(id, DisputeCourt.Ruling.Customer100);
+
+        uint256 cost3 = _roundCost(3);
+        vm.prank(courier);
+        court.appeal{value: cost3}(id);
+        _seatCurrentRound(id);
+        assertEq(court.disputeOf(id).round, 3);
+        assertEq(court.panelSize(id), config.juryAppeal2Size(), "appeal two is seven");
+    }
+
+    /// @dev sec. 28's schedule has three rows and no fourth.
+    function test_ThereIsNoFourthRound() public {
+        _addJurors(12);
+        uint256 id = _openAndSeat();
+        _rule(id, DisputeCourt.Ruling.Customer100);
+
+        uint256 cost2 = _roundCost(2);
+        vm.prank(courier);
+        court.appeal{value: cost2}(id);
+        _seatCurrentRound(id);
+        _rule(id, DisputeCourt.Ruling.Customer100);
+
+        uint256 cost3 = _roundCost(3);
+        vm.prank(courier);
+        court.appeal{value: cost3}(id);
+        _seatCurrentRound(id);
+        _rule(id, DisputeCourt.Ruling.Customer100);
+
+        vm.expectRevert(abi.encodeWithSelector(DisputeCourt.NoFurtherAppeal.selector, uint8(3)));
+        vm.prank(courier);
+        court.appeal{value: cost3}(id);
+    }
+
+    function test_AnAppealAfterTheWindowClosesIsRefused() public {
+        _addJurors(5);
+        uint256 id = _openAndSeat();
+        _rule(id, DisputeCourt.Ruling.Customer100);
+
+        uint64 closesAt = court.disputeOf(id).phaseDeadline;
+        vm.warp(closesAt + 1);
+
+        uint256 cost2 = _roundCost(2);
+        vm.expectRevert(abi.encodeWithSelector(DisputeCourt.AppealWindowClosed.selector, closesAt));
+        vm.prank(courier);
+        court.appeal{value: cost2}(id);
+    }
+
+    /// @dev The loser always gets their chance to escalate before money moves.
+    function test_FinalisingBeforeTheAppealWindowClosesIsRefused() public {
+        _addJurors(5);
+        uint256 id = _openAndSeat();
+        _rule(id, DisputeCourt.Ruling.Customer100);
+
+        uint64 closesAt = court.disputeOf(id).phaseDeadline;
+        vm.expectRevert(abi.encodeWithSelector(DisputeCourt.AppealWindowOpen.selector, closesAt));
+        court.finalise(id);
+    }
+
+    // --------------------------------------------- sec. 30: ruling into money
+
+    function test_ARulingSettlesTheEscrowAndOnlyOnce() public {
+        _addJurors(5);
+        uint256 id = _openAndSeat();
+        uint256 deliveryId = court.disputeOf(id).deliveryId;
+        uint256 escrow = hub.customerFundingAmount(deliveryId);
+
+        _rule(id, DisputeCourt.Ruling.Customer100);
+        vm.warp(block.timestamp + config.appealWindow() + 1);
+        court.finalise(id);
+
+        assertEq(uint8(hub.deliveryOf(deliveryId).state), uint8(DeliveryHub.State.Resolved));
+        assertEq(vault.claimableOf(customer), escrow, "the whole escrow went to the customer");
+        assertEq(vault.claimableOf(courier), 0);
+        assertEq(registry.courierOf(courier).reserved, 0, "and the coverage was released");
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DisputeCourt.WrongPhase.selector, id, DisputeCourt.Phase.Settled, DisputeCourt.Phase.Ruled
+            )
+        );
+        court.finalise(id);
+    }
+
+    /// @dev Whichever of the six the panel picks, the escrow is split, never lost.
+    function test_EveryRulingSplitsTheWholeEscrow() public {
+        for (uint8 code = 1; code <= 6; code++) {
+            _checkSplit(DisputeCourt.Ruling(code));
+        }
+    }
+
+    function _checkSplit(DisputeCourt.Ruling ruling) internal {
+        uint256 snapshot = vm.snapshotState();
+        _addJurors(5);
+        uint256 id = _openAndSeat();
+        uint256 deliveryId = court.disputeOf(id).deliveryId;
+        uint256 escrow = hub.customerFundingAmount(deliveryId);
+
+        _rule(id, ruling);
+        vm.warp(block.timestamp + config.appealWindow() + 1);
+        court.finalise(id);
+
+        assertEq(
+            vault.claimableOf(customer) + vault.claimableOf(courier),
+            escrow,
+            "a ruling apportions the escrow; it never creates or destroys any"
+        );
+        assertEq(vault.claimableOf(treasury), 0, "and a disputed delivery pays no protocol fee");
+        vm.revertToState(snapshot);
+    }
+
+    /// @dev `Refuse` is a panel declining to decide, not a courier win.
+    function test_RefusingToRuleReturnsTheEscrow() public {
+        _addJurors(5);
+        uint256 id = _openAndSeat();
+        uint256 deliveryId = court.disputeOf(id).deliveryId;
+        uint256 escrow = hub.customerFundingAmount(deliveryId);
+
+        _rule(id, DisputeCourt.Ruling.Refuse);
+        vm.warp(block.timestamp + config.appealWindow() + 1);
+        court.finalise(id);
+
+        assertEq(vault.claimableOf(customer), escrow);
+        assertEq(vault.claimableOf(courier), 0);
+    }
+
+    // --------------------------------------------------- sec. 28: the bonds
+
+    function test_TheParticipationBondComesBackAndTheFeeGoesToTheTreasury() public {
+        _addJurors(5);
+        uint256 id = _openAndSeat();
+
+        _rule(id, DisputeCourt.Ruling.Customer100);
+        vm.warp(block.timestamp + config.appealWindow() + 1);
+        court.finalise(id);
+
+        assertEq(court.claimable(customer), config.disputeBond(1), "taking part is not a wager");
+        assertEq(court.claimable(treasury), config.arbitrationFee(1), "the fee is earned");
+    }
+
+    /// @dev An appeal that changes the answer was worth hearing; its bond returns.
+    function test_ASuccessfulAppealGetsItsBondBack() public {
+        _addJurors(12);
+        uint256 id = _openAndSeat();
+        _rule(id, DisputeCourt.Ruling.Customer100);
+
+        uint256 cost2 = _roundCost(2);
+        vm.prank(courier);
+        court.appeal{value: cost2}(id);
+        _seatCurrentRound(id);
+        _rule(id, DisputeCourt.Ruling.Courier100);
+
+        vm.warp(block.timestamp + config.appealWindow() + 1);
+        court.finalise(id);
+
+        assertEq(court.claimable(courier), config.disputeBond(2), "the larger panel disagreed");
+    }
+
+    /// @dev One that does not is paying to delay, and the bond is forfeited.
+    function test_AFailedAppealForfeitsItsBond() public {
+        _addJurors(12);
+        uint256 id = _openAndSeat();
+        _rule(id, DisputeCourt.Ruling.Customer100);
+
+        uint256 cost2 = _roundCost(2);
+        vm.prank(courier);
+        court.appeal{value: cost2}(id);
+        _seatCurrentRound(id);
+        _rule(id, DisputeCourt.Ruling.Customer100);
+
+        vm.warp(block.timestamp + config.appealWindow() + 1);
+        court.finalise(id);
+
+        assertEq(court.claimable(courier), 0, "the same answer twice is not a win");
+        assertEq(
+            court.claimable(treasury),
+            uint256(config.arbitrationFee(1)) + config.arbitrationFee(2) + config.disputeBond(2),
+            "the forfeited bond joins the fees"
+        );
+    }
+
+    /**
+     * @dev The court holds bonds and fees belonging to several people at once.
+     *      `solvent` is the guard that stops it paying one of them out of
+     *      another's money, and no ordinary path can reach it — every function
+     *      that takes value counts it, and every function that pays it out
+     *      discounts it. So the balance is corrupted here deliberately, which is
+     *      the only honest way to prove a safety net catches anything.
+     */
+    function test_ACourtThatCannotCoverWhatItOwesRefusesToAct() public {
+        _addJurors(5);
+        uint256 id = _openAndSeat();
+        _rule(id, DisputeCourt.Ruling.Customer100);
+        vm.warp(block.timestamp + config.appealWindow() + 1);
+
+        uint256 owed = court.totalOwed();
+        assertGt(owed, 0, "the court is holding something worth protecting");
+        vm.deal(address(court), owed - 1);
+
+        vm.expectRevert(abi.encodeWithSelector(DisputeCourt.Insolvent.selector, owed, owed - 1));
+        court.finalise(id);
+    }
+
+    function test_ClaimPaysExactlyOnce() public {
+        _addJurors(5);
+        uint256 id = _openAndSeat();
+        _rule(id, DisputeCourt.Ruling.Customer100);
+        vm.warp(block.timestamp + config.appealWindow() + 1);
+        court.finalise(id);
+
+        uint256 owed = court.claimable(customer);
+        uint256 before = customer.balance;
+        vm.prank(customer);
+        court.claim();
+
+        assertEq(customer.balance, before + owed);
+        assertEq(court.claimable(customer), 0);
+
+        vm.expectRevert(abi.encodeWithSelector(DisputeCourt.NothingToClaim.selector, customer));
+        vm.prank(customer);
+        court.claim();
+    }
+
+    // ----------------------------------------------------- sec. 31: fallback
+
+    /// @dev The committee is for a jury that produced nothing, never for one that did.
+    function test_TheCommitteeCannotTouchARunningDispute() public {
+        _addJurors(5);
+        uint256 id = _openAndSeat();
+
+        FallbackCommittee.Decision memory decision = _decision(id, 1, DisputeCourt.Ruling.Courier100);
+        bytes memory sig = _committeeSig(decision);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DisputeCourt.WrongPhase.selector, id, DisputeCourt.Phase.Commit, DisputeCourt.Phase.Failed
+            )
+        );
+        court.resolveByCommittee(id, decision, sig);
+    }
+
+    function test_TheCommitteeEndsACaseNobodyRevealed() public {
+        _addJurors(5);
+        uint256 id = _openAndSeat();
+        uint256 deliveryId = court.disputeOf(id).deliveryId;
+        uint256 escrow = hub.customerFundingAmount(deliveryId);
+
+        vm.warp(block.timestamp + config.commitWindow() + 1);
+        court.closeCommit(id);
+        vm.warp(block.timestamp + config.revealWindow() + 1);
+        court.closeReveal(id);
+        assertEq(uint8(court.disputeOf(id).phase), uint8(DisputeCourt.Phase.Failed), "no reveals, no ruling");
+
+        FallbackCommittee.Decision memory decision = _decision(id, 1, DisputeCourt.Ruling.Courier100);
+        bytes memory sig = _committeeSig(decision);
+        court.resolveByCommittee(id, decision, sig);
+
+        assertEq(uint8(hub.deliveryOf(deliveryId).state), uint8(DeliveryHub.State.Resolved));
+        assertEq(vault.claimableOf(courier), escrow, "the committee's ruling settled it");
+    }
+
+    /// @dev sec. 31's whole point: bounded codes, never a transfer.
+    function test_TheCommitteeCannotSignSomethingThatIsNotARuling() public {
+        uint256 id = _failedDispute();
+
+        for (uint256 i = 0; i < 2; i++) {
+            uint8 code = i == 0 ? 0 : 7;
+            FallbackCommittee.Decision memory decision = FallbackCommittee.Decision({
+                disputeId: id, round: 1, ruling: code, expiresAt: uint64(block.timestamp + 1 days)
+            });
+            bytes memory sig = _committeeSig(decision);
+
+            vm.expectRevert(abi.encodeWithSelector(FallbackCommittee.RulingNotAllowed.selector, code));
+            court.resolveByCommittee(id, decision, sig);
+        }
+    }
+
+    function test_ACommitteeDecisionIsBoundToItsDisputeAndRound() public {
+        uint256 id = _failedDispute();
+
+        FallbackCommittee.Decision memory wrongDispute = _decision(id + 1, 1, DisputeCourt.Ruling.Courier100);
+        bytes memory sig1 = _committeeSig(wrongDispute);
+        vm.expectRevert(abi.encodeWithSelector(FallbackCommittee.WrongDispute.selector, id, id + 1));
+        court.resolveByCommittee(id, wrongDispute, sig1);
+
+        FallbackCommittee.Decision memory wrongRound = _decision(id, 2, DisputeCourt.Ruling.Courier100);
+        bytes memory sig2 = _committeeSig(wrongRound);
+        vm.expectRevert(abi.encodeWithSelector(FallbackCommittee.WrongRound.selector, uint8(1), uint8(2)));
+        court.resolveByCommittee(id, wrongRound, sig2);
+    }
+
+    function test_AnExpiredCommitteeDecisionIsRefused() public {
+        uint256 id = _failedDispute();
+
+        FallbackCommittee.Decision memory decision = _decision(id, 1, DisputeCourt.Ruling.Courier100);
+        bytes memory sig = _committeeSig(decision);
+        vm.warp(decision.expiresAt + 1);
+
+        vm.expectRevert(abi.encodeWithSelector(FallbackCommittee.DecisionExpired.selector, decision.expiresAt));
+        court.resolveByCommittee(id, decision, sig);
+    }
+
+    function test_SomebodyElsesSignatureIsNotTheCommittees() public {
+        uint256 id = _failedDispute();
+
+        FallbackCommittee.Decision memory decision = _decision(id, 1, DisputeCourt.Ruling.Courier100);
+        bytes32 digest = committee.hashDecision(decision);
+        (uint8 v, bytes32 r, bytes32 sg) = vm.sign(uint256(0xBADBAD), digest);
+        bytes memory forged = abi.encodePacked(r, sg, v);
+
+        vm.expectRevert(abi.encodeWithSelector(FallbackCommittee.DecisionSignatureInvalid.selector, digest));
+        court.resolveByCommittee(id, decision, forged);
+    }
+
+    /// @dev The real shape of sec. 31: a Safe, answering through ERC-1271.
+    function test_AContractWalletSignatureIsAccepted() public {
+        StubSafe realSafe = new StubSafe();
+        vm.prank(signerAdmin);
+        committee.setSafe(address(realSafe));
+
+        uint256 id = _failedDispute();
+        FallbackCommittee.Decision memory decision = _decision(id, 1, DisputeCourt.Ruling.Split50);
+        realSafe.approve(committee.hashDecision(decision));
+
+        court.resolveByCommittee(id, decision, hex"");
+        assertEq(uint8(court.disputeOf(id).phase), uint8(DisputeCourt.Phase.Settled));
+    }
+
+    /// @dev A dispute that reached `Failed` with no committee answer yet.
+    function _failedDispute() internal returns (uint256 id) {
+        _addJurors(5);
+        id = _openAndSeat();
+        vm.warp(block.timestamp + config.commitWindow() + 1);
+        court.closeCommit(id);
+        vm.warp(block.timestamp + config.revealWindow() + 1);
+        court.closeReveal(id);
+    }
+
+    // ------------------------------------------ no dispute can freeze funds
+
+    /**
+     * @dev The acceptance criterion, exercised end to end: the court goes
+     *      completely silent, and the escrow still reaches someone. The hub's
+     *      long stop settles the delivery, and `abandon` returns everything the
+     *      court was holding, because nothing was ever adjudicated.
+     */
+    function test_ASilentCourtCannotFreezeAnybodysMoney() public {
+        uint256 deliveryId = _disputableDelivery();
+        uint256 escrow = hub.customerFundingAmount(deliveryId);
+        uint256 cost = _roundCost(1);
+        vm.prank(customer);
+        uint256 id = court.open{value: cost}(deliveryId);
+
+        // Nothing happens. Ever.
+        vm.warp(block.timestamp + config.disputeWindow() + 1);
+        hub.poke(deliveryId);
+
+        assertEq(uint8(hub.deliveryOf(deliveryId).state), uint8(DeliveryHub.State.Resolved));
+        assertEq(vault.claimableOf(customer), escrow, "the escrow came back");
+        assertEq(registry.courierOf(courier).reserved, 0, "and the coverage was released unslashed");
+
+        court.abandon(id);
+        assertEq(uint8(court.disputeOf(id).phase), uint8(DisputeCourt.Phase.Abandoned));
+        assertEq(court.claimable(customer), cost, "fee and bond both come back; nothing was tried");
+    }
+
+    /// @dev And the long stop cannot fire early, under a jury still working.
+    function test_TheLongStopCannotSettleUnderALiveJury() public {
+        _addJurors(5);
+        uint256 id = _openAndSeat();
+        uint256 deliveryId = court.disputeOf(id).deliveryId;
+
+        uint64 longStop = hub.deliveryOf(deliveryId).stateDeadline;
+        vm.warp(block.timestamp + 1 days);
+        vm.expectRevert(abi.encodeWithSelector(DeliveryHub.DeadlineNotReached.selector, longStop));
+        hub.poke(deliveryId);
+
+        assertEq(uint8(hub.deliveryOf(deliveryId).state), uint8(DeliveryHub.State.Disputed));
+    }
+
+    /// @dev A dispute the hub has not settled cannot be abandoned out from under it.
+    function test_ALiveDisputeCannotBeAbandoned() public {
+        uint256 deliveryId = _disputableDelivery();
+        uint256 cost = _roundCost(1);
+        vm.prank(customer);
+        uint256 id = court.open{value: cost}(deliveryId);
+
+        vm.expectRevert(abi.encodeWithSelector(DisputeCourt.DeliveryStillDisputed.selector, deliveryId));
+        court.abandon(id);
     }
 }

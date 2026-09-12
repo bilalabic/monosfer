@@ -10,6 +10,10 @@ mysteriously.
 The callee itself is fine; only calls nested inside the argument or value
 expressions are traps. That distinction is what this scanner draws.
 
+Inside a `{value: ...}` expression the rule is stricter -- *any* call is
+reported, not just an obvious instance call -- because a local helper there can
+read a contract just as easily and looks pure while doing it.
+
 It keys on *shape*, not on a list of variable names: any `lowercase.member(`
 inside the argument or value expression is treated as a call on a contract
 instance. An earlier version carried a hardcoded list of names and went blind the
@@ -36,6 +40,15 @@ BUILTIN = {'abi', 'vm', 'type', 'super', 'this', 'block', 'msg', 'tx'}
 
 # Test helpers that sign, and therefore read a domain separator from a contract.
 HELPER_CALL = re.compile(r'\b(sign[A-Z]\w*)\s*\(')
+
+# Any call at all. Used only inside a `{value: ...}` expression, where the rule
+# has to be stricter: that expression is evaluated immediately before the call
+# the cheatcode was meant for, and a local helper is no safer there than an
+# instance call, because the helper may read a contract itself. The eighth
+# instance of this bug was exactly that -- `_roundCost(1)`, a pure-looking
+# internal helper that reads two config getters.
+ANY_CALL = re.compile(r'\b([A-Za-z_]\w*)\s*\(')
+VALUE_SAFE = {'value', 'uint256', 'uint128', 'uint96', 'uint64', 'int256'}
 
 PREFIX = re.compile(
     r'^(?:'
@@ -72,6 +85,14 @@ def offends(text):
     return False
 
 
+def offends_value(text):
+    """Stricter rule for a `{value: ...}` expression: any call is a trap."""
+    for name in ANY_CALL.findall(text):
+        if name not in VALUE_SAFE and name not in BUILTIN:
+            return True
+    return False
+
+
 def scan(paths):
     hits = []
     for f in sorted(paths):
@@ -90,7 +111,7 @@ def scan(paths):
             value_expr, args = split_call(st)
             if not args and not value_expr:
                 continue
-            if offends(args) or offends(value_expr):
+            if offends(args) or offends_value(value_expr):
                 hits.append((f, i + 1, st))
     return hits
 

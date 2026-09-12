@@ -28,6 +28,11 @@
         "internalType": "contract ReputationRegistry"
       },
       {
+        "name": "referral_",
+        "type": "address",
+        "internalType": "contract Referral"
+      },
+      {
         "name": "bidDeposit_",
         "type": "uint96",
         "internalType": "uint96"
@@ -233,6 +238,43 @@
         "name": "deliveryId",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "acceptance",
+        "type": "tuple",
+        "internalType": "struct PickupProof.Acceptance",
+        "components": [
+          {
+            "name": "deliveryId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "courier",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "action",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "nonce",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "expiresAt",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      },
+      {
+        "name": "signature",
+        "type": "bytes",
+        "internalType": "bytes"
       }
     ],
     "outputs": [],
@@ -694,6 +736,43 @@
   },
   {
     "type": "function",
+    "name": "openDispute",
+    "inputs": [
+      {
+        "name": "deliveryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "partiesOf",
+    "inputs": [
+      {
+        "name": "deliveryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "customer",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "courier",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "pickupAction",
     "inputs": [],
     "outputs": [
@@ -874,6 +953,19 @@
   },
   {
     "type": "function",
+    "name": "referral",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract Referral"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "registry",
     "inputs": [],
     "outputs": [
@@ -913,6 +1005,19 @@
   },
   {
     "type": "function",
+    "name": "returnAction",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
     "name": "selectCourier",
     "inputs": [
       {
@@ -932,6 +1037,35 @@
       }
     ],
     "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "settleByRuling",
+    "inputs": [
+      {
+        "name": "deliveryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "customerBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "toCustomer",
+        "type": "uint96",
+        "internalType": "uint96"
+      },
+      {
+        "name": "toCourier",
+        "type": "uint96",
+        "internalType": "uint96"
+      }
+    ],
     "stateMutability": "nonpayable"
   },
   {
@@ -1270,6 +1404,25 @@
   },
   {
     "type": "event",
+    "name": "DisputeOpened",
+    "inputs": [
+      {
+        "name": "deliveryId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "until",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "EIP712DomainChanged",
     "inputs": [],
     "anonymous": false
@@ -1375,6 +1528,25 @@
   },
   {
     "type": "event",
+    "name": "ReferralReportFailed",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "data",
+        "type": "bytes",
+        "indexed": false,
+        "internalType": "bytes"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "ReputationReportFailed",
     "inputs": [
       {
@@ -1382,6 +1554,25 @@
         "type": "bytes",
         "indexed": false,
         "internalType": "bytes"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ReturnConfirmed",
+    "inputs": [
+      {
+        "name": "deliveryId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "courier",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -1401,6 +1592,37 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RuledSettlement",
+    "inputs": [
+      {
+        "name": "deliveryId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "customerBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "toCustomer",
+        "type": "uint96",
+        "indexed": false,
+        "internalType": "uint96"
+      },
+      {
+        "name": "toCourier",
+        "type": "uint96",
+        "indexed": false,
+        "internalType": "uint96"
       }
     ],
     "anonymous": false
@@ -1570,6 +1792,22 @@
         "name": "caller",
         "type": "address",
         "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "NotDisputable",
+    "inputs": [
+      {
+        "name": "deliveryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "state",
+        "type": "uint8",
+        "internalType": "enum DeliveryHub.State"
       }
     ]
   },
@@ -1910,6 +2148,17 @@
     "type": "error",
     "name": "ReentrancyGuardReentrantCall",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RulingOutOfRange",
+    "inputs": [
+      {
+        "name": "customerBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ]
   },
   {
     "type": "error",

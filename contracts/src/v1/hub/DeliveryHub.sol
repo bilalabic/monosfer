@@ -83,9 +83,11 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
         InTransit,
         DeliveredPending,
         ReturnRequired,
+        Disputed,
         // terminal from here down
         Completed,
         Returned,
+        Resolved,
         Cancelled,
         Expired
     }
@@ -185,6 +187,12 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
     event DeliveryProofSubmitted(uint256 indexed deliveryId, address indexed courier);
     event ReturnRequested(uint256 indexed deliveryId, address indexed by);
 
+    /// @notice The court has taken the delivery; deterministic exits are suspended.
+    event DisputeOpened(uint256 indexed deliveryId, uint64 until);
+
+    /// @notice A ruling apportioned the escrow (sec. 30).
+    event RuledSettlement(uint256 indexed deliveryId, uint16 customerBps, uint96 toCustomer, uint96 toCourier);
+
     /// @notice A return was proved with the sender's signed acceptance (sec. 17).
     event ReturnConfirmed(uint256 indexed deliveryId, address indexed courier);
     event Settled(uint256 indexed deliveryId, State finalState);
@@ -216,6 +224,8 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
     error DeadlineNotReached(uint64 deadline);
     error InsufficientBond(uint256 required, uint256 provided);
     error RatingWindowClosed(uint64 completedAt);
+    error NotDisputable(uint256 deliveryId, State state);
+    error RulingOutOfRange(uint16 customerBps);
 
     // --------------------------------------------------------------------
     // Modifiers
@@ -223,6 +233,11 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
 
     modifier whenNotPaused() {
         _checkNotPaused();
+        _;
+    }
+
+    modifier onlyDisputeCourt() {
+        accessManager.requireRole(accessManager.DISPUTE_COURT_ROLE(), msg.sender);
         _;
     }
 
@@ -618,6 +633,116 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
     }
 
     // --------------------------------------------------------------------
+    // Disputes (sec. 26, sec. 30)
+    // --------------------------------------------------------------------
+
+    /**
+     * @notice The court takes custody of the outcome (sec. 26).
+     * @dev Only the three states where the parties can genuinely disagree about
+     *      a physical fact: goods in transit, a delivery claimed but challenged,
+     *      or a return that was asked for. Everything earlier is a funding or
+     *      scheduling question that resolves deterministically, and sec. 26 is
+     *      explicit that those must not become jury cases.
+     *
+     *      Moving to `Disputed` is what suspends the deterministic exits. While
+     *      the court holds it, `poke` can no longer complete or return the
+     *      delivery — otherwise the clock would settle the escrow underneath a
+     *      jury that was still deliberating, and the ruling would arrive to find
+     *      the money gone.
+     *
+     *      The state still carries a deadline. `disputeWindow` is the long stop
+     *      that keeps "no state without an exit" true even when the court itself
+     *      goes silent; it is sized to outlast three full rounds and their appeal
+     *      windows, so it can only bite on a court that has stopped working.
+     *
+     *      Returns nothing. The court establishes who the parties are with
+     *      `partiesOf` before it writes anything, so handing them back here
+     *      would be a value with no reader.
+     */
+    function openDispute(uint256 deliveryId) external onlyDisputeCourt {
+        Delivery storage d = _requireDelivery(deliveryId);
+        State s = d.state;
+        if (s != State.InTransit && s != State.DeliveredPending && s != State.ReturnRequired) {
+            revert NotDisputable(deliveryId, s);
+        }
+
+        // Custody ends here when it was still open. A parcel whose fate is
+        // before a jury is not one the courier is still carrying, and sec. 9's
+        // concurrency limit must not be consumed for weeks by a case. In
+        // `DeliveredPending` the proof already closed it.
+        if (s != State.DeliveredPending) registry.closeCustody(d.courier);
+
+        _transition(deliveryId, d, State.Disputed, config.disputeWindow());
+        emit DisputeOpened(deliveryId, d.stateDeadline);
+    }
+
+    /**
+     * @notice Settle a disputed delivery on the court's ruling (sec. 30).
+     * @dev The court passes a share, not a payment instruction. sec. 30 bounds
+     *      the outcomes precisely so that no juror can name a destination or
+     *      invent a percentage; by the time it reaches here the ruling is one of
+     *      six fixed codes and this function only knows how to split the escrow
+     *      between the two parties already recorded on the delivery.
+     *
+     *      The protocol fee is not taken. A disputed delivery is one the protocol
+     *      failed to carry cleanly, and charging for it would mean earning more
+     *      the worse things went.
+     *
+     *      Settlement happens exactly once because it is gated on `Disputed` and
+     *      leaves the delivery terminal. A ruling that arrives after the long
+     *      stop has already fired finds the delivery in `Resolved` and is
+     *      refused — the court is told, and refunds its own bonds accordingly.
+     * @param deliveryId The delivery under dispute.
+     * @param customerBps The customer's share of the escrow, in basis points.
+     */
+    function settleByRuling(uint256 deliveryId, uint16 customerBps)
+        external
+        onlyDisputeCourt
+        nonReentrant
+        returns (uint96 toCustomer, uint96 toCourier)
+    {
+        if (customerBps > 10_000) revert RulingOutOfRange(customerBps);
+
+        Delivery storage d = _requireDelivery(deliveryId);
+        _requireState(deliveryId, d, State.Disputed);
+
+        uint96 total = SafeCast.toUint96(customerFundingAmount(deliveryId));
+        toCustomer = SafeCast.toUint96((uint256(total) * customerBps) / 10_000);
+        toCourier = total - toCustomer;
+
+        ISettlementVault.Payout[] memory payouts = _twoWaySplit(d, toCustomer, toCourier);
+
+        // Custody was closed when the court took the case; only the collateral
+        // is still reserved.
+        _releaseCourierCollateral(d);
+        _report(abi.encodeCall(ReputationRegistry.recordDispute, (d.courier, customerBps < 5_000)));
+        _finish(deliveryId, d, State.Resolved);
+        emit RuledSettlement(deliveryId, customerBps, toCustomer, toCourier);
+        emit Settled(deliveryId, State.Resolved);
+        vault.releaseLock(escrowLockId(deliveryId), payouts);
+    }
+
+    /**
+     * @dev Only the non-zero legs, for the reason `_successPayouts` documents:
+     *      the vault refuses a zero-amount payout, and a 0/100 ruling is one of
+     *      the six sec. 30 allows.
+     */
+    function _twoWaySplit(Delivery storage d, uint96 toCustomer, uint96 toCourier)
+        internal
+        view
+        returns (ISettlementVault.Payout[] memory payouts)
+    {
+        uint256 n = 0;
+        if (toCustomer > 0) n++;
+        if (toCourier > 0) n++;
+
+        payouts = new ISettlementVault.Payout[](n);
+        uint256 k = 0;
+        if (toCustomer > 0) payouts[k++] = ISettlementVault.Payout({to: d.customer, amount: toCustomer});
+        if (toCourier > 0) payouts[k] = ISettlementVault.Payout({to: d.courier, amount: toCourier});
+    }
+
+    // --------------------------------------------------------------------
     // The exit: anyone can advance a stalled delivery
     // --------------------------------------------------------------------
 
@@ -631,6 +756,7 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
      *        ReadyForPickup   -> Cancelled  (courier never came; escrow refunded)
      *        InTransit        -> ReturnRequired (courier holds goods; must return)
      *        ReturnRequired   -> Returned   (deterministic, not a jury case, sec. 26)
+     *        Disputed         -> Resolved   (long stop; the court went silent)
      *        DeliveredPending -> Completed  (permissionless finalizer, sec. 16)
      */
     function poke(uint256 deliveryId) external nonReentrant {
@@ -650,6 +776,14 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
         } else if (s == State.InTransit) {
             _transition(deliveryId, d, State.ReturnRequired, config.returnWindow());
             emit ReturnRequested(deliveryId, msg.sender);
+        } else if (s == State.Disputed) {
+            // The court had the whole of `disputeWindow` and did not rule. The
+            // escrow goes back to the customer, which is the same answer the
+            // protocol gives whenever it cannot establish that the courier
+            // performed — and the courier's coverage is released unslashed,
+            // because slashing needs a finding and there was none (sec. 13,
+            // sec. 26).
+            _settleDisputeTimeout(deliveryId, d);
         } else if (s == State.ReturnRequired) {
             // The window elapsed without a confirmed return. Resolve
             // deterministically: the customer is made whole and the courier's
@@ -712,6 +846,17 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
         payouts[k++] = ISettlementVault.Payout({to: d.courier, amount: d.courierAsk});
         if (fee > 0) payouts[k++] = ISettlementVault.Payout({to: config.treasury(), amount: fee});
         if (reserve > 0) payouts[k] = ISettlementVault.Payout({to: d.customer, amount: reserve});
+    }
+
+    /// @dev The long stop, kept beside the ruling path so the two are read together.
+    function _settleDisputeTimeout(uint256 deliveryId, Delivery storage d) internal {
+        ISettlementVault.Payout[] memory payouts = new ISettlementVault.Payout[](1);
+        payouts[0] = ISettlementVault.Payout({to: d.customer, amount: customerFundingAmount(deliveryId)});
+
+        _releaseCourierCollateral(d);
+        _finish(deliveryId, d, State.Resolved);
+        emit Settled(deliveryId, State.Resolved);
+        vault.releaseLock(escrowLockId(deliveryId), payouts);
     }
 
     /**
@@ -832,6 +977,13 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
             onTime = d.etaDeadline != 0 && block.timestamp <= d.etaDeadline;
         } else if (terminal == State.Returned) {
             outcome = ReputationRegistry.Outcome.Returned;
+        } else if (terminal == State.Resolved) {
+            // sec. 19 has a dispute rate of its own and `settleByRuling` writes
+            // it directly. Reporting an outcome here as well would count one
+            // delivery twice, and the only outcome that would fit is `Expired` —
+            // which is not what happened and would be held against a courier the
+            // jury may well have found for.
+            return;
         }
 
         _report(abi.encodeCall(ReputationRegistry.recordOutcome, (courier, deliveryId, outcome, onTime)));
@@ -895,6 +1047,12 @@ contract DeliveryHub is ReentrancyGuard, RiskQuoteVerifier, PickupProofVerifier,
 
     function bidOf(uint256 deliveryId, address courier) external view returns (Bid memory) {
         return _bids[deliveryId][courier];
+    }
+
+    /// @notice The two parties to a delivery, for a caller that only needs those.
+    function partiesOf(uint256 deliveryId) external view returns (address customer, address courier) {
+        Delivery storage d = _deliveries[deliveryId];
+        return (d.customer, d.courier);
     }
 
     function isTerminal(uint256 deliveryId) external view returns (bool) {

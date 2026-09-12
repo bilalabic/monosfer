@@ -65,6 +65,14 @@ contract ProtocolConfig {
         uint32 drawWindow;
         uint32 commitWindow;
         uint32 revealWindow;
+        // How long a ruling stands before it is final. sec. 28 provides for
+        // appeals but names no deadline; without one a ruled dispute could be
+        // appealed years later and the escrow could never be released.
+        uint32 appealWindow;
+        // The whole life of a disputed delivery, measured from the moment the
+        // court takes it. Not a phase: it is the long stop that makes "no
+        // dispute can freeze funds" true even if the court itself goes silent.
+        uint32 disputeWindow;
         uint32 challengeWindow; // sec. 48: 24 h
         uint32 courierWithdrawalCooldown; // sec. 48: 24 h
         uint32 riskQuoteValidity; // sec. 48: 5 min
@@ -76,6 +84,16 @@ contract ProtocolConfig {
         uint128 minJurorStake; // sec. 48: 10 MON
         uint128 jurorLockPerCase; // sec. 48: 2 MON
         uint128 nonRevealSlash; // sec. 48: 1 MON
+        // --- dispute economics, sec. 28 (wei) ---
+        // One arbitration fee and one bond per round. The schedule rises with
+        // the panel: a larger jury costs more to convene, and an appeal that
+        // costs nothing is a free option on a second opinion.
+        uint128 arbitrationFeeFirst; // sec. 28: 0.3 MON
+        uint128 arbitrationFeeAppeal1; // sec. 28: 0.5 MON
+        uint128 arbitrationFeeAppeal2; // sec. 28: 0.7 MON
+        uint128 disputeBondFirst; // sec. 28: 1 MON
+        uint128 disputeBondAppeal1; // sec. 28: 2 MON
+        uint128 disputeBondAppeal2; // sec. 28: 4 MON
     }
 
     // --------------------------------------------------------------------
@@ -115,6 +133,9 @@ contract ProtocolConfig {
     uint32 public constant MIN_LIFECYCLE_WINDOW = 10 minutes;
     uint32 public constant MAX_LIFECYCLE_WINDOW = 30 days;
 
+    /// @notice Ceiling on the whole life of a disputed delivery.
+    uint32 public constant MAX_DISPUTE_WINDOW = 90 days;
+
     uint32 public constant MIN_CHALLENGE_WINDOW = 1 hours;
     uint32 public constant MAX_CHALLENGE_WINDOW = 7 days;
 
@@ -131,6 +152,11 @@ contract ProtocolConfig {
 
     uint32 public constant MIN_REWARD_RECLAIM_DELAY = 1 days;
     uint32 public constant MAX_REWARD_RECLAIM_DELAY = 90 days;
+
+    /// @notice Ceiling on any single arbitration fee or bond (sec. 28).
+    /// @dev A dispute that costs more than most parcels are worth is a dispute
+    ///      nobody opens, which turns the court off by price rather than by vote.
+    uint128 public constant MAX_DISPUTE_COST = 100 ether;
 
     uint128 public constant MIN_COURIER_DEPOSIT = 0.001 ether;
     uint128 public constant MAX_COURIER_DEPOSIT = 1_000 ether;
@@ -198,6 +224,8 @@ contract ProtocolConfig {
     error InvalidCoverageOrdering();
     error InvalidJuryOrdering();
     error InvalidJurorEconomics();
+    error InvalidDisputeEconomics();
+    error InvalidDisputeWindow(uint32 needed, uint32 given);
     error JurySizeMustBeOdd(uint8 size);
 
     // --------------------------------------------------------------------
@@ -352,6 +380,32 @@ contract ProtocolConfig {
 
     function nonRevealSlash() external view returns (uint128) {
         return _params.nonRevealSlash;
+    }
+
+    /// @notice The longest a delivery may stay in dispute before it is force-settled.
+    function disputeWindow() external view returns (uint32) {
+        return _params.disputeWindow;
+    }
+
+    /// @notice How long a ruling may be appealed before it becomes final (sec. 28).
+    function appealWindow() external view returns (uint32) {
+        return _params.appealWindow;
+    }
+
+    /// @notice The arbitration fee for `round` (1, 2 or 3), per sec. 28.
+    function arbitrationFee(uint8 round) external view returns (uint128) {
+        if (round == 1) return _params.arbitrationFeeFirst;
+        if (round == 2) return _params.arbitrationFeeAppeal1;
+        if (round == 3) return _params.arbitrationFeeAppeal2;
+        revert OutOfBounds("round");
+    }
+
+    /// @notice The participation or appeal bond for `round` (1, 2 or 3), per sec. 28.
+    function disputeBond(uint8 round) external view returns (uint128) {
+        if (round == 1) return _params.disputeBondFirst;
+        if (round == 2) return _params.disputeBondAppeal1;
+        if (round == 3) return _params.disputeBondAppeal2;
+        revert OutOfBounds("round");
     }
 
     function evidenceWindow() external view returns (uint32) {
@@ -558,6 +612,16 @@ contract ProtocolConfig {
         _validateLifecycleWindow(p.drawWindow, "drawWindow");
         _validateLifecycleWindow(p.commitWindow, "commitWindow");
         _validateLifecycleWindow(p.revealWindow, "revealWindow");
+        _validateLifecycleWindow(p.appealWindow, "appealWindow");
+        // Not a lifecycle window. Three full rounds already come to nearly 22
+        // days, so pinning this to the 30-day lifecycle ceiling would leave
+        // governance almost no room to lengthen a phase. It gets its own bound.
+        if (p.disputeWindow == 0 || p.disputeWindow > MAX_DISPUTE_WINDOW) revert OutOfBounds("disputeWindow");
+        // The long stop has to outlast the path it is stopping, or a dispute
+        // would expire mid-trial and settle behind the jury's back.
+        uint256 longestPath = 3 * (uint256(p.evidenceWindow) + p.drawWindow + p.commitWindow + p.revealWindow) + 3
+            * uint256(p.appealWindow);
+        if (p.disputeWindow < longestPath) revert InvalidDisputeWindow(uint32(longestPath), p.disputeWindow);
         if (p.challengeWindow < MIN_CHALLENGE_WINDOW || p.challengeWindow > MAX_CHALLENGE_WINDOW) {
             revert OutOfBounds("challengeWindow");
         }
@@ -589,6 +653,18 @@ contract ProtocolConfig {
         // never be slashed for more than is locked for the case (sec. 27).
         if (p.jurorLockPerCase > p.minJurorStake) revert InvalidJurorEconomics();
         if (p.nonRevealSlash > p.jurorLockPerCase) revert InvalidJurorEconomics();
+
+        // sec. 28's schedule rises across rounds. Enforced rather than assumed:
+        // a later round that cost less than an earlier one would make appealing
+        // cheaper than being judged, which inverts what the bond is for.
+        if (p.arbitrationFeeFirst > p.arbitrationFeeAppeal1 || p.arbitrationFeeAppeal1 > p.arbitrationFeeAppeal2) {
+            revert InvalidDisputeEconomics();
+        }
+        if (p.disputeBondFirst > p.disputeBondAppeal1 || p.disputeBondAppeal1 > p.disputeBondAppeal2) {
+            revert InvalidDisputeEconomics();
+        }
+        if (p.arbitrationFeeAppeal2 > MAX_DISPUTE_COST) revert OutOfBounds("arbitrationFee");
+        if (p.disputeBondAppeal2 > MAX_DISPUTE_COST) revert OutOfBounds("disputeBond");
     }
 
     function _validateLifecycleWindow(uint32 window, string memory name) internal pure {
