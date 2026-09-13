@@ -1,5 +1,37 @@
 # Backend V2 İlerleme Kaydı
 
+## 2026-09-13 — Contract Sync / CS.1–CS.6
+
+Teslim notu: Yerel commit komutu otomatik onay incelemesinde kullanım limiti nedeniyle reddedildi; commit oluşmadı ve push yapılmadı. Kod değişiklikleri stage edildi; ardından frontend/contract handoff notları genişletildi. FE-CS-1–7 ve CT-CS-1–5 işleri, eksik imza aktarım kanalı ve export sonrası gereken backend işi ayrıca belirtildi. Doküman güncellemesi sonrası `git diff --check` ile kontrol yapıldı; kod testleri yukarıdaki teslimle aynı uygulamayı doğrular. Yeni reputation/support response assertion'ları için ayrıca release integration testi 10/10 geçti.
+
+Başlangıç `9a15adc`, `Monosfer-V2`. Durum: bekliyor → devam ediyor → doğrulanıyor → tamamlandı (backend kodu, yerel entegrasyon ve read-only Testnet). Production yayını yapılmadı.
+
+- CS.1: DeliveryHub'ın 13 state sırası; `etaMinutes`, `etaDeadline`, `completedAt`; block timestamp migration ve timestamp'siz stream için fail-closed reindex zorunluluğu.
+- CS.2: `HubRpc.read` raw viem hatasını sabit `RPC read failed` ile değiştirir. Güncel struct alanları ve canonical event replay/reconcile karşılaştırılır; dispute inbox/projection da kontrol edilir.
+- CS.3: customer pickup/return typed-data ve courier OTP PoD imzası; auth/Origin/CSRF, şifreli SQL idempotency, zincir domain/hash/nonce/signer/validity kontrolleri. Delivery başına Redis üzerinde saatte 5 yeni OTP denemesi; cached başarılı retry bu bütçeyi tüketmez. Commitment HMAC ile nonce/deployment/delivery'ye bağlanır; düşük entropili OTP düz hash olarak yayımlanmaz.
+- CS.4: DisputeCourt inbox/projection aynı finalized batch transaction'ına dahil; duplicate/replay/reorg desteği. Support summary dispute özeti, ops canonical committee gauge değeri içerir.
+- CS.5: reputation cevabı `source=backend_delivery_projection`, `onChainReputation.status=export_missing`. Eksik dört ABI consumer export'u handoff'ta açıkça kayıtlı.
+- CS.6: OpenAPI, frontend proof sözleşmesi, migration/reindex ve ekip handoff notları güncellendi. Ek paket/lockfile değişikliği yok; Mongo uygulama verisine müdahale yok.
+
+| Kontrol | Gerçek sonuç |
+| --- | --- |
+| `npm.cmd run typecheck` | Başarılı |
+| `npm.cmd run build` | Başarılı; yalnız backend dist contract bundle üretildi |
+| `npm.cmd test` | 87/87 geçti |
+| `npm.cmd run test:integration` | 40/40 geçti; gerçek yerel PG/Redis/Mongo fixture; migration ikinci çalıştırmada boş |
+| `npm.cmd run test:legacy` | 13/13 geçti |
+| `npm.cmd run openapi:export` | Başarılı; API ve realtime artifact üretildi (git-ignored) |
+| `npm.cmd run ops:preflight` | Yerel `node tests/support/release-cli.mjs preflight` harness'i ile passed; indexer disabled olduğu için ops degraded, productionReady=false |
+| `npm.cmd run ops:testnet-smoke` | Public Testnet üzerinde passed; finalized block `62033850`, `hash_quote`, üç `proof_hashes` eth_call karşılaştırması, hub/court read; transactionsSent=0 |
+| `npm.cmd audit --json` | Registry erişimli çalıştırmada 0 açık / 294 toplam bağımlılık |
+| `git diff --check` / kapsam | Başarılı; yalnız `backend/` |
+
+İlk unit koşusunda yeni route liste beklentileri eksikti; fixture enum/struct değerleri güncellendi. Yeni güvenlik testinde secret alan adının kendisini değer sanan assertion ve Solidity enum yorum ayrıştırması düzeltildi; son 87 test yeşil. İlk preflight/smoke eksik runtime env nedeniyle reddedildi; `.env` değiştirilmeden mevcut local harness ve process-level public RPC ayarı kullanıldı. Sandbox ağ kısıtı sonrası audit/smoke izinli ağ erişimiyle tamamlandı. Docker Desktop ve yalnız backend Compose test servisleri başlatıldı; test sonrası açık bırakıldı. Fixture cleanup yalnız testin ürettiği kayıtları kaldırdı.
+
+Build fingerprint: `f18a98e9b9a9691e2150595363ab7352aadb15aeb2b5eeaa69a031344e0c0f7c`. Canlı staging stream reindex edilmedi; proof transaction gönderimi denenmedi. Yerel commit kaydı teslim sırasında ayrıca verilir; otomatik push yok.
+
+Sonraki iki iş: (1) staging yeni stream üzerinde archive RPC backfill + reconcile ve signer rotation kabulü; (2) frontend customer acceptance signing/courier proof submission entegrasyonu ve contract ekibinden eksik reputation/referral/reward export teslimi.
+
 ## 2026-09-11 — Faz 7 commit teslim kaydı
 
 Uygulama commit'i **`73a26f9c1c746c53e66a55dd9b7b025515e29caa`** — `feat(backend): implement phase 7 support audit and release operations`. `Monosfer-V2` üzerinde 38 dosyanın tamamı `backend/` altında; staged diff/check ve kapsam doğrulandı. Bu hash kaydı ayrı docs commit'idir. 81 unit/inject + 38 integration + 13 legacy test, local restore/preflight ve canlı read-only Testnet başarılı; npm audit 0 açık. Push/deploy yapılmadı. Yerel Compose test servisleri açık bırakıldı; fixture geçici backup/schema/key'leri temizlendi. Production/provider/gerçek DR kabulü handoff olarak bekliyor.

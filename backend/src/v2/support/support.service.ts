@@ -61,7 +61,8 @@ export class SupportService {
       const quote = (await client.query(`SELECT digest,expires_at,created_at FROM monosfer.risk_quote_issuances WHERE digest=$1 AND stream=$2 AND customer=$3`,
         [data.quoteDigest,cursor.stream,data.customer])).rows[0] ?? null;
       const notifications = (await client.query(`SELECT count(*)::text AS total FROM monosfer.notifications WHERE stream=$1 AND delivery_id=$2 AND binding=$3`,[cursor.stream,id,binding])).rows[0];
-      return {delivery:data,quote,privateRecordId:record?.id??null,evidence:evidence.slice(0,100),evidenceHasMore:evidence.length>100,notifications};
+      const dispute=(await client.query('SELECT data FROM monosfer.dispute_projections WHERE stream=$1 AND delivery_id=$2 AND updated_block<=$3 ORDER BY dispute_id DESC LIMIT 1',[cursor.stream,id,cursor.last_block])).rows[0]?.data??null;
+      return {delivery:data,quote,privateRecordId:record?.id??null,evidence:evidence.slice(0,100),evidenceHasMore:evidence.length>100,notifications,dispute,committeeResolutionAlert:dispute?.committeeResolutionAlert??false};
     });
   }
   createCase(actor: SupportActor, input: CaseCreateDto, key: unknown) {

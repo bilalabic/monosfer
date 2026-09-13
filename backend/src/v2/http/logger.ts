@@ -10,7 +10,7 @@ export function createLogger(destination?: DestinationStream): Logger {
           'sessionId', 'sessionHash', 'nonce', 'csrfToken', 'signature', 'email', 'phone', 'message', 'browserToken', 'walletAddress', 'sessionCookieSecret',
           'quote','typedData','salt','signerPrivateKey','QUOTE_SIGNER_PRIVATE_KEY','privatePayload','encrypted_response','idempotencyKey',
           'trackingSession','lat','lng','coordinates','contentBase64','text','objectKey','encryptedPayload','subscription','endpoint','evidenceHash','route',
-          'note','encrypted_note','metricsToken','OPS_METRICS_TOKEN','testnetRpcUrl'].flatMap(key => [key, `*.${key}`])],
+          'note','encrypted_note','metricsToken','OPS_METRICS_TOKEN','testnetRpcUrl','code','otp','attestation','acceptance','POD_ATTESTATION_SIGNER_PRIVATE_KEY'].flatMap(key => [key, `*.${key}`])],
       censor: '[REDACTED]',
     },
   };

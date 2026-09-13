@@ -46,7 +46,7 @@ export class OpsTraceGuard implements CanActivate {
 export class OpsController {
   constructor(private readonly ops:OpsService,private readonly audit:AuditService) {}
   @Get('status') @ApiBearerAuth('ops') @UseGuards(OpsTokenGuard)
-  @ApiOkResponse({schema:{type:'object',properties:{status:{type:'string',enum:['ready','degraded']},postgres:{type:'boolean'},redis:{type:'boolean'},schemaReady:{type:'boolean'},indexer:{type:'object'},jobs:{type:'object',nullable:true},rebuild:{type:'object',nullable:true},providers:{type:'object'},http:{type:'object'}}}})
+  @ApiOkResponse({schema:{type:'object',properties:{status:{type:'string',enum:['ready','degraded']},postgres:{type:'boolean'},redis:{type:'boolean'},schemaReady:{type:'boolean'},indexer:{type:'object'},jobs:{type:'object',nullable:true},rebuild:{type:'object',nullable:true},committeeResolutions:{type:'string',nullable:true,description:'Canonical committee-resolution count; gauge, may decrease on reorg.'},providers:{type:'object'},http:{type:'object'}}}})
   status() {return this.ops.status();}
   @Get('metrics') @ApiBearerAuth('ops') @ApiProduces('text/plain') @UseGuards(OpsTokenGuard)
   @ApiOkResponse({schema:{type:'string'}})

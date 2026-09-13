@@ -46,7 +46,21 @@ Reconcile checkpoint bloğunda `nextDeliveryId`, `deliveryOf`, bilinen `bidOf` a
 | GET /v1/deliveries/:id | `{indexing,data:Delivery}`; bilinmeyen ID ready iken 404, henüz doğrulanamıyorsa 202 ve data:null |
 | GET /v1/deliveries/:id/bids?limit=25&after=0x… | `{indexing,data:[Bid],nextCursor}`; exclusive lowercase wallet cursor, max 100 |
 
-Delivery state: Bidding, AwaitingFunding, ReadyForPickup, InTransit, DeliveredPending, ReturnRequired, Completed, Returned, Cancelled, Expired. IDs, riskTier, termsVersion, deadline/validUntil (Unix saniyesi), ETA ve tutarlar decimal string; funding/active boolean. Courier seçilmediyse zero address. Fiyatlar kontrattaki tam birim miktarlardır; backend token formatlaması/kur dönüşümü yapmaz. OpenAPI alanları tanımlar. Liste/bid sayfaları canlı projection üzerinde cursor pagination'dır, sayfalar arası snapshot garantisi yoktur.
+Delivery state: Bidding, AwaitingFunding, ReadyForPickup, InTransit, DeliveredPending, ReturnRequired, Disputed, Completed, Returned, Resolved, Cancelled, Expired. IDs, riskTier, termsVersion, deadline/validUntil (Unix saniyesi), ETA ve tutarlar decimal string; funding/active boolean. Courier seçilmediyse zero address. Fiyatlar kontrattaki tam birim miktarlardır; backend token formatlaması/kur dönüşümü yapmaz. OpenAPI alanları tanımlar. Liste/bid sayfaları canlı projection üzerinde cursor pagination'dır, sayfalar arası snapshot garantisi yoktur.
+
+## Contract Sync reindex — 2026-09-13
+
+`1789344000000-contract-sync.sql`, `indexer_blocks.timestamp` alanını ekler. Eski canonical blok timestamp'i NULL olan stream'ler error/integrity=false işaretlenir; timestamp uydurulmaz. Worker böyle bir stream'de once/replay/reconcile ile ilerlemeyi reddeder. `etaMinutes` seçilen bid'den, `etaDeadline=pickupBlockTimestamp+etaMinutes*60`, `completedAt=CompletedBlockTimestamp` alınır. Disputed state 7, Completed 8, Resolved 10'dur.
+
+Build fingerprint artık DeliveryHub ve DisputeCourt ABI/address/deployment block verisini kapsar. Staging prosedürü:
+
+1. İlgili indexer/link/provider worker'larını kontrollü durdurun, mevcut DB/anahtar/object backup'ını koruyun. Production işlemi için ayrıca operasyon yetkilendirmesi gerekir.
+2. Backend build, yeni migration ve export adres/bloklarını doğrulayın. Eski fingerprint'i SQL'de yenisiyle değiştirip geçmeyin.
+3. Yeni hub adresinde worker doğal olarak yeni `chainId:hubAddress` stream'i açar; eski stream verisi korunur. Aynı hub adresiyle timestamp'siz/eski fingerprint stream'i yeniden kurmak gerekiyorsa PK çakışması nedeniyle aynı DB'de ikinci stream açılamaz: yeni izole staging PostgreSQL hedefi hazırlayın veya ayrıca incelenmiş arşivleme/backfill migration'ı isteyin. Bu teslim otomatik silme/reset aracı içermez.
+4. Archive RPC ile `npm run indexer -- watch` çalıştırıp finalized head'e kadar tamamlayın. Sonra `npm run indexer -- reconcile`, sıfır mismatch ardından `npm run indexer -- once`. Event/projection onarımı gerekiyorsa replay → reconcile → once; NULL timestamp için replay yeterli değildir.
+5. Ready, integrity_ok, sıfır lag, güncel fingerprint ve timestamp'leri doğrulayın. Private link'ler deployment'a bağlıdır; eski link'ler yeni stream'e kopyalanmaz. Link worker yalnız yeni trusted quoteDigest/customer eşleşmesiyle bağ kurar. Reputation rebuild ve proof read smoke sonrası API/worker geçişini yapın.
+
+DisputeCourt aynı finalized aralıkta ayrı inbox/projection'a alınır; reconcile taze court log taramasını ve yeniden üretilmiş projection'ı kontrol eder. `ResolvedByCommittee` alarm gauge'u reorg'da azalabilir. Reorg sırasında hub ve court verisi tek transaction'da geri alınır. Bu teslimde staging reindex veya production migration çalıştırılmadı.
 
 Yalnız kamuya açık on-chain alanlar döner. Delivery write, bid write, arbitrary event ingestion, private payload veya private-link endpoint'i yoktur. DTO'lar bilinmeyen parametre ve geçersiz/uint256 dışı ID'leri reddeder. DB hatası mevcut standart 503 yanıtını verir. Process/dependency health ayrı kalır; frontend/monitoring indexer durumuna da bakmalıdır. Heartbeat süresi geçerse stale; backlog varsa syncing olur. Var olan projection stale/error iken okunabilir fakat indexing metadata durumunu açıkça taşır; UI son durum olduğunu varsaymamalıdır.
 

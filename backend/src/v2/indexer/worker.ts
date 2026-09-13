@@ -3,6 +3,7 @@ import type { Bundle, Deployment, IndexerSettings } from './config.js';
 import type { IndexerRpc } from './rpc.js';
 import { decodeLogs, states, type ChainBlock } from './events.js';
 import { applyBatch, cursor, projection, replayDelivery, reconstructDelivery, transaction, type Cursor } from './store.js';
+import { applyDisputes, replayDispute, reconstructDispute } from './disputes.js';
 
 function stableJson(value: unknown): string {
   return JSON.stringify(value, (_key, v) => v && typeof v === 'object' && !Array.isArray(v)
@@ -37,6 +38,10 @@ export class IndexerWorker {
     if (await this.rpc.chainId() !== this.settings.chainId) throw new Error('RPC chain mismatch');
     const code = await this.rpc.code(this.deployment.address);
     if (!code || code === '0x') throw new Error('Missing deployed contract');
+    if (this.deployment.court) {
+      const courtCode=await this.rpc.code(this.deployment.court.address);
+      if (!this.bundle.courtAbi || !courtCode || courtCode==='0x') throw new Error('Missing dispute contract');
+    }
     let current = await cursor(db, this.stream);
     if (!current) {
       const anchor = await this.rpc.block(BigInt(this.deployment.block) - 1n);
@@ -48,6 +53,7 @@ export class IndexerWorker {
       current = await cursor(db, this.stream);
     }
     if (current!.export_fingerprint !== this.bundle.fingerprint || BigInt(current!.start_block) !== BigInt(this.deployment.block)) throw new Error('Export changed; reviewed migration required');
+    if ((await db.query('SELECT 1 FROM monosfer.indexer_blocks WHERE stream=$1 AND canonical AND timestamp IS NULL LIMIT 1',[this.stream])).rowCount) throw new Error('Block timestamp required; reindex');
     return current!;
   }
   private async canonical(db: PoolClient, current: Cursor): Promise<Cursor> {
@@ -68,6 +74,9 @@ export class IndexerWorker {
       const affected = await db.query('SELECT DISTINCT delivery_id::text FROM monosfer.chain_event_inbox WHERE stream=$1 AND canonical AND block_number>$2 AND delivery_id IS NOT NULL', [this.stream, boundary.number.toString()]);
       await db.query('UPDATE monosfer.chain_event_inbox SET canonical=false WHERE stream=$1 AND block_number>$2 AND canonical', [this.stream, boundary.number.toString()]);
       await db.query('UPDATE monosfer.indexer_blocks SET canonical=false WHERE stream=$1 AND number>$2 AND canonical', [this.stream, boundary.number.toString()]);
+      const disputes=await db.query('SELECT DISTINCT dispute_id::text FROM monosfer.dispute_event_inbox WHERE stream=$1 AND canonical AND block_number>$2 AND dispute_id IS NOT NULL',[this.stream,String(boundary.number)]);
+      await db.query('UPDATE monosfer.dispute_event_inbox SET canonical=false WHERE stream=$1 AND block_number>$2 AND canonical',[this.stream,String(boundary.number)]);
+      for (const row of disputes.rows) await replayDispute(db,this.stream,row.dispute_id,boundary.number);
       for (const row of affected.rows) await replayDelivery(db, this.stream, row.delivery_id, boundary.number);
       await db.query("UPDATE monosfer.indexer_streams SET last_block=$2,last_hash=$3,status='syncing',checked_at=NULL,reconciled_at=NULL WHERE stream=$1", [this.stream, boundary.number.toString(), boundary.hash]);
     });
@@ -96,10 +105,12 @@ export class IndexerWorker {
           if (blocks[i]!.number !== from + BigInt(i) || blocks[i]!.parentHash !== (i ? blocks[i - 1]!.hash : current.last_hash)) throw new Error('Noncontiguous RPC chain');
         }
         const events = decodeLogs(this.bundle.abi, this.deployment.address, blocks, await this.rpc.logs(this.deployment.address, from, to));
+        const courtEvents = await this.courtEvents(blocks,from,to);
         if ((await this.rpc.block(to)).hash !== blocks.at(-1)!.hash) throw new Error('RPC changed during fetch');
         if ((await this.rpc.block(head.number)).hash !== head.hash) throw new Error('Finalized checkpoint changed');
         await transaction(db, async () => {
           await applyBatch(db, this.stream, blocks, events);
+          await applyDisputes(db,this.stream,courtEvents,to);
           await db.query('UPDATE monosfer.indexer_streams SET last_block=$2,last_hash=$3 WHERE stream=$1', [this.stream, to.toString(), blocks.at(-1)!.hash]);
         });
       }
@@ -115,6 +126,8 @@ export class IndexerWorker {
         const ids = await db.query(`SELECT delivery_id::text FROM monosfer.delivery_projections WHERE stream=$1 UNION
           SELECT delivery_id::text FROM monosfer.chain_event_inbox WHERE stream=$1 AND canonical AND delivery_id IS NOT NULL`, [this.stream]);
         for (const row of ids.rows) { this.signal?.throwIfAborted(); await replayDelivery(db, this.stream, row.delivery_id, BigInt(current.last_block)); }
+        const disputes=await db.query('SELECT dispute_id::text FROM monosfer.dispute_projections WHERE stream=$1 UNION SELECT dispute_id::text FROM monosfer.dispute_event_inbox WHERE stream=$1 AND canonical AND dispute_id IS NOT NULL',[this.stream]);
+        for (const row of disputes.rows) await replayDispute(db,this.stream,row.dispute_id,BigInt(current.last_block));
         await db.query("UPDATE monosfer.indexer_streams SET status='syncing',checked_at=NULL,reconciled_at=NULL,integrity_ok=false WHERE stream=$1", [this.stream]);
       });
     });
@@ -132,13 +145,16 @@ export class IndexerWorker {
         this.signal?.throwIfAborted();
         const end = from + BigInt(this.settings.batchSize) - 1n;
         const to = end < checkpoint ? end : checkpoint;
-        const storedBlocks = await db.query('SELECT number,hash,parent_hash FROM monosfer.indexer_blocks WHERE stream=$1 AND canonical AND number BETWEEN $2 AND $3 ORDER BY number', [this.stream, from.toString(), to.toString()]);
-        const blocks = storedBlocks.rows.map(row => ({ number: BigInt(row.number), hash: row.hash, parentHash: row.parent_hash }));
+        const storedBlocks = await db.query('SELECT number,hash,parent_hash,timestamp FROM monosfer.indexer_blocks WHERE stream=$1 AND canonical AND number BETWEEN $2 AND $3 ORDER BY number', [this.stream, from.toString(), to.toString()]);
+        const blocks = storedBlocks.rows.map(row => ({ number: BigInt(row.number), hash: row.hash, parentHash: row.parent_hash, timestamp: BigInt(row.timestamp) }));
         if (BigInt(blocks.length) !== to - from + 1n) throw new Error('Missing canonical block');
         const fresh = decodeLogs(this.bundle.abi, this.deployment.address, blocks, await this.rpc.logs(this.deployment.address, from, to));
         const stored = await db.query('SELECT event_name,args,raw_log FROM monosfer.chain_event_inbox WHERE stream=$1 AND canonical AND block_number BETWEEN $2 AND $3 ORDER BY block_number,transaction_index,log_index', [this.stream, from.toString(), to.toString()]);
         const normalized = fresh.map(e => ({ event_name: e.name, args: e.args, raw_log: { ...e.log, blockNumber: e.log.blockNumber.toString() } }));
         if (stableJson(normalized) !== stableJson(stored.rows)) mismatches++;
+        const courtFresh=await this.courtEvents(blocks,from,to);
+        const courtStored=await db.query('SELECT event_name,args,block_hash,log_index FROM monosfer.dispute_event_inbox WHERE stream=$1 AND canonical AND block_number BETWEEN $2 AND $3 ORDER BY block_number,transaction_index,log_index',[this.stream,String(from),String(to)]);
+        if(stableJson(courtFresh.map(e=>({event_name:e.name,args:e.args,block_hash:e.log.blockHash,log_index:e.log.logIndex})))!==stableJson(courtStored.rows)) mismatches++;
       }
       const total = await this.rpc.read(this.deployment.address, this.bundle.abi, 'nextDeliveryId', [], checkpoint);
       if (BigInt(String(total)) !== BigInt(ids.length)) mismatches++;
@@ -158,9 +174,21 @@ export class IndexerWorker {
           checkedBids++;
         }
       }
+      const disputes=await db.query(`SELECT dispute_id::text FROM monosfer.dispute_projections WHERE stream=$1 UNION
+        SELECT dispute_id::text FROM monosfer.dispute_event_inbox WHERE stream=$1 AND canonical AND dispute_id IS NOT NULL`,[this.stream]);
+      for(const row of disputes.rows) {
+        const rebuilt=await reconstructDispute(db,this.stream,row.dispute_id);
+        const stored=(await db.query('SELECT data FROM monosfer.dispute_projections WHERE stream=$1 AND dispute_id=$2',[this.stream,row.dispute_id])).rows[0]?.data??null;
+        if(stableJson(rebuilt)!==stableJson(stored))mismatches++;
+      }
       if ((await this.rpc.block(checkpoint)).hash !== current.last_hash) throw new Error('Checkpoint changed during reconciliation');
       await db.query("UPDATE monosfer.indexer_streams SET status=$2,reconciled_at=now(),checked_at=NULL,integrity_ok=$3 WHERE stream=$1", [this.stream, mismatches ? 'error' : 'syncing', mismatches === 0]);
       return { checkedDeliveries: ids.length, checkedBids, mismatches };
     });
+  }
+  private async courtEvents(blocks: ChainBlock[], from: bigint, to: bigint) {
+    const court=this.deployment.court;
+    if(!court || to<BigInt(court.block)) return [];
+    return decodeLogs(this.bundle.courtAbi!,court.address,blocks,await this.rpc.logs(court.address,from>BigInt(court.block)?from:BigInt(court.block),to));
   }
 }

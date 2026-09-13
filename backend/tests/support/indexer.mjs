@@ -13,7 +13,7 @@ export function hubFixture(customerAddress) {
   const courier = `0x${randomBytes(20).toString('hex')}`;
   const other = `0x${randomBytes(20).toString('hex')}`;
   const blocks = new Map(); const logs = new Map();
-  for (let n = 99; n <= 108; n++) blocks.set(BigInt(n), { number: BigInt(n), hash: hashOf(`initial${n}`), parentHash: hashOf(`initial${n-1}`) });
+  for (let n = 99; n <= 108; n++) blocks.set(BigInt(n), { number: BigInt(n), hash: hashOf(`initial${n}`), parentHash: hashOf(`initial${n-1}`), timestamp: BigInt(n) });
   const settings = { enabled: true, chainId: 10143, rpcUrl: '', batchSize: 2, pollMs: 250, maxLag: 0, staleSeconds: 30, reorgDepth: 8,
     deployment: bundle.chains[10143], fingerprint: bundle.fingerprint };
   const fixture = { bundle, settings, customer, courier, other, address, blocks, logs, head: 102n, wrongChain: false, corrupt: false, drift: false, duplicate: true, requests: [] };
@@ -41,13 +41,14 @@ export function hubFixture(customerAddress) {
   event(103,'StateChanged',{deliveryId,from:3,to:4,deadline:2200n});
   event(104,'DeliveryProofSubmitted',{deliveryId,courier});
   event(104,'StateChanged',{deliveryId,from:4,to:5,deadline:2500n});
-  event(105,'StateChanged',{deliveryId,from:5,to:7,deadline:0n});
-  event(105,'Settled',{deliveryId,finalState:7});
+  event(105,'StateChanged',{deliveryId,from:5,to:8,deadline:0n});
+  event(105,'Settled',{deliveryId,finalState:8});
   fixture.deliveryAt = height => {
     const n = Number(height);
-    const state = n < 100 ? 0 : n === 100 ? 1 : n === 101 ? 2 : n === 102 ? 3 : n === 103 ? 4 : n === 104 ? 5 : 7;
+    const state = n < 100 ? 0 : n === 100 ? 1 : n === 101 ? 2 : n === 102 ? 3 : n === 103 ? 4 : n === 104 ? 5 : 8;
     return { customer, courier: n < 101 ? `0x${'0'.repeat(40)}` : courier, state: fixture.drift ? 9 : state, riskTier: 1,
-      termsVersion: n < 101 ? 0 : 2, stateDeadline: BigInt(({ 0:0,1:1000,2:1500,3:1800,4:2200,5:2500,7:0 })[state]),
+      termsVersion: n < 101 ? 0 : 2, stateDeadline: BigInt(({ 0:0,1:1000,2:1500,3:1800,4:2200,5:2500,8:0 })[state]),
+      etaMinutes:n<101?0:10,etaDeadline:n<103?0n:703n,completedAt:n<105?0n:105n,
       courierAsk: n < 101 ? 0n : 200n, protocolFee: n < 101 ? 0n : 10n, returnReserve: n < 101 ? 0n : 20n, requiredCollateral: 5000n,
       customerFunded: n >= 102, courierFunded: n >= 102 };
   };
@@ -69,7 +70,7 @@ export async function rpcServer(fixture) {
         case 'eth_getBlockByNumber': {
           const block = fixture.blocks.get(a === 'finalized' ? fixture.head : BigInt(a));
           if (!block) throw new Error();
-          result = { number: toHex(block.number), hash:block.hash, parentHash:block.parentHash, transactions:[], timestamp:'0x1', gasLimit:'0x1',gasUsed:'0x0',size:'0x1',difficulty:'0x0',extraData:'0x',nonce:'0x0000000000000000',miner:fixture.customer,logsBloom:`0x${'0'.repeat(512)}` }; break;
+          result = { number: toHex(block.number), hash:block.hash, parentHash:block.parentHash, transactions:[], timestamp:toHex(block.timestamp), gasLimit:'0x1',gasUsed:'0x0',size:'0x1',difficulty:'0x0',extraData:'0x',nonce:'0x0000000000000000',miner:fixture.customer,logsBloom:`0x${'0'.repeat(512)}` }; break;
         }
         case 'eth_getLogs': {
           const found = [...fixture.logs.entries()].filter(([height]) => height>=BigInt(a.fromBlock) && height<=BigInt(a.toBlock)).flatMap(([,values])=>values);

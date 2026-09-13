@@ -31,7 +31,7 @@ export class BidQueryDto {
 }
 const decimalSchema = { type: 'string' as const, pattern: '^[0-9]+$', description: 'Exact decimal integer; timestamps are Unix seconds.' };
 const deliverySchema = { type: 'object' as const, additionalProperties: false, properties: {
-  ...Object.fromEntries(['id','riskTier','termsVersion','stateDeadline','courierAsk','protocolFee','returnReserve','requiredCollateral'].map(key => [key, decimalSchema])),
+  ...Object.fromEntries(['id','riskTier','termsVersion','stateDeadline','etaDeadline','etaMinutes','completedAt','courierAsk','protocolFee','returnReserve','requiredCollateral'].map(key => [key, decimalSchema])),
   customer: { type: 'string' as const, pattern: '^0x[0-9a-f]{40}$' }, courier: { type: 'string' as const, description: 'Zero address until selected.' },
   state: { type: 'string' as const, enum: states.slice(1) }, customerFunded: { type: 'boolean' as const }, courierFunded: { type: 'boolean' as const },
   quoteDigest: { type: 'string' as const }, creationTxHash: { type: 'string' as const },

@@ -39,7 +39,7 @@ test('real SQL + RPC indexer: atomic ingest, restart, replay, reconcile, reorg, 
     try {
       // Only this test's random contract stream and private fixture are removed.
       await pool.query('DELETE FROM monosfer.private_delivery_links WHERE private_record_id=$1',[privateId]);
-      for(const table of ['bid_projections','delivery_projections','chain_event_inbox','indexer_blocks','indexer_streams']) await pool.query(`DELETE FROM monosfer.${table} WHERE stream=$1`,[stream]);
+      for(const table of ['dispute_projections','dispute_event_inbox','bid_projections','delivery_projections','chain_event_inbox','indexer_blocks','indexer_streams']) await pool.query(`DELETE FROM monosfer.${table} WHERE stream=$1`,[stream]);
       await pool.query('DELETE FROM monosfer.private_delivery_records WHERE id=$1',[privateId]);
       await pool.query('DELETE FROM monosfer.private_data_import_runs WHERE id=$1',[runId]);
     }finally{await pool.end();}
@@ -105,8 +105,8 @@ test('real SQL + RPC indexer: atomic ingest, restart, replay, reconcile, reorg, 
   f.head=105n;await resumed.once();await resumed.once();assert.equal((await reads.read('delivery','0')).data.state,'Completed');
   assert.equal((await resumed.reconcile()).mismatches,0);await resumed.once();
   // Reorg starts after funding. Old success events remain as orphan inbox records.
-  for(let n=103n;n<=105n;n++) {f.blocks.set(n,{number:n,hash:hashOf(`fork${n}`),parentHash:n===103n?f.blocks.get(102n).hash:hashOf(`fork${n-1n}`)});f.logs.set(n,[]);}
-  f.event(103,'StateChanged',{deliveryId:0n,from:3,to:9,deadline:0n});f.event(103,'Settled',{deliveryId:0n,finalState:9});
+  for(let n=103n;n<=105n;n++) {f.blocks.set(n,{number:n,hash:hashOf(`fork${n}`),parentHash:n===103n?f.blocks.get(102n).hash:hashOf(`fork${n-1n}`),timestamp:n});f.logs.set(n,[]);}
+  f.event(103,'StateChanged',{deliveryId:0n,from:3,to:11,deadline:0n});f.event(103,'Settled',{deliveryId:0n,finalState:11});
   await resumed.once();await resumed.once();
   assert.equal((await reads.read('delivery','0')).data.state,'Cancelled');
   assert.ok((await pool.query('SELECT count(*)::int AS n FROM monosfer.chain_event_inbox WHERE stream=$1 AND NOT canonical',[stream])).rows[0].n>0);
@@ -115,7 +115,7 @@ test('real SQL + RPC indexer: atomic ingest, restart, replay, reconcile, reorg, 
   await assert.rejects(new IndexerWorker(pool,rpc,{...f.bundle,fingerprint:'a'.repeat(64)},f.settings).once(),/Indexer operation failed/);
   f.wrongChain=true;await assert.rejects(resumed.once(),/Indexer operation failed/);f.wrongChain=false;
   // An ancestor outside the allowed window cannot silently reset a confirmed projection.
-  for(let n=99n;n<=105n;n++) f.blocks.set(n,{number:n,hash:hashOf(`deep${n}`),parentHash:hashOf(`deep${n-1n}`)});
+  for(let n=99n;n<=105n;n++) f.blocks.set(n,{number:n,hash:hashOf(`deep${n}`),parentHash:hashOf(`deep${n-1n}`),timestamp:n});
   await assert.rejects(resumed.once(),/Indexer operation failed/);
   assert.equal((await reads.read('delivery','0')).data.state,'Cancelled');assert.equal((await reads.read('status')).indexing.status,'error');
   assert.equal(await resolver.findConfirmed(privateId),null);

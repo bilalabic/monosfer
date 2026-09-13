@@ -22,6 +22,7 @@ export const auditPageSchema={type:'object' as const,additionalProperties:false,
   id:text,request_id:uuid,actor_wallet:{...wallet,nullable:true},action:text,target_type:text,target_id:text,
   decision:{...text,enum:['allowed','denied','failed']},reason_code:text,created_at:timestamp}}},nextCursor:{...text,nullable:true}}};
 export const reputationSchema={type:'object' as const,additionalProperties:false,properties:{wallet,status:{...text,enum:['ready','rebuild_pending']},
+  source:{...text,enum:['backend_delivery_projection']},onChainReputation:{type:'object' as const,properties:{status:{...text,enum:['export_missing']}}},
   sourceBlock:text,rebuiltAt:{...timestamp,nullable:true},counters:{type:'object' as const,nullable:true,additionalProperties:false,properties:Object.fromEntries(
     ['customerDeliveries','courierDeliveries','customerCompleted','courierCompleted','returned','cancelled','expired'].map(k=>[k,{...text,pattern:'^[0-9]+$'}]))},
   referral:{type:'object' as const,properties:{status:{...text,enum:['pending_policy']}}},

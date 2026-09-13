@@ -32,8 +32,11 @@ async function save(db: PoolClient, stream: string, id: string, p: Projection, b
     WHERE monosfer.bid_projections.data IS DISTINCT FROM excluded.data`, [stream, id, json(Object.values(p.bids))]);
 }
 export async function applyBatch(db: PoolClient, stream: string, blocks: ChainBlock[], events: HubEvent[]) {
-  for (const block of blocks) await db.query(`INSERT INTO monosfer.indexer_blocks(stream,number,hash,parent_hash,canonical) VALUES($1,$2,$3,$4,true)
-    ON CONFLICT(stream,hash) DO UPDATE SET canonical=true`, [stream, block.number.toString(), block.hash, block.parentHash]);
+  for (const block of blocks) {
+    if (typeof block.timestamp !== 'bigint') throw new Error('Block timestamp required; reindex');
+    await db.query(`INSERT INTO monosfer.indexer_blocks(stream,number,hash,parent_hash,canonical,timestamp) VALUES($1,$2,$3,$4,true,$5)
+    ON CONFLICT(stream,hash) DO UPDATE SET canonical=true,timestamp=excluded.timestamp`, [stream, block.number.toString(), block.hash, block.parentHash, String(block.timestamp)]);
+  }
   const changed = new Map<string, Projection>();
   for (const event of events) {
     const log = event.log;
@@ -53,13 +56,17 @@ export async function replayDelivery(db: PoolClient, stream: string, id: string,
 export async function reconstructDelivery(db: PoolClient, stream: string, id: string): Promise<Projection> {
   const p: Projection = { delivery: null, bids: {} };
   // Server cursor bounds event memory for long-lived deliveries.
-  await db.query(`DECLARE replay_events NO SCROLL CURSOR FOR SELECT event_name,args,raw_log FROM monosfer.chain_event_inbox
-    WHERE stream=$1 AND delivery_id=$2 AND canonical ORDER BY block_number,transaction_index,log_index`, [stream, id]);
+  await db.query(`DECLARE replay_events NO SCROLL CURSOR FOR SELECT e.event_name,e.args,e.raw_log,b.timestamp FROM monosfer.chain_event_inbox e
+    JOIN monosfer.indexer_blocks b ON b.stream=e.stream AND b.hash=e.block_hash
+    WHERE e.stream=$1 AND e.delivery_id=$2 AND e.canonical ORDER BY e.block_number,e.transaction_index,e.log_index`, [stream, id]);
   try {
     while (true) {
       const batch = await db.query('FETCH 500 FROM replay_events');
       if (!batch.rows.length) break;
-      for (const row of batch.rows) reduceEvent(p, { name: row.event_name, args: row.args, log: { ...row.raw_log, blockNumber: BigInt(row.raw_log.blockNumber) } as ChainLog });
+      for (const row of batch.rows) {
+        if (row.timestamp === null) throw new Error('Block timestamp required; reindex');
+        reduceEvent(p, { name: row.event_name, args: row.args, timestamp: BigInt(row.timestamp), log: { ...row.raw_log, blockNumber: BigInt(row.raw_log.blockNumber) } as ChainLog });
+      }
     }
   } finally { await db.query('CLOSE replay_events'); }
   return p;

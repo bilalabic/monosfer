@@ -46,11 +46,11 @@ test('return, funding cancellation, expiry and losing-bid withdrawal follow cont
     const apply=(name,args)=>reduceEvent(p,{name,args:{deliveryId:'0',...args},log:{transactionHash:hashOf(name)}});
     if(outcome==='return') {
       apply('StateChanged',{from:'4',to:'6',deadline:'2800'});apply('ReturnRequested',{by:f.customer});
-      apply('StateChanged',{from:'6',to:'8',deadline:'0'});apply('Settled',{finalState:'8'});assert.equal(p.delivery.state,'Returned');
+      apply('StateChanged',{from:'6',to:'9',deadline:'0'});apply('Settled',{finalState:'9'});assert.equal(p.delivery.state,'Returned');
     }else if(outcome==='funding_cancel') {
-      apply('StateChanged',{from:'2',to:'9',deadline:'0'});apply('Settled',{finalState:'9'});assert.equal(p.bids[f.courier].active,false);
+      apply('StateChanged',{from:'2',to:'11',deadline:'0'});apply('Settled',{finalState:'11'});assert.equal(p.bids[f.courier].active,false);
     }else if(outcome==='expiry') {
-      apply('StateChanged',{from:'1',to:'10',deadline:'0'});assert.equal(p.delivery.state,'Expired');
+      apply('StateChanged',{from:'1',to:'12',deadline:'0'});assert.equal(p.delivery.state,'Expired');
     }else { apply('BidWithdrawn',{courier:f.other});assert.equal(p.bids[f.other].active,false); }
     assert.throws(()=>apply('StateChanged',{from:'7',to:'1',deadline:'1'}),/Invalid lifecycle/);
   }

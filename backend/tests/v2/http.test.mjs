@@ -35,6 +35,7 @@ test('health, request IDs, headers, public contract, and legacy isolation', asyn
   assert.deepEqual(Object.keys(document.paths).sort(), [
     '/v1/auth/session', '/v1/auth/sessions', '/v1/auth/siwe/nonce', '/v1/auth/siwe/verify', '/v1/deliveries', '/v1/deliveries/{id}',
     '/v1/deliveries/{id}/bids', '/v1/deliveries/{id}/evidence', '/v1/deliveries/{id}/evidence/{evidenceId}', '/v1/deliveries/{id}/evidence/{evidenceId}/content',
+    '/v1/deliveries/{id}/pickup-acceptances','/v1/deliveries/{id}/return-acceptances','/v1/deliveries/{id}/pod-attestations',
     '/v1/deliveries/{id}/route', '/v1/deliveries/{id}/tracking/location', '/v1/deliveries/{id}/tracking/sessions', '/v1/health/live', '/v1/health/ready',
     '/v1/indexer/status', '/v1/notifications', '/v1/quotes/delivery', '/v1/quotes/{quoteDigest}', '/v1/quotes/{quoteDigest}/refresh', '/v1/users/me',
     '/v1/admin/audit','/v1/ops/metrics','/v1/ops/status','/v1/ops/traces/{requestId}', '/v1/support/cases','/v1/support/cases/{caseId}',

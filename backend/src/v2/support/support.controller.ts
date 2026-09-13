@@ -14,7 +14,7 @@ export const supportActor = (req: AuthRequest) => ({wallet:req.auth.user.walletA
 export class SupportController {
   constructor(private readonly support: SupportService) {}
   @Get('deliveries/:id') @ApiOperation({summary:'Audited finalized delivery summary'})
-  @ApiOkResponse({schema:{type:'object',properties:{delivery:{type:'object'},quote:{type:'object',nullable:true,properties:{digest:{type:'string'},expires_at:{type:'string',format:'date-time'},created_at:{type:'string',format:'date-time'}}},privateRecordId:{type:'string',format:'uuid',nullable:true},evidence:evidencePageSchema.properties.data,evidenceHasMore:{type:'boolean'},notifications:{type:'object',properties:{total:{type:'string'}}}}}})
+  @ApiOkResponse({schema:{type:'object',properties:{delivery:{type:'object'},quote:{type:'object',nullable:true,properties:{digest:{type:'string'},expires_at:{type:'string',format:'date-time'},created_at:{type:'string',format:'date-time'}}},privateRecordId:{type:'string',format:'uuid',nullable:true},evidence:evidencePageSchema.properties.data,evidenceHasMore:{type:'boolean'},notifications:{type:'object',properties:{total:{type:'string'}}},dispute:{type:'object',nullable:true,description:'Finalized DisputeCourt projection; no evidence contents.'},committeeResolutionAlert:{type:'boolean'}}}})
   delivery(@Req() req:AuthRequest,@Param() p:DeliveryIdDto) { return this.support.delivery(supportActor(req),p.id,'summary'); }
   @Get('deliveries/:id/private') @ApiOperation({summary:'Audited restricted private fields; admin or active assigned case required'})
   @ApiOkResponse({schema:supportPrivateSchema})

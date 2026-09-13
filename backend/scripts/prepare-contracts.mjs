@@ -3,9 +3,10 @@ import { createHash } from 'node:crypto';
 import { ABIS, CHAINS } from '../../contracts/exports/index.js';
 
 // Generated backend build artifact; upstream exports remain the only source of ABI/address data.
-const source = { abi: ABIS.DeliveryHub, chains: Object.fromEntries(Object.entries(CHAINS).flatMap(([id, chain]) => {
+const source = { abi: ABIS.DeliveryHub, courtAbi: ABIS.DisputeCourt, chains: Object.fromEntries(Object.entries(CHAINS).flatMap(([id, chain]) => {
   const hub = chain.contracts.DeliveryHub;
-  return hub && !hub.legacy ? [[id, { chainId: chain.chainId, ...hub }]] : [];
+  const court = chain.contracts.DisputeCourt;
+  return hub && !hub.legacy ? [[id, { chainId: chain.chainId, ...hub, ...(court && !court.legacy ? { court } : {}) }]] : [];
 })) };
 const fingerprint = createHash('sha256').update(JSON.stringify(source)).digest('hex');
 await mkdir(new URL('../dist/indexer/', import.meta.url), { recursive: true });

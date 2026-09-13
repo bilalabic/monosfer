@@ -11,6 +11,7 @@ import { UsersModule } from './users/users.module.js';
 import { PrivateDataModule } from './private-data/private-data.module.js';
 import { IndexerReadModule } from './indexer/read.module.js';
 import { QuotesModule } from './quotes/quotes.module.js';
+import { ProofsModule } from './proofs/proofs.module.js';
 import { TrackingApiModule } from './tracking/tracking.module.js';
 import { TrackingRealtimeModule } from './tracking/realtime.js';
 import { ProvidersModule } from './providers/providers.module.js';
@@ -29,7 +30,7 @@ import { createLogger, FrameworkLogger } from './http/logger.js';
 @Module({})
 export class AppModule {
   static register(settings: Settings): DynamicModule {
-    return { module: AppModule, imports: [ConfigModule.register(settings), HealthModule, AuthModule, UsersModule, PrivateDataModule, IndexerReadModule, QuotesModule, TrackingApiModule, ProvidersModule, SupportModule, ReputationModule, OpsModule] };
+    return { module: AppModule, imports: [ConfigModule.register(settings), HealthModule, AuthModule, UsersModule, PrivateDataModule, IndexerReadModule, QuotesModule, ProofsModule, TrackingApiModule, ProvidersModule, SupportModule, ReputationModule, OpsModule] };
   }
 }
 
@@ -75,7 +76,7 @@ export async function configureApplication(app: NestFastifyApplication, settings
   for (const name of ['NonceInputDto', 'VerifyInputDto', 'UpdateUserDto', 'CourierProfileDto', 'DeliveryQueryDto', 'DeliveryIdDto', 'BidQueryDto',
     'CreateQuoteDto','QuoteMetadataDto','QuoteLocationDto','QuoteDropoffDto','QuotePrivatePayloadDto','QuoteDigestDto','RefreshQuoteDto',
     'TrackingLocationDto','TrackingEmptyDto','EvidenceInputDto','EvidenceGpsDto','DeliveryEvidenceIdDto','NotificationQueryDto',
-    'CaseCreateDto','CasePatchDto','CaseIdDto','SupportEvidenceIdDto','WalletIdDto','TraceIdDto','SupportPageDto','AuditPageDto']) {
+    'CaseCreateDto','CasePatchDto','CaseIdDto','SupportEvidenceIdDto','WalletIdDto','TraceIdDto','SupportPageDto','AuditPageDto','AcceptanceInputDto','PodInputDto']) {
     const schema = document.components.schemas[name];
     if (schema && !('$ref' in schema)) schema.additionalProperties = false;
   }

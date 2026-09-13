@@ -1,5 +1,11 @@
 # Monosfer V2 Backend — Fazlı Uygulama Planı
 
+## Contract Sync — 2026-09-13
+
+Başlangıç `9a15adc`, `Monosfer-V2`; yalnız backend kapsamı. Kullanıcının Contract Sync planı uygulandı. Görevler CS.1 state/struct/timestamp, CS.2 RPC/reconcile, CS.3 proof API, CS.4 dispute projection, CS.5 reputation kaynak bildirimi, CS.6 dokümantasyon/doğrulama olarak izlendi: bekliyor → devam ediyor → doğrulanıyor → tamamlandı (yerel test ve read-only Testnet kapsamı).
+
+[Sözleşme ve işletim notları](backend-v2-contract-sync.md), [gerçek test sonuçları](backend-v2-progress.md), [ekip bağımlılıkları](backend-v2-handoffs.md). Production signer/KMS, staging reindex ve eksik contract ABI export'ları dış bağımlılık olarak sürer.
+
 ## Faz 7 — Support, audit ve yayın hazırlığı / 2026-09-11
 
 Başlangıç `282c570`, `Monosfer-V2`, yalnız `backend/`. Kullanıcının Faz 7 planı uygulandı. Durum: **bekliyor → devam ediyor → doğrulanıyor → tamamlandı (2026-09-11)**; planın local/test adapter ve read-only Testnet kapsamı için. [Gerçek test günlüğü](backend-v2-progress.md): 81 unit/inject, 38 integration, 13 legacy; preflight, gerçek pg_dump/restore fixture ve canlı salt-okunur Testnet başarılı. API/CLI ayrıntıları [Faz 7 sözleşmesi](backend-v2-release.md) içindedir. Production/provider/gerçek DR kabulü handoff'ta bekler.

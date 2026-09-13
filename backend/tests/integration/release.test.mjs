@@ -114,7 +114,10 @@ test('phase 7 real SQL/Redis: case/audit atomicity, trusted access, reputation r
     await f.db.query("UPDATE monosfer.delivery_projections SET data=jsonb_set(data,'{state}','\"Completed\"') WHERE stream=$1 AND delivery_id=0",[f.stream]);
     await reputation.rebuild(true);const first=await reputation.read(f.customer.address);assert.equal(first.status,'ready');assert.equal(first.counters.customerCompleted,'1');assert.equal(first.reward.status,'pending_policy');
     await reputation.rebuild(true);const second=await reputation.read(f.customer.address);assert.deepEqual(first.counters,second.counters);assert.equal(await count(),2);
-    assert.equal((await get('customer','/v1/users/me/reputation')).statusCode,200);
+    const response=await get('customer','/v1/users/me/reputation');assert.equal(response.statusCode,200);
+    assert.equal(response.json().source,'backend_delivery_projection');assert.equal(response.json().onChainReputation.status,'export_missing');
+    const summary=await get('support','/v1/support/deliveries/0');assert.equal(summary.statusCode,200);
+    assert.equal(summary.json().dispute,null);assert.equal(summary.json().committeeResolutionAlert,false);
     assert.equal((await get('support',`/v1/support/wallets/${f.customer.address}/reputation`)).statusCode,200);
     await f.db.query("UPDATE monosfer.indexer_streams SET last_hash='0x'||repeat('1',64) WHERE stream=$1",[f.stream]);
     assert.equal((await reputation.read(f.customer.address)).status,'rebuild_pending');

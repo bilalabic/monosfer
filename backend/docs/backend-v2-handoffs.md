@@ -1,5 +1,46 @@
 # V2 Backend Ekip Bağımlılıkları
 
+## Contract Sync — 2026-09-13
+
+### Frontend ekibine iletilecek işler
+
+Bu liste backend'in beklediği entegrasyonları belirtir; frontend kodu bu çalışmada incelenip tamamlandı olarak işaretlenmedi.
+
+| Kimlik | Eksik entegrasyon / beklenen davranış | Kabul koşulu |
+| --- | --- | --- |
+| FE-CS-1 | V2 `/v1` API, SIWE cookie oturumu, `credentials: include`, mutating isteklerde Origin/CSRF ve gerekli yerlerde Idempotency-Key kullanımı. | Wallet değişiminde eski oturum/kullanıcı verisi temizlenir; 401 tekrar girişe, 403 yetki hatasına yönlendirilir. `/api` fallback yapılmaz. |
+| FE-CS-2 | Customer pickup/return endpoint'inden typed-data alır, teslimat/kurye/aksiyon/süreyi gösterip wallet ile imzalar; seçilmiş courier ilgili contract çağrısını yapar. | Yanlış wallet/chain, imza reddi, expiry, kullanılmış nonce ve state değişimi senaryoları browser kabul testinden geçer. |
+| FE-CS-3 | Customer imzasını courier cihazına iletme kanalı kararlaştırılmalı. Mevcut backend acceptance üretir; imzalı acceptance relay/inbox endpoint'i içermez. | İki farklı cihazda aktarım ve yeniden deneme akışı belirlenir. Relay API isteniyorsa kapsam ayrıca backend'e bildirilir; imza URL/analytics/log'a yazılmaz. |
+| FE-CS-4 | Atanmış courier PoD için `{proofType:"otp",code}` gönderir; dönen attestation + backend signature ile `submitDeliveryProof` çağırır. | OTP yalnız form/request body'de kullanılır; kontrata raw kod taşınmaz. 429 durumunda otomatik yeni key ile sınırsız retry yapılmaz. QR/recipient-signature yolu henüz sunulmaz. |
+| FE-CS-5 | Receipt ile backend finalized projection senkronizasyonu ayrılır. `indexing_pending`, stale/error, `Disputed`, `Resolved`, yeni ETA alanları UI'da işlenir. | Tx receipt alınınca private link oluşmuş kabul edilmez; ready projection/link beklenir. Stale veriyle proof butonu başarılı işlem vaadi vermez. |
+| FE-CS-6 | `source=backend_delivery_projection` sayaçları on-chain puan/badge olarak etiketlenmez; `export_missing`, `rebuild_pending`, `pending_policy` durumları gösterilir. | Kullanıcıya hak edilmiş/ödenebilir reward veya on-chain reputation iddiası yapılmaz. |
+| FE-CS-7 | Support ekranı yeni dispute özeti/committee alarmını gösterebilir; private/evidence content mevcut case/admin politikasından geçer. Backend support case ile on-chain dispute farklı kaynaklardır. | Local support case açılması zincirde dispute açmaz. Evidence upload otomatik on-chain commitment submission yapmaz. |
+
+Frontend teslim kaynağı: [proof sözleşmesi](backend-v2-contract-sync.md) ve `npm run openapi:export` ile üretilen `backend/artifacts/openapi.json`. Artifact git-ignored olduğu için checkout sonrası yeniden üretilebilir. Gerçek browser/courier transaction E2E bu backend tesliminde çalıştırılmadı.
+
+### Contract ekibine iletilecek işler
+
+| Kimlik | Eksik / gerekli teslim | Backend etkisi ve kabul koşulu |
+| --- | --- | --- |
+| CT-CS-1 — blocker | `ReputationRegistry`, `BadgeSBT`, `Referral`, `RewardDistributorV1` için `contracts/tools/build-exports.mjs` EXPORTED listesi ve generated ABIS/ContractName/getAddress yüzeyi tamamlanmalı. | Dört isim consumer import/type kontrolünden geçmeli; ABI ve deployment adresi/bloku aynı release'e ait olmalı. Şu an backend on-chain projection'ı `export_missing` bildirir. |
+| CT-CS-2 | Bu dört kontratın event/read sözleşmesi, rol/authorization gereksinimi, rating/confidence/badge ve referral/reward lifecycle anlamları consumer dokümanına eklenmeli. | Backend rebuild tasarımı için event kimliği, başlangıç bloğu, tekrar hesaplama kuralları ve örnek fixture sağlanır. Export teslimi tek başına backend projection'ını otomatik etkinleştirmez; ayrıca backend işi gerekir. |
+| CT-CS-3 | Staging release için DeliveryHub/DisputeCourt/ProtocolConfig adresleri, deployment blokları, chainId ve signer konfigürasyonu birlikte doğrulanmalı. | Backend generated bundle ile aynı deployment kullanır. Adres/ABI değişikliği yeni fingerprint ve reindex gerektirir; eski stream fingerprint'i elle güncellenmez. |
+| CT-CS-4 | PoD signer provisioning/rotation sahipliği altyapı ekibiyle netleşmeli; risk signer'dan ayrı anahtar/adres kullanılmalı. | `podAttestationSigner` backend signer'ıyla eşleşir, TTL `podAttestationValidity` sınırındadır. Rotasyon sonrası eski imzaların geçersizleştiği staging kabulü yapılır. Secret/private key doküman veya chat üzerinden paylaşılmaz. |
+| CT-CS-5 | Proof fonksiyonları için şu an tespit edilmiş ek kontrat düzeltmesi yok; customer acceptance ile servis PoD yolu ayrımı korunmalı. | Canlı read-only smoke üç proof digest'ini gerçek hash fonksiyonlarıyla eşleştirdi. Transaction/state-transition E2E ve imzalı acceptance'ın iki cihazlı akışı ayrı kabul testidir. |
+
+Contract dosyalarında değişiklik yapılmadı. CT-CS-1/2 teslim edilene kadar gerçek on-chain reputation/referral/reward backend entegrasyonu tamamlandı sayılmamalı.
+
+### Ortak kararlar ve sonraki sıra
+
+1. Teknik güvenlik/operasyon: CT-CS-1 export teslimi; ardından staging migration + yeni stream backfill/reconcile ve ayrı PoD signer rotation kabulü. Production KMS/retention/OTP kilit açma kararları ayrıca gereklidir.
+2. Ürün/API: FE-CS-2/3/4 iki cihazlı pickup → delivery proof → return senaryoları. Customer imzasını taşıma ve recipient kodunu güvenli ulaştırma kanalı seçildikten sonra eksik backend relay/kod yönetimi ihtiyacı netleştirilir.
+
+- **Contract blocker:** `ReputationRegistry`, `BadgeSBT`, `Referral`, `RewardDistributorV1` deployment kaydında var fakat `contracts/exports` ABIS / ContractName / getAddress tüketici yüzeyi eksik. Contract ekibi export generator ve çıktısını teslim etmeli. Backend mevcut delivery sayaçlarını on-chain score/confidence diye sunmaz: `source=backend_delivery_projection`, `onChainReputation.status=export_missing`. `pending_policy` reward/referral devam eder.
+- **Frontend:** [proof API sözleşmesi](backend-v2-contract-sync.md). Customer pickup/return acceptance typed-data'sını wallet ile imzalar; kurye `confirmPickup` / `confirmReturn` transaction'ını gönderir. PoD endpoint'ini atanan kurye çağırır; backend imzası ve attestation `submitDeliveryProof` içindir. İmzalar ve kodlar analytics/log/URL içine konmaz. 409 expiry/state/idempotency çakışması; 503 trusted snapshot/signer/RPC yokluğu; 429 OTP deneme sınırı. Yeniden imza alınmadan önce lifecycle ve expiry gösterilmeli.
+- **Staging/altyapı:** timestamp ve DisputeCourt ABI/address/block bilgisi fingerprint'i değiştirir. Eski stream üzerinde fingerprint'i elle değiştirerek devam edilmez; [reindex prosedürü](indexer-operations.md) uygulanır. Production signer secret/KMS, ayrı risk/PoD signer rotasyonu ve RPC kapasitesi ekibin kabulünü gerektirir. Bu teslimde staging/production migrate/deploy yapılmadı.
+- **OTP/ürün:** ilk yol yalnız private payload `dropoff.deliveryCode` eşitliğini doğrular; QR/recipient wallet direct-sign yok. Saatlik 5 yeni deneme delivery bazında backend güvenlik sınırıdır. Üretimde kod oluşturma/teslim kanalı, yeniden üretim ve kilit açma politikası, recipient doğrulaması ve operasyon SLA'sı belirlenmeli. Runtime PoD anahtarı yoksa API 503 verir.
+- **Ops:** `monosfer_committee_resolutions` canonical projection gauge'udur, reorg'da azalabilir; ops status/indexer readiness ile birlikte alarm kuralı kurulmalı. Reputation projection rebuild yeni state'leri kapsar ama gerçek rating/reward event'leri export gelene kadar tüketilmez.
+
 ## Faz 7 — Support/operasyon sözleşmesi / 2026-09-11
 
 - Frontend/support aracı: [Faz 7 API ve örnekler](backend-v2-release.md), `artifacts/openapi.json`. Support/admin yetkisi profil role alanından gelmez; SIWE session + env allowlist gerekir. Case create `{id,assignee?,note?}`, Idempotency-Key, Origin/CSRF; private/evidence content için aktif atama gerekir. Case notes şifreli yazılır, genel case list/detail içinde döndürülmez. Legacy dispute evidence bu yüzeye aktarılmaz. Browser/mobile kabulü ayrıca yapılmalı.

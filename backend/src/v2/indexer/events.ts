@@ -1,12 +1,13 @@
 import { decodeEventLog, toEventSelector, type Abi, type Hex } from 'viem';
 
-export const states = ['None', 'Bidding', 'AwaitingFunding', 'ReadyForPickup', 'InTransit', 'DeliveredPending', 'ReturnRequired', 'Completed', 'Returned', 'Cancelled', 'Expired'] as const;
-export interface ChainBlock { number: bigint; hash: Hex; parentHash: Hex }
+export const states = ['None', 'Bidding', 'AwaitingFunding', 'ReadyForPickup', 'InTransit', 'DeliveredPending', 'ReturnRequired', 'Disputed', 'Completed', 'Returned', 'Resolved', 'Cancelled', 'Expired'] as const;
+export interface ChainBlock { number: bigint; hash: Hex; parentHash: Hex; timestamp: bigint }
 export interface ChainLog { address: string; blockNumber: bigint; blockHash: Hex; transactionHash: Hex; transactionIndex: number; logIndex: number; data: Hex; topics: Hex[]; removed?: boolean }
-export interface HubEvent { name: string; args: Record<string, string>; log: ChainLog }
+export interface HubEvent { name: string; args: Record<string, string>; log: ChainLog; timestamp?: bigint }
 export interface Delivery {
   id: string; customer: string; courier: string; state: string; riskTier: string; termsVersion: string; stateDeadline: string;
   courierAsk: string; protocolFee: string; returnReserve: string; requiredCollateral: string;
+  etaDeadline: string; etaMinutes: string; completedAt: string;
   customerFunded: boolean; courierFunded: boolean; quoteDigest: string; creationTxHash: string;
 }
 export interface Bid { courier: string; courierAsk: string; returnAsk: string; etaMinutes: string; validUntil: string; termsVersion: string; active: boolean }
@@ -26,7 +27,7 @@ export function decodeLogs(abi: Abi, address: string, blocks: ChainBlock[], logs
     seen.set(key, signature);
     const decoded = decodeEventLog({ abi, data: log.data, topics: log.topics as [Hex, ...Hex[]], strict: true });
     const args = Object.fromEntries(Object.entries(decoded.args ?? {}).map(([key, value]) => [key, String(value).toLowerCase()]));
-    events.push({ name: decoded.eventName!, args, log });
+    events.push({ name: decoded.eventName!, args, log, timestamp: blocks.find(b => b.number === log.blockNumber)!.timestamp });
   }
   return events.sort((a, b) => a.log.blockNumber !== b.log.blockNumber ? (a.log.blockNumber < b.log.blockNumber ? -1 : 1) : a.log.transactionIndex - b.log.transactionIndex || a.log.logIndex - b.log.logIndex);
 }
@@ -37,7 +38,7 @@ export function reduceEvent(projection: Projection, event: HubEvent): void {
     if (projection.delivery) throw new Error('Duplicate delivery creation');
     projection.delivery = { id, customer: a.customer!, courier: zeroAddress, state: 'None', riskTier: a.riskTier!, termsVersion: '0',
       stateDeadline: a.deadline!, courierAsk: '0', protocolFee: '0', returnReserve: '0', requiredCollateral: a.requiredCollateral!,
-      customerFunded: false, courierFunded: false, quoteDigest: a.quoteDigest!, creationTxHash: event.log.transactionHash };
+      etaDeadline: '0', etaMinutes: '0', completedAt: '0', customerFunded: false, courierFunded: false, quoteDigest: a.quoteDigest!, creationTxHash: event.log.transactionHash };
     return;
   }
   const d = projection.delivery;
@@ -52,7 +53,7 @@ export function reduceEvent(projection: Projection, event: HubEvent): void {
       bid.active = false; break;
     case 'CourierSelected':
       if (!bid?.active || d.state !== 'AwaitingFunding' || bid.courierAsk !== a.courierAsk || d.courier !== zeroAddress) throw new Error('Invalid courier selection');
-      d.courier = a.courier!; d.courierAsk = a.courierAsk!; d.protocolFee = a.protocolFee!; d.returnReserve = bid.returnAsk; d.termsVersion = bid.termsVersion; break;
+      d.courier = a.courier!; d.courierAsk = a.courierAsk!; d.protocolFee = a.protocolFee!; d.returnReserve = bid.returnAsk; d.termsVersion = bid.termsVersion; d.etaMinutes = bid.etaMinutes; break;
     case 'CustomerFunded':
       if (d.state !== 'AwaitingFunding' || d.customerFunded || BigInt(a.amount!) !== BigInt(d.courierAsk) + BigInt(d.protocolFee) + BigInt(d.returnReserve)) throw new Error('Invalid customer funding');
       d.customerFunded = true; break;
@@ -61,13 +62,18 @@ export function reduceEvent(projection: Projection, event: HubEvent): void {
       d.courierFunded = true; bid.active = false; break;
     case 'StateChanged': {
       const from = states[Number(a.from)]; const to = states[Number(a.to)];
-      const allowed: Record<string, string[]> = { None: ['Bidding'], Bidding: ['AwaitingFunding', 'Cancelled', 'Expired'], AwaitingFunding: ['ReadyForPickup', 'Cancelled'], ReadyForPickup: ['InTransit', 'Cancelled'], InTransit: ['DeliveredPending', 'ReturnRequired'], DeliveredPending: ['Completed'], ReturnRequired: ['Returned'] };
-      if (d.state !== from || !to || !allowed[from!]?.includes(to) || (Number(a.to) >= 7 && a.deadline !== '0') ||
+      const allowed: Record<string, string[]> = { None: ['Bidding'], Bidding: ['AwaitingFunding', 'Cancelled', 'Expired'], AwaitingFunding: ['ReadyForPickup', 'Cancelled'], ReadyForPickup: ['InTransit', 'Cancelled'], InTransit: ['DeliveredPending', 'ReturnRequired', 'Disputed'], DeliveredPending: ['Completed', 'Disputed'], ReturnRequired: ['Returned', 'Disputed'], Disputed: ['Resolved'] };
+      if (d.state !== from || !to || !allowed[from!]?.includes(to) || (Number(a.to) >= 8 && a.deadline !== '0') ||
         (to === 'ReadyForPickup' && (!d.customerFunded || !d.courierFunded))) throw new Error('Invalid lifecycle transition');
       if (to === 'Cancelled' && from !== 'Bidding' && !d.courierFunded && projection.bids[d.courier]) projection.bids[d.courier]!.active = false;
+      if (to === 'Completed') { if (event.timestamp === undefined) throw new Error('Block timestamp required; reindex'); d.completedAt = String(event.timestamp); }
       d.state = to; d.stateDeadline = a.deadline!; break;
     }
-    case 'Settled': if (d.state !== states[Number(a.finalState)] || Number(a.finalState) < 7) throw new Error('Invalid settlement'); break;
-    case 'PickupConfirmed': case 'DeliveryProofSubmitted': if (d.courier !== a.courier) throw new Error('Invalid courier proof'); break;
+    case 'Settled': if (d.state !== states[Number(a.finalState)] || Number(a.finalState) < 8) throw new Error('Invalid settlement'); break;
+    case 'PickupConfirmed':
+      if (event.timestamp === undefined) throw new Error('Block timestamp required; reindex');
+      d.etaDeadline = String(event.timestamp + BigInt(d.etaMinutes) * 60n);
+      if (d.courier !== a.courier) throw new Error('Invalid courier proof'); break;
+    case 'DeliveryProofSubmitted': case 'ReturnConfirmed': if (d.courier !== a.courier) throw new Error('Invalid courier proof'); break;
   }
 }

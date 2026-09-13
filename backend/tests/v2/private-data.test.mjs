@@ -128,7 +128,7 @@ test('private data errors and logs are sanitized; legacy private records have no
   logger.info({ payload: privateFixtures().delivery, pickup: 'PRIVATE_ADDRESS', deliveryCode: 'PRIVATE_CODE', evidence: 'PRIVATE_EVIDENCE', nested: { pushToken: 'PRIVATE_PUSH' } });
   for (const secret of privateSecrets) assert.equal((logs.join('') + response.body).includes(secret), false);
   assert.deepEqual(Object.entries(document.paths).filter(([path, methods]) => path.startsWith('/v1/deliveries') && Object.keys(methods).some(method => method !== 'get')).map(([path])=>path).sort(),
-    ['/v1/deliveries/{id}/evidence','/v1/deliveries/{id}/tracking/location','/v1/deliveries/{id}/tracking/sessions']);
+    ['/v1/deliveries/{id}/evidence','/v1/deliveries/{id}/pickup-acceptances','/v1/deliveries/{id}/pod-attestations','/v1/deliveries/{id}/return-acceptances','/v1/deliveries/{id}/tracking/location','/v1/deliveries/{id}/tracking/sessions']);
   assert.equal((await app.inject('/v1/private-records/legacy-id')).statusCode,404);
   assert.equal((await app.inject('/v1/deliveries/0/evidence/00000000-0000-4000-8000-000000000000/content')).statusCode,401);
 });

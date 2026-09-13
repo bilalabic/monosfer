@@ -3,6 +3,7 @@ import { loadBundle } from '../indexer/config.js';
 import { HubRpc } from '../indexer/rpc.js';
 import { loadQuoteBundle } from '../quotes/config.js';
 import { typedQuote, quoteTypes } from '../quotes/typed-data.js';
+import { proofTypedData } from '../proofs/typed-data.js';
 
 // Public RPC only: this module has no account/signer or transaction transport.
 export async function testnetSmoke(url: string) {
@@ -41,11 +42,27 @@ export async function testnetSmoke(url: string) {
       expiresAt:String(block.timestamp+BigInt(Math.min(300,validity))),salt:`0x${'11'.repeat(32)}` as Hex};
     const {quoteDigest}=typedQuote(quote,10143,deployment.address,validity);
     const hash=await client.readContract({address:deployment.address,abi:quotes.abi,functionName:'hashQuote',args:[quote],blockNumber:block.number});
-    if(hash!==quoteDigest)throw new Error();checks.push(stage);stage='indexer_read';
+    if(hash!==quoteDigest)throw new Error();checks.push(stage);stage='proof_hashes';
+    const hubRead=(functionName:string,args:unknown[]=[])=>client.readContract({address:deployment.address,abi:quotes.abi,functionName,args,blockNumber:block.number!});
+    const action=String(await hubRead('pickupAction'));
+    const returnAction=String(await hubRead('returnAction'));
+    const proofTypes=await hubRead('podProofTypes') as string[];
+    for(const kind of ['pickup','return','pod'] as const) {
+      const message:Record<string,string>={deliveryId:'0',courier:deployment.address,nonce:'1',expiresAt:String(block.timestamp+60n)};
+      if(kind==='pod')Object.assign(message,{proofType:proofTypes[0],challengeHash:`0x${'22'.repeat(32)}`,issuedAt:String(block.timestamp)});
+      else message.action=kind==='pickup'?action:returnAction;
+      const expected=proofTypedData(kind,message,10143,deployment.address).digest;
+      if(await hubRead(kind==='pod'?'hashPodAttestation':'hashPickupAcceptance',[message])!==expected)throw new Error();
+    }
+    checks.push(stage);stage='indexer_read';
     const rpc=new HubRpc(url),height=block.number;
     const indexed=await rpc.block(height);
     if(indexed.hash!==block.hash.toLowerCase())throw new Error();
     await rpc.logs(deployment.address,height,height);
+    if(deployment.court) {
+      if(!(await rpc.code(deployment.court.address))||await rpc.code(deployment.court.address)==='0x')throw new Error();
+      await rpc.logs(deployment.court.address,height,height);
+    }
     if((await client.getBlock({blockNumber:height})).hash!==block.hash)throw new Error();
     checks.push(stage);
     return {status:'passed' as const,checks,chainId:10143,finalizedBlock:String(height),exportFingerprint:bundle.fingerprint,transactionsSent:0};

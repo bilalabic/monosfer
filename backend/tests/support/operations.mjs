@@ -35,7 +35,7 @@ export async function operationsFixture(t){
       await Promise.allSettled(apps.map(app=>app.close()));
       const evidence=(await db.query('SELECT id FROM monosfer.evidence_packages WHERE stream=$1',[stream])).rows;
       for(const row of evidence){assert.match(row.id,/^[0-9a-f-]{36}$/);try{await unlink(join(storage.root,`${row.id}.json`));}catch(e){if(e.code!=='ENOENT')throw e;}}
-      for(const table of ['notifications','provider_jobs','evidence_packages','notification_cursors','private_delivery_links','bid_projections','delivery_projections','chain_event_inbox','indexer_blocks','indexer_streams']){
+      for(const table of ['proof_issuances','dispute_projections','dispute_event_inbox','notifications','provider_jobs','evidence_packages','notification_cursors','private_delivery_links','bid_projections','delivery_projections','chain_event_inbox','indexer_blocks','indexer_streams']){
         await db.query(`DELETE FROM monosfer.${table} WHERE stream=$1`,[stream]);
       }
       await db.query('DELETE FROM monosfer.private_delivery_records WHERE id=ANY($1::uuid[])',[recordIds]);

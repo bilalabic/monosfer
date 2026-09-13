@@ -10,7 +10,8 @@ await report('ops_preflight',()=>withResources(async({settings,config,db,redis})
   const files=(await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).map(f=>f.slice(0,-4));
   checks.migrations=files.every(f=>applied.includes(f));
   const document=JSON.parse(await readFile(new URL('../artifacts/openapi.json',import.meta.url),'utf8'));
-  checks.openapi=['/v1/support/cases','/v1/admin/audit','/v1/ops/status','/v1/users/me/reputation'].every(p=>!!document.paths[p]);
+  checks.openapi=['/v1/support/cases','/v1/admin/audit','/v1/ops/status','/v1/users/me/reputation',
+    '/v1/deliveries/{id}/pickup-acceptances','/v1/deliveries/{id}/return-acceptances','/v1/deliveries/{id}/pod-attestations'].every(p=>!!document.paths[p]);
   const storage=new LocalEvidenceStorage();
   try {const info=await lstat(storage.root);checks.storage=info.isDirectory()&&!info.isSymbolicLink();}
   catch(error) {if(error.code!=='ENOENT')throw error;checks.storage=!settings.operations.enabled;}

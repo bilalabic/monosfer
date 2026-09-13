@@ -4,12 +4,14 @@ import { parseIndexerSettings, type IndexerSettings } from '../indexer/config.js
 import { parseQuoteSettings, type QuoteSettings } from '../quotes/config.js';
 import { parseOperationsSettings, type OperationsSettings } from '../operations/config.js';
 import { parseReleaseSettings, type ReleaseSettings } from '../ops/config.js';
+import { parseProofSettings, type ProofSettings } from '../proofs/config.js';
 
 export interface Settings extends PrivateKeySettings {
   indexer: IndexerSettings;
   quotes: QuoteSettings;
   operations: OperationsSettings;
   release: ReleaseSettings;
+  proofs: ProofSettings;
   environment: 'development' | 'test' | 'production';
   host: string;
   port: number;
@@ -93,6 +95,7 @@ export function parseSettings(env: NodeJS.ProcessEnv): Settings {
     quotes: parseQuoteSettings(env),
     operations: parseOperationsSettings(env),
     release: parseReleaseSettings(env),
+    proofs: parseProofSettings(env),
     environment: environment as Settings['environment'], host,
     port: integer('PORT', 3001, 1, 65535),
     databaseUrl: endpoint('DATABASE_URL', ['postgres:', 'postgresql:']),

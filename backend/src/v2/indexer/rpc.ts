@@ -15,7 +15,8 @@ export class HubRpc implements IndexerRpc {
   async block(number: bigint | 'finalized'): Promise<ChainBlock> {
     const b = await this.client.getBlock(typeof number === 'bigint' ? { blockNumber: number } : { blockTag: number });
     if (b.number === null || (typeof number === 'bigint' && b.number !== number) || !b.hash || !/^0x[0-9a-fA-F]{64}$/.test(b.hash) || !/^0x[0-9a-fA-F]{64}$/.test(b.parentHash)) throw new Error('Invalid RPC block');
-    return { number: b.number, hash: b.hash.toLowerCase() as Hex, parentHash: b.parentHash.toLowerCase() as Hex };
+    if (typeof b.timestamp !== 'bigint' || b.timestamp < 0n) throw new Error('Invalid RPC block timestamp');
+    return { number: b.number, hash: b.hash.toLowerCase() as Hex, parentHash: b.parentHash.toLowerCase() as Hex, timestamp: b.timestamp };
   }
   async logs(address: Address, fromBlock: bigint, toBlock: bigint): Promise<ChainLog[]> {
     const logs = await this.client.getLogs({ address, fromBlock, toBlock });
@@ -24,7 +25,8 @@ export class HubRpc implements IndexerRpc {
       return { ...log, blockNumber: log.blockNumber, blockHash: log.blockHash, transactionHash: log.transactionHash, transactionIndex: log.transactionIndex, logIndex: log.logIndex };
     });
   }
-  read(address: Address, abi: Abi, functionName: string, args: unknown[], blockNumber: bigint) {
-    return this.client.readContract({ address, abi, functionName, args, blockNumber });
+  async read(address: Address, abi: Abi, functionName: string, args: unknown[], blockNumber: bigint) {
+    try { return await this.client.readContract({ address, abi, functionName, args, blockNumber }); }
+    catch { throw new Error('RPC read failed'); }
   }
 }

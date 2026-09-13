@@ -8,7 +8,7 @@ export interface DeliveryContext {
   id:string; stream:string; privateRecordId:string; customer:string; courier:string; state:string; binding:string;
 }
 export const activeStates=['ReadyForPickup','InTransit'];
-const knownStates=[...activeStates,'Bidding','AwaitingFunding','DeliveredPending','ReturnRequired','Completed','Returned','Cancelled','Expired'];
+const knownStates=[...activeStates,'Bidding','AwaitingFunding','DeliveredPending','ReturnRequired','Disputed','Completed','Returned','Resolved','Cancelled','Expired'];
 @Injectable()
 export class DeliveryAccess {
   constructor(private readonly db:DatabaseService,private readonly config:ConfigService){}

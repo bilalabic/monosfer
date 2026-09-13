@@ -21,6 +21,7 @@ export class ReputationService {
       AND p.source_block=r.source_block AND p.source_hash=r.source_hash AND p.export_fingerprint=r.export_fingerprint`,
       [cursor.stream,wallet.toLowerCase(),cursor.last_block,cursor.last_hash,cursor.export_fingerprint])).rows[0];
     return {wallet:wallet.toLowerCase(),status:row?'ready':'rebuild_pending',counters:row?.counters??null,
+      source:'backend_delivery_projection',onChainReputation:{status:'export_missing'},
       sourceBlock:cursor.last_block,rebuiltAt:row?.rebuilt_at??null,referral:{status:'pending_policy'},reward:{status:'pending_policy'}};
   }
   async rebuild(apply: boolean) {
@@ -43,7 +44,7 @@ export class ReputationService {
         'cancelled',count(*) FILTER(WHERE state='Cancelled')::text,
         'expired',count(*) FILTER(WHERE state='Expired')::text) AS counters
       FROM observations WHERE wallet ~ '^0x[0-9a-f]{40}$' AND wallet<>'0x0000000000000000000000000000000000000000'
-      AND state IN ('Bidding','AwaitingFunding','ReadyForPickup','InTransit','DeliveredPending','ReturnRequired','Completed','Returned','Cancelled','Expired')
+      AND state IN ('Bidding','AwaitingFunding','ReadyForPickup','InTransit','DeliveredPending','ReturnRequired','Disputed','Completed','Returned','Resolved','Cancelled','Expired')
       GROUP BY wallet ORDER BY wallet`,[cursor.stream,cursor.last_block])).rows;
       if(apply) {
         // Replace only derived rows for this trusted stream, preserving audit and source events.

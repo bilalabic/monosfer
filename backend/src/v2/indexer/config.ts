@@ -2,13 +2,13 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import type { Abi, Address } from 'viem';
 
-export interface Deployment { chainId: number; address: Address; block: number }
-export interface Bundle { abi: Abi; chains: Record<string, Deployment>; fingerprint: string }
+export interface Deployment { chainId: number; address: Address; block: number; court?: { address: Address; block: number } }
+export interface Bundle { abi: Abi; courtAbi?: Abi; chains: Record<string, Deployment>; fingerprint: string }
 // Bootstrap-only artifact load; no filesystem reads in the HTTP request path.
 export function loadBundle(): Bundle {
   try {
     const bundle = JSON.parse(readFileSync(new URL('./contracts.json', import.meta.url), 'utf8')) as Bundle;
-    const fingerprint = createHash('sha256').update(JSON.stringify({ abi: bundle.abi, chains: bundle.chains })).digest('hex');
+    const fingerprint = createHash('sha256').update(JSON.stringify({ abi: bundle.abi, courtAbi: bundle.courtAbi, chains: bundle.chains })).digest('hex');
     if (fingerprint !== bundle.fingerprint || !Array.isArray(bundle.abi)) throw new Error();
     return bundle;
   } catch { throw new Error('Invalid contract export bundle; run backend build'); }
