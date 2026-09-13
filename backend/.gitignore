@@ -1,2 +1,7 @@
 node_modules
 .env
+dist/
+artifacts/
+.local/
+.env.*
+!.env.example

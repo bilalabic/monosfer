@@ -1,0 +1,44 @@
+name: monosfer-backend-v2
+services:
+  mongo-test:
+    image: mongo:8.0
+    profiles: ["private-tests"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: fixture_admin
+      MONGO_INITDB_ROOT_PASSWORD: local-fixtures-only
+    ports:
+      - "127.0.0.1:57017:27017"
+    volumes:
+      - ./scripts/local-mongo-init.js:/docker-entrypoint-initdb.d/reader.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: monosfer
+      POSTGRES_PASSWORD: local-development-only
+      POSTGRES_DB: monosfer_v2
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monosfer -d monosfer_v2"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--requirepass", "local-development-only"]
+    ports:
+      - "127.0.0.1:56379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "local-development-only", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+volumes:
+  postgres_data:

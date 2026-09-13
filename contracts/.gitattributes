@@ -1,0 +1,15 @@
+# Generated artefacts must be LF in the working tree on every platform.
+#
+# `tools/build-exports.mjs` writes LF unconditionally, and its `--check` mode
+# compares bytes to decide whether the committed package is stale. On a Windows
+# checkout with `core.autocrlf=true` git materialises CRLF, so the check reports
+# files as stale that are byte-identical once line endings are normalised —
+# while Linux CI sees nothing. Pinning eol=lf keeps generator, working tree and
+# CI in agreement.
+#
+# Same reasoning as the Solidity rules in the repository-root .gitattributes;
+# kept here so the contract toolchain owns its own artefacts.
+exports/**/*.js    text eol=lf
+exports/**/*.d.ts  text eol=lf
+exports/**/*.json  text eol=lf
+deployments/*.json text eol=lf

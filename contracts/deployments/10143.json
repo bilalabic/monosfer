@@ -1,0 +1,110 @@
+{
+  "chainId": 10143,
+  "name": "monad-testnet",
+  "rpcUrl": "https://testnet-rpc.monad.xyz",
+  "explorer": "https://testnet.monadexplorer.com",
+  "commit": "ffc9110d289ef114a5bc7a787f6f10dd2f624967",
+  "contracts": {
+    "ProtocolAccessManager": {
+      "address": "0x296c8ee6ff71292b7e6bfe994bfd18cc52ba177f",
+      "txHash": "0xaa0e6dc2001754420a9e1046f164eff6d351f813cc5c96ab98d7fc10739b183c",
+      "block": 61922789
+    },
+    "ProtocolConfig": {
+      "address": "0x776ad2882e428cec672368cbe33fdd464be8fb79",
+      "txHash": "0xec5f51e9384041a6a0002f7f3aca8fa9b114b6f7f6581ad8b88ddc340ae05b5f",
+      "block": 61922793
+    },
+    "SettlementVault": {
+      "address": "0xd74ea5d94fa8199428c64fae73e4ae4acc6a36af",
+      "txHash": "0xf033cf6ea1b31369d3fd97538abd9c25280b3e9404d9749472ea767bc0b07d1c",
+      "block": 61922796
+    },
+    "CourierRegistry": {
+      "address": "0x70cf474887600038ff19871cdf84b0f18c246909",
+      "txHash": "0xc96f76c7f91a15883c3656281beb691dd634b1c920eb2cc4a0366464f90cff6e",
+      "block": 61922807
+    },
+    "ReputationRegistry": {
+      "address": "0xc8e9ad6291bb52616281795b817d4cf56700b528",
+      "txHash": "0x807a83a3cea793ff70b9a657ed2a70b08865784a200a689bd35a08ac8803691b",
+      "block": 61922815
+    },
+    "BadgeSBT": {
+      "address": "0x522616dcc2daa16df02cc84049bb6eeee2f8a66c",
+      "txHash": "0xefae6fd41b9a49e8d477c2b967a5cff86dd74417d7a6e93ef09b1f6646df9f48",
+      "block": 61922819
+    },
+    "Referral": {
+      "address": "0xbf546eecd98a677e6c41b07fbe186851d7776405",
+      "txHash": "0x30c4837faf5fc2e0252090db21a08c030f48942ae191669c1b23b7bfc40aa43e",
+      "block": 61922826
+    },
+    "DeliveryHub": {
+      "address": "0xd7f1328488d78a4b05d174689c2be20684268bb0",
+      "txHash": "0xd11832a689faf0e3b0fa3ec9e6f5549e3d002db7ede72addb49b10369b7c3ea2",
+      "block": 61922830
+    },
+    "PythEntropyAdapter": {
+      "address": "0x653e228296566c028edc6c8af0d852e263658800",
+      "txHash": "0xa353fb56aa06d3439dc295ed126aa7a39b3706d0a4803b714249346465160e39",
+      "block": 61923522
+    },
+    "JurorPool": {
+      "address": "0x3c60d37b03b13806721117ea26a2d4eec75b67db",
+      "txHash": "0x59a3b87be6c0ef15e2fb008158c6187f81bfa0ec6254ec16d76d82c846230d76",
+      "block": 61923525
+    },
+    "FallbackCommittee": {
+      "address": "0x6d2e4f7b4bd440b926976f947ff83606e09fd921",
+      "txHash": "0x2dc2d7a174f328b61c918ecf46cb9f284743c1b2a019e66dc1340bd2f0dda288",
+      "block": 61923534
+    },
+    "DisputeCourt": {
+      "address": "0xc9178d647fb1441b06adbe20c03d3c450f0f84f3",
+      "txHash": "0xac7d2e73158a95449e6a078cb98bb6ae93603cecb9c638854409e2b9e0d1007a",
+      "block": 61923536
+    },
+    "RewardDistributorV1": {
+      "address": "0x2210085de8c54a894ef6e6f4fc44c7905083a9ee",
+      "txHash": "0x9e10f1b3fb202433f3856af9afc2e0b1d4e8b7580c018d572fee8789037a6226",
+      "block": 61922821
+    },
+    "Delivera": {
+      "address": "0x70042757830398af367c989d9bc8bab244c871d9",
+      "txHash": "0x485722b567e89cefa7329c34d7c968df2b2e07bb93fba4078a05f476b53b7368",
+      "block": 60021693,
+      "legacy": true
+    },
+    "MCRYToken": {
+      "address": "0x4cd3d3e5f738eb78ff8b41bd261a45044692c049",
+      "txHash": "0x91a94c1d755320f881b71bdac46d9d1e788ab963a28ea904dc3271183a23989d",
+      "block": 60022392,
+      "legacy": true
+    },
+    "ReputationBadge": {
+      "address": "0x81e480f6b54fafdf4de404321f2991a051b8d931",
+      "txHash": "0x1878a91ea688291fe0a6efafbf4d2c9071d3cf3864854a1733a16f5996227bec",
+      "block": 60022399,
+      "legacy": true
+    },
+    "Leaderboard": {
+      "address": "0xe19c2e7cd1579fb8ba4b1ca2e1e6066d07b7ff97",
+      "txHash": "0x66d78b2c2e7f6e64f64ef230b0fbafa501749c023bc1463e7206594ff6251a39",
+      "block": 60022401,
+      "legacy": true
+    },
+    "DeliveryEscrow": {
+      "address": "0x0b0afb512a50ed98e58f8c3922fc89e9332a4c89",
+      "txHash": "0xc42df664fbe668005be5a2380e92c834427cdc78b707866f53ab9c8f459ff1c5",
+      "block": 60022414,
+      "legacy": true
+    },
+    "RewardDistributor": {
+      "address": "0xd471cd7ae1b84e22f65d0c6a1f995d75b3ade100",
+      "txHash": "0x7541b6933beb5a33ce38706ff22fb975e2fe73e36bb6da55f15a710bf0ea83c4",
+      "block": 61717461,
+      "legacy": true
+    }
+  }
+}

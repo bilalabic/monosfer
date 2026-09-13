@@ -1,0 +1,6 @@
+{
+  "watch": ["src/v2"],
+  "ext": "ts",
+  "nodeArgs": [],
+  "exec": "npm run build && node --env-file-if-exists=.env dist/main.js"
+}

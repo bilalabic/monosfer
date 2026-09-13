@@ -1,358 +1,280 @@
-# Delivera Smart Contracts
+# MONOSFER Kontratları
 
-Monad Testnet (`10143`) uzerinde calisan Delivera kontratlari.
-Bu dokuman backend ve frontend ekiplerinin paralel calismasini kolaylastirmak icin handoff formatinda hazirlandi.
+Monad Testnet (`chainId 10143`) üzerinde çalışan MONOSFER akıllı kontratları.
 
-## 1) Hedef ve Kapsam
+Kapsam ve şartname: depo kökündeki
+`MONOSFER_Initial_Release_Base_Documentation_v1.0.md`. Bu README'deki `sec. ` atıfları
+o dokümana yapılır.
 
-Bu repo icinde iki ayri uygulama yolu vardir:
+---
 
-- `Delivera.sol`:
-  - Native MON ile tek-kontrat MVP
-  - Demo hizli cikis ve tek dosyada akisin gorulmesi icin ideal
-- Moduler sistem:
-  - `MCRYToken.sol`
-  - `DeliveryEscrow.sol`
-  - `Leaderboard.sol`
-  - `RewardDistributor.sol`
-  - `ReputationBadge.sol`
-  - Backend/frontend entegrasyonu ve v2 genisleme icin onerilen yol
+## 1) V1 kontratları
 
-Hackathon demosunda hiz gerekiyorsa `Delivera.sol`, urune yaklasan mimari gerekiyorsa moduler sistem kullanilmalidir.
+Aktif geliştirme `src/v1/` altındadır ve baseline sec. 32'deki mimariyi izler:
+sorumluluklar ayrı kontratlara bölünmüş, tüm değer tek bir vault'ta custody
+edilir, yetkiler tek bir rol yöneticisinden gelir.
 
-## 2) Ag ve Ortam Bilgileri
+| Kontrat | Sorumluluk | Doküman |
+|---|---|---|
+| `ProtocolAccessManager` | Roller, acil durum pause, gecikmeli unpause | [governance](docs/governance.md) |
+| `ProtocolConfig` | sec. 48 parametreleri, sınırlar, zaman kilidi, sürümleme | [governance](docs/governance.md) |
+| `SettlementVault` | Custody, pull-payment uzlaşma, ödeme gücü | [settlement](docs/settlement.md) |
+| `CourierRegistry` | Stake, C0/C1/C2, askı, teminat, custody | [courier-registry](docs/courier-registry.md) |
+| `DeliveryHub` | Teslimat yaşam döngüsü, teklif, fonlama, uzlaşma | [delivery-lifecycle](docs/delivery-lifecycle.md) |
+| `RiskQuoteVerifier` | İmzalı kapsam teklifi, zincirde kapsam bandı | [risk-quote](docs/risk-quote.md) |
+| `PickupProofVerifier` | Gönderenin imzalı devir kabulü, nonce, ERC-1271 | [proofs](docs/proofs.md) |
+| `PodAttestationVerifier` | İmzalı teslim kanıtı, challenge taahhüdü, 10 dk ömür | [proofs](docs/proofs.md) |
+| `ReputationRegistry` | 0-1000 puan, ayrı güven seviyesi, sıralama yok | [reputation](docs/reputation.md) |
+| `BadgeSBT` | Devredilemez rozetler (ERC-721 + ERC-5192) | [badges](docs/badges.md) |
+| `RewardDistributor` | Epoch bütçeli Merkle ödül dağıtımı | [rewards](docs/rewards.md) |
+| `Referral` | Tek referans eden, tek ödül, döngüsüz | [rewards](docs/rewards.md) |
+| `JurorPool` | Juror stake'i, eşit ağırlık, çekiliş anında donan aday kümesi | [dispute](docs/dispute.md) |
+| `DisputeCourt` | Kanıt, jüri çekilişi, commit/reveal, 3→5→7 itiraz, hüküm | [dispute](docs/dispute.md) |
+| `FallbackCommittee` | sec. 31 son çare: Safe, ERC-1271, yalnızca sınırlı hüküm kodu | [dispute](docs/dispute.md) |
+| `PythEntropyAdapter` | Jüri çekilişi için rastgelelik (sec. 29) | [dispute](docs/dispute.md) |
 
-- Network: `Monad Testnet`
-- RPC: `https://testnet-rpc.monad.xyz`
-- Chain ID: `10143`
-- Explorer: `https://testnet.monadexplorer.com`
+Sıradaki fazlar (`ReputationRegistry`, `DisputeCourt`, …):
+[`docs/implementation-plan-v1.0.md`](docs/implementation-plan-v1.0.md).
 
-`foundry.toml` icinde `monad_testnet` alias tanimlidir.
+---
 
-## 2.1) MetaMask Kurulumu ve Kontrol Listesi
+## 2) Ağ
 
-MetaMask tarafi calismiyorsa genelde 3 sebep var: yanlis ag, yanlis adres, yetersiz bakiye.
+| | |
+|---|---|
+| Network | Monad Testnet |
+| Chain ID | `10143` |
+| RPC | `https://testnet-rpc.monad.xyz` |
+| Explorer | `https://testnet.monadexplorer.com` |
 
-### A) Monad Testnet agini manuel ekle
+`foundry.toml` içinde `monad_testnet` alias'ı tanımlıdır.
 
-MetaMask -> `Settings` -> `Networks` -> `Add network manually`:
+**Deploy adresleri:** [`deployments/10143.json`](deployments/10143.json).
+Adresleri elle hiçbir yere kopyalamayın — sec. 5'e bakın.
 
-- Network Name: `Monad Testnet`
-- RPC URL: `https://testnet-rpc.monad.xyz`
-- Chain ID: `10143`
-- Currency Symbol: `MON`
-- Block Explorer URL: `https://testnet.monadexplorer.com`
+> **Monad'a özgü:** gas, harcanan miktar üzerinden değil
+> **`gasLimit × maxFeePerGas`** üzerinden peşin rezerve edilir (sec. 43). Fazla büyük
+> gas limiti tamponu, bakiyesi yeterli bir hesabın işlemini bile
+> "insufficient balance" ile reddettirir. İşlem gönderirken `--gas-limit` verin.
 
-Alternatif: [chainlist.org](https://chainlist.org) uzerinden Monad Testnet eklenebilir.
+---
 
-### B) Deployer adresi ve `.env` adresini eslestir
-
-Terminalde:
-
-```bash
-source .env
-cast wallet address --private-key $PRIVATE_KEY
-cast balance $(cast wallet address --private-key $PRIVATE_KEY) --rpc-url monad_testnet
-cast chain-id --rpc-url monad_testnet
-```
-
-Beklenen sonuc:
-
-- `cast chain-id` -> `10143`
-- `cast wallet address` ile MetaMask aktif adresi ayni
-- bakiye > `1 MON` (guvenli deploy icin)
-
-### C) "Signer had insufficient balance" hatasi icin net kontrol
-
-Bu hata bakiye varken bile gorunebilir, eger MetaMask'te gordugun adres ile script'in imzaladigi adres farkliysa.
-
-Mutlaka su ikisini karsilastir:
-
-1. MetaMask aktif hesap adresi
-2. `cast wallet address --private-key $PRIVATE_KEY` ciktisi
-
-Farkliysa `.env` icindeki key yanlis hesaba ait demektir.
-
-### D) Frontend tarafinda zorunlu network kontrolu
-
-Frontend baglandiginda:
-
-- Chain ID `10143` degilse kullaniciya network switch istegi gonder.
-- Yanlis chain'de write islemlerini blokla.
-- Tx olustuktan sonra explorer linkini goster:
-  - `https://testnet.monadexplorer.com/tx/<TX_HASH>`
-
-## 3) Kurulum ve Komutlar
+## 3) Kurulum ve komutlar
 
 ```bash
 cd contracts
 forge build
-forge test -vv
+forge test -vvv
 ```
 
-Deploy oncesi:
+Bağımlılıklar (`forge-std`, `openzeppelin-contracts`) depoda **vendor** edilmiştir;
+submodule kurulumu gerekmez.
+
+| Komut | İş |
+|---|---|
+| `forge build` | Derle |
+| `forge test` | Tüm testler (`FOUNDRY_PROFILE=ci` daha ağır fuzz/invariant koşar) |
+| `forge fmt` | Biçimlendir |
+| `forge snapshot --no-match-test "testFuzz\|invariant_"` | Gas snapshot'ını yeniden üret |
+| `slither .` | Statik analiz (`pip install slither-analyzer==0.11.6`) |
+| `python3 tools/cheatcode-scan.py` | Cheatcode tüketen test satırlarını arar (aşağıya bkz.) |
+
+---
+
+## 4) CI ve kalite kapıları
+
+`.github/workflows/contracts.yml` her pull request'te ve `Monosfer-V2` push'unda
+çalışır. `deploy.yml` sadece uygulamayı deploy eder; kontratları **build veya
+test etmez**.
+
+| Kapı | Komut |
+|---|---|
+| Build | `forge build` |
+| Format | `forge fmt --check` |
+| Test | `forge test -vvv` |
+| Gas | `forge snapshot --check --no-match-test "testFuzz\|invariant_" --tolerance 1` |
+| Statik analiz | `slither .` (`fail_on: medium`) |
+| Deploy dry-run | Devralınan iki deploy script'i simüle edilir |
+
+**Kapı olmayan iki şey.** `script/v1/DeployCore.s.sol` CI'da simüle edilmiyor ve
+`npm run contracts:exports:check` bir kapı değil — ikisi de yerelde koşuluyor.
+Yani bozuk bir V1 deploy script'i veya bayat bir `exports/` paketi CI'dan sessizce
+geçer. Bilinçli bir boşluk değil, kapatılmayı bekleyen bir eksik.
+
+### Arac surumu (pinlenmistir)
+
+```text
+Foundry 1.8.1   ·   OpenZeppelin 5.7.0   ·   Slither 0.11.6
+```
+
+CI aynı sürüme pinlidir. **Gas rakamları Foundry sürümüne duyarlıdır**: 1.5.1 →
+1.8.1 yükseltmesinde kontrat değişmeden ölçülen gas %25–61 arttı. Bu yüzden
+`.gas-snapshot` yalnızca pinlenmiş sürüm içinde anlamlıdır; sürüm yükseltilirse
+aynı PR'da yeniden üretilmelidir.
+
+Snapshot **yalnızca deterministik testleri** kapsar. Fuzz ve invariant testlerinin
+raporladığı gas, rastgele girdiler üzerinden bir ortalamadır ve fuzz seed'iyle
+değişir; snapshot'a dahil edilseler kontrol dalgalı olurdu. Bu kontrolü anlamlı kılan şey
+determinizmdir.
+
+Determinizm testin **kendi başına** ölçülebilmesi demektir: bir girdinin gası,
+ondan önce hangi testlerin koştuğuna bağlı olmamalı. Test fixture'larında artan
+sayaçtan üretilip calldata'ya ulaşan değerler tam olarak bu bağımlılığı yaratır
+ve kapıyı kodun değil test filtresinin fonksiyonu haline getirir. Fixture'lar bu
+yüzden nonce/salt gibi değerleri argümanlardan türetir.
+
+**%1 tolerans bir kod farkını değil, platform farkını soğurur.** Karşılaştırılan
+276 girdinin üçü, Windows geliştirme makinesi ile Linux CI arasında 55–64 gas
+(%0,003–0,006) ayrışıyor — aynı forge sürümü, aynı commit SHA — ve fark yerelde
+tekrarlanamıyor. Tolerans olmadan bu kontrol her fazda gereksiz yere kırmızı yanıyordu ve buna
+cevap vermek, aracı memnun etmek için gerçek test kodunu değiştirmek anlamına
+geliyordu. %1 hâlâ bu kontrolün işini görüyor: 40 bin gaslık bir birim testinde 400
+gas, yani istenmeden eklenen bir cold SLOAD (2100) kaçmaz.
+
+Aynı gerekçeyle `test/v1/invariant/` altındaki **erişilebilirlik probları** da
+kapının dışındadır. Bunlar fuzzer'ın yetkili yolu gerçekten kat edebildiğini
+kanıtlayan vacuity guard'larıdır; ölçtükleri gas handler'ın defter tutmasının
+özelliğidir, protokolün değil, ve platformlar arasında birkaç on gas oynar.
+`test_invariant_` önekini taşırlar, böylece kapının `testFuzz|invariant_`
+filtresine takılırlar — testler olarak koşmaya devam ederler.
+
+### Tekrarlanabilir derleme
+
+`foundry.toml` içinde `bytecode_hash = "none"`. Varsayılan davranışta solc,
+bytecode'a **mutlak kaynak yollarını** içeren bir metadata hash'i gömer; aynı
+kaynak Windows'ta ve Linux CI'da farklı bytecode, farklı CREATE adresi ve —
+adres byte'ları calldata'ya girdiğinde — farklı gas üretir. Bu ayar makineler
+arasında aynı çıktıyı garanti eder.
+
+### Statik analiz baseline
+
+Kabul edilen baseline ve gerekçeleri
+[`docs/static-analysis-baseline.md`](docs/static-analysis-baseline.md)'de kayıtlı,
+filtreler `slither.config.json`'da. Filtrelenmiş koşu **0 sonuç** vermelidir;
+vermiyorsa bulgu yeni kodadır.
+
+### Cheatcode tüketen testler
+
+Foundry'de `vm.prank` ve `vm.expectRevert` **bir sonraki çağrıya** uygulanır. O
+çağrının argümanları (veya `{value:}` ifadesi) kurulurken bir view çağrısı
+yapılıyorsa, cheatcode ona iner ve asıl çağrı prank'siz gider. Test sessizce
+yanlış sebeple geçer.
+
+Bu hata bu depoda altı kez çıktı, üçü testi tamamen anlamsızlaştırmıştı.
+`tools/cheatcode-scan.py` bunu arar; bir kapı değil, elle koşulan bir tarayıcı.
+Bilerek bozulmuş örneklere karşı doğrulanmıştır.
+
+### Solidity satır sonları
+
+Kök `.gitattributes`, `*.sol` dosyalarını `eol=lf` olarak sabitler. Windows'ta
+`core.autocrlf=true` ile bu ayar olmadan `forge fmt` her satırı değişmiş gösterir
+ve yerelde CI'dan farklı davranır.
+
+---
+
+## 5) Frontend / backend entegrasyonu
+
+Adresler ve ABI'lar **üretilir**, elle yazılmaz:
 
 ```bash
-echo "PRIVATE_KEY=0x..." > .env
-echo ".env" >> .gitignore
-source .env
+npm run contracts:exports          # deployments/ + forge ciktisi -> exports/
+npm run contracts:exports:check    # bayatsa hata ver
 ```
 
-Deploy secenekleri:
+```js
+import { getAddress, getChain, ABIS } from '../../contracts/exports/index.js'
+const vault = getAddress(10143, 'SettlementVault')
+```
 
-- Tek kontrat MVP:
+Paket ESM + `.d.ts` yayınlar: TypeScript frontend tip denetimi, JavaScript backend
+editör tamamlaması alır. Ayrıntı ve gerekçe:
+[`docs/integration.md`](docs/integration.md).
+
+> Adresleri `chain.ts`, `.env` veya bu README'ye **kopyalamayın**. Elle tutulan her
+> kopya zamanla diğerlerinden ayrışır; bu katman tam olarak onu önlemek için var.
+
+---
+
+## 6) Deploy
 
 ```bash
-forge script script/Deploy.s.sol \
-  --rpc-url monad_testnet \
-  --private-key $PRIVATE_KEY \
-  --broadcast
+DEFAULT_ADMIN=... CONFIG_ADMIN=... EMERGENCY_ADMIN=... SIGNER_ADMIN=... \
+TREASURER=... TREASURY=... RISK_QUOTE_SIGNER=... POD_ATTESTATION_SIGNER=... \
+EXPECTED_CHAIN_ID=10143 \
+forge script script/v1/DeployCore.s.sol:DeployCoreScript \
+  --rpc-url monad_testnet --broadcast
 ```
 
-- Moduler sistem:
+Script şu durumlarda **deploy etmeden durur**: eksik rol adresi, kritik rollerin
+aynı adresi paylaşması, yanlış ağ, boş olmayan vault/registry.
 
-```bash
-forge script script/DeploySystem.s.sol \
-  --rpc-url monad_testnet \
-  --private-key $PRIVATE_KEY \
-  --broadcast
-```
+Roller script tarafından **verilmez** — yalnızca `DEFAULT_ADMIN` atanır; diğer
+roller multisig'in kendisi tarafından verilir, böylece deployer anahtarı hiçbir
+operasyonel rol taşımaz. Rol matrisi ve runbook:
+[`docs/governance.md`](docs/governance.md).
 
-## 4) Sistem Akisi (Moduler)
+Deploy sonrası manifest ve export'ları güncelleyin (sec. 5).
 
-1. Kurye `depositStake()` ile stake yatırır.
-2. Musteri `createDeliveryRequest()` ile escrow talebi acar.
-3. Kuryeler `submitBid()` ile teklif verir, `BID_DEPOSIT` kilitlenir.
-4. Musteri `acceptBid()` ile kazanani secer.
-5. Kurye `confirmPickup()` cagirir.
-6. Musteri `confirmDelivery()` cagirir, odeme dagitimi otomatik olur.
-7. Musteri `submitRating()` ile puanlar.
-8. `Leaderboard` skoru gunceller, event emit eder.
+---
 
-## 5) Kontrat Sorumluluklari
+## 7) Test
 
-### `MCRYToken`
+| Suite | Kapsam |
+|---|---|
+| `test/v1/` | V1 birim + fuzz testleri |
+| `test/v1/invariant/` | Durum-bilgili invariant suiteleri |
+| `test/legacy/` | Devralınan kontratların regresyon ağı (bkz. sec. 8) |
 
-- ERC20-benzeri temel token
-- `transfer`, `approve`, `transferFrom`
-- Stake ve escrow odemelerinde kullanilir
+Güncel sonuçlar, faz faz özet ve testnet senaryoları:
+[`docs/verification-log.md`](docs/verification-log.md).
 
-### `DeliveryEscrow`
+---
 
-- Talep/bid/secim/teslim akisi
-- Teminat kilitleme ve iade
-- `%1` komisyon kesintisi
-- Komisyon dagilimi: `%50 treasury` + `%50 rewardPool`
-- Leaderboard entegrasyonu
+## 8) Devralınan kontratlar
 
-### `Leaderboard`
+`src/*.sol` altındaki kontratlar (`Delivera`, `DeliveryEscrow`, `Leaderboard`,
+`MCRYToken`, `ReputationBadge`, `RewardDistributor`) V1 öncesi MVP'ye aittir.
+Karar **D1** gereği **byte-byte dondurulmuşlardır**: mevcut demo çalışmaya devam
+etsin diye dururlar, düzeltme almazlar ve P5.3 cut-over'ında kaldırılacaklardır.
+`test/legacy/` davranışlarını sabitler, `foundry.toml` ve `slither.config.json`
+onları biçimlendirme ve statik analiz kapsamının dışında tutar.
 
-- Kurye istatistikleri
-- Skor hesaplama
-- `ScoreUpdated` eventi
-- Ilk teslimatta rozet mint tetigi
+> ⚠️ Bu kontratlarda **kalıcı para kilitlenmesine** yol açan doğrulanmış açıklar
+> vardır. Zincir üzerinde kanıtlanmış ayrıntı:
+> [`docs/contract-analysis-v1.0.md`](docs/contract-analysis-v1.0.md).
+> Yeni geliştirme yalnızca V1 üzerinde yapılır.
 
-### `RewardDistributor`
+---
 
-- Periyot bazli `merkleRoot` saklama
-- Proof ile odul claim
-
-### `ReputationBadge`
-
-- Soulbound rozet mint
-- Transfer kapali (`revert`)
-
-## 6) Kritik Parametreler
-
-### `Delivera.sol` (native MON MVP)
-
-- `MIN_COURIER_STAKE = 0.01 ether`
-- `BID_DEPOSIT = 0.001 ether`
-- `PLATFORM_FEE_BPS = 100`
-
-### `DeliveryEscrow.sol` (token tabanli)
-
-- `MIN_COURIER_STAKE = 10 ether`
-- `BID_DEPOSIT = 1 ether`
-- `PLATFORM_FEE_BPS = 100`
-
-Not: Her iki modelde de toplam platform komisyonu `%1` olarak ayarlidir.
-
-## 7) Backend Handoff
-
-### 7.1 Dinlenecek Eventler
-
-- `DeliveryRequested(requestId, customer, maxBudget, urgency)`
-- `BidSubmitted(requestId, courier, amount)`
-- `CourierSelected(requestId, courier, amount)`
-- `PickupConfirmed(requestId, timestamp)`
-- `DeliveryConfirmed(requestId, timestamp)`
-- `PaymentReleased(requestId, courier, courierAmount, treasuryFee, rewardFee)`
-- `RatingSubmitted(requestId, courier, stars)`
-- `ScoreUpdated(courier, newScore, timestamp)` (`Leaderboard`)
-
-### 7.2 Onerilen Veri Modeli
-
-- `requests`
-  - `request_id`, `customer`, `status`, `max_budget`, `accepted_amount`, `urgency`
-- `bids`
-  - `request_id`, `courier`, `amount`, `estimated_minutes`, `is_winner`
-- `deliveries`
-  - `request_id`, `pickup_at`, `delivered_at`, `is_on_time`
-- `ratings`
-  - `request_id`, `courier`, `stars`
-- `leaderboard_snapshots`
-  - `courier`, `score`, `block_number`, `updated_at`
-
-### 7.3 Sync Stratejisi
-
-- Polling veya websocket ile event ingest
-- Reorg guvenligi: en az `3` block confirmation
-- Her event sonrası gerekirse on-chain read ile state dogrulama:
-  - `requests(requestId)`
-  - `courierStake(courier)`
-  - `courierStats(courier)`
-
-### 7.4 Backend Gorev Listesi
-
-- Event consumer
-- Idempotent writer (ayni tx iki kez islenmemeli)
-- Retry + dead-letter queue
-- Leaderboard cache endpoint (`GET /leaderboard`)
-- Request detay endpoint (`GET /requests/:id`)
-
-## 8) Frontend Handoff
-
-### 8.1 Zorunlu Ekranlar
-
-- Talep olusturma
-- Teklif listesi
-- Kurye secimi
-- Pickup onayi
-- Delivery onayi
-- Rating
-- Leaderboard
-
-### 8.2 Gerekli Read Fonksiyonlari
-
-- `DeliveryEscrow.requests(requestId)`
-- `DeliveryEscrow.getBidderCount(requestId)`
-- `DeliveryEscrow.getBidders(requestId)`
-- `DeliveryEscrow.courierStake(courier)`
-- `Leaderboard.courierStats(courier)`
-- `Leaderboard.getTopCouriers(candidates, topN)`
-
-### 8.3 Gerekli Write Fonksiyonlari
-
-- `depositStake(amount)`
-- `createDeliveryRequest(...)`
-- `submitBid(...)`
-- `acceptBid(requestId, courier)`
-- `confirmPickup(requestId)`
-- `confirmDelivery(requestId)`
-- `submitRating(requestId, stars)`
-
-### 8.4 UI Durum Makinesi (Oneri)
-
-- `OPEN_FOR_BIDS`
-- `ACCEPTED`
-- `IN_TRANSIT`
-- `DELIVERED`
-- `RATED`
-
-UI, durum degisimini event ile dinlemeli; fallback olarak kontrattan durum okumali.
-
-## 9) Frontend Config Ornegi
-
-```ts
-export const MONAD_TESTNET = {
-  chainId: 10143,
-  rpcUrl: "https://testnet-rpc.monad.xyz",
-  explorer: "https://testnet.monadexplorer.com",
-  contracts: {
-    token: "0xda4f523b0d55fb6ce61515c4d003a70ca55948cd",
-    escrow: "0x91023fb41c5a308c12ab68c037207f832426d067",
-    leaderboard: "0x5a887f8c32e3299309212686acaad9b108aa883c",
-    distributor: "0x6e7ed62ab956f79e16d870d0b3796dffca6903f2",
-    badge: "0x8b44b40e24c16174eb0df623212f341e230ae83c"
-  }
-};
-```
-
-## 10) ABI ve Artifact Lokasyonlari
-
-`forge build` sonrasi ABI dosyalari:
-
-- `out/Delivera.sol/Delivera.json`
-- `out/DeliveryEscrow.sol/DeliveryEscrow.json`
-- `out/Leaderboard.sol/Leaderboard.json`
-- `out/RewardDistributor.sol/RewardDistributor.json`
-- `out/ReputationBadge.sol/ReputationBadge.json`
-- `out/MCRYToken.sol/MCRYToken.json`
-
-Frontend sadece `abi` alanini import ederek kullanabilir.
-
-### 10.1 Testnet Deploy Kaydi
-
-Gercek deploy kaydi:
-
-- `broadcast/DeploySystem.s.sol/10143/run-latest.json`
-
-Bu dosyada `transactions[].hash` ve `receipts[]` dolu oldugu icin deploy on-chain basarili tamamlanmistir.
-Backend ve frontend adresleri bu dosyadan alinmistir; mock adres kullanilmamistir.
-
-## 11) Test Kapsami
-
-- `test/Delivera.t.sol`
-  - Native MON full flow
-  - Leaderboard basic siralama
-- `test/DeliveryEscrow.t.sol`
-  - Token bazli full flow
-  - Fee dagitimi dogrulamasi
-  - Rating -> leaderboard guncellemesi
-
-Calistirma:
-
-```bash
-forge test -vv
-```
-
-## 12) Bilinen Limitler (Hackathon MVP)
-
-- Reentrancy guard ekli degil (v2'de eklenmeli)
-- GPS/Oracle dogrulama sade
-- Dispute resolution yok
-- Access control minimal
-- On-chain sorting gas maliyetli (demo odakli)
-
-## 13) V2 Teknik Yol Haritasi
-
-- OpenZeppelin tabanli ERC20/ERC721
-- UUPS veya Transparent proxy upgrade modeli
-- Chainlink/Oracle destekli lokasyon dogrulama
-- Merkle dagitiminda off-chain signer + period otomasyonu
-- Subgraph veya benzeri indexer altyapisi
-
-## 14) Dosya Haritasi
+## 9) Dosya haritası
 
 ```text
 contracts/
 ├── src/
-│   ├── Delivera.sol
-│   ├── DeliveryEscrow.sol
-│   ├── Leaderboard.sol
-│   ├── MCRYToken.sol
-│   ├── ReputationBadge.sol
-│   └── RewardDistributor.sol
+│   ├── v1/                     aktif gelistirme
+│   │   ├── access/             ProtocolAccessManager
+│   │   ├── config/             ProtocolConfig, BaselineParams
+│   │   ├── vault/              SettlementVault
+│   │   ├── registry/           CourierRegistry
+│   │   ├── hub/                DeliveryHub
+│   │   ├── risk/               CoverageQuote, RiskQuoteVerifier
+│   │   ├── reputation/         ReputationRegistry
+│   │   ├── badge/              BadgeSBT, IERC5192
+│   │   ├── rewards/            RewardDistributor, Referral
+│   │   ├── proof/              PickupProof(+Verifier), DeliveryProof(+PodAttestationVerifier)
+│   │   └── interfaces/         ISettlementVault
+│   └── *.sol                   devralinan (dondurulmus, bkz. sec. 8)
 ├── script/
-│   ├── Deploy.s.sol
-│   ├── DeploySystem.s.sol
-│   ├── TestScenario.sh
-│   └── TestScenarioSystem.sh
+│   ├── v1/DeployCore.s.sol     V1 deploy (rol ayrilik korumalari)
+│   └── Deploy*.s.sol           devralinan deploy
 ├── test/
-│   ├── Delivera.t.sol
-│   └── DeliveryEscrow.t.sol
-├── foundry.toml
-└── .env.example
+│   ├── v1/                     V1 testleri + invariant/
+│   └── legacy/                 devralinan regresyon agi
+├── deployments/10143.json      adres manifesti (tek gercek kaynak)
+├── exports/                    URETILEN: frontend/backend paketi
+├── tools/build-exports.mjs     export ureticisi
+├── docs/                       tasarim dokumanlari ve dogrulama gunlugu
+├── .gas-snapshot
+├── slither.config.json
+└── foundry.toml
 ```
-

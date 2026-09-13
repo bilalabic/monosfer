@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { recoverTypedDataAddress } from 'viem';
+import { operationsFixture } from '../support/operations.mjs';
+import { proofRpc } from '../support/proofs.mjs';
+import { ProofChain } from '../../dist/proofs/chain.js';
+
+test('SQL proof issuance: owner/state/CSRF guards, encrypted idempotency, nonce reuse and OTP budget', {timeout:60000},async t=>{
+  const f=await operationsFixture(t);const rpc=await proofRpc(f.config,f.customer.address,f.courier.address);t.after(rpc.close);
+  const {app,logs,document}=await f.makeApp({providers:[[ProofChain,rpc.chain]]});
+  const setState=async state=>{
+    rpc.fixture.state={ReadyForPickup:3,InTransit:4,ReturnRequired:6,Completed:8}[state];
+    await f.db.query(`UPDATE monosfer.delivery_projections SET data=data||$2::jsonb WHERE stream=$1`,[f.stream,JSON.stringify({state,stateDeadline:String(Math.floor(Date.now()/1000)+600)})]);
+    await f.db.query('UPDATE monosfer.indexer_streams SET checked_at=now() WHERE stream=$1',[f.stream]);
+  };
+  const issue=(kind,name='customer',key='proof-request-key-0001',payload={})=>app.inject({method:'POST',url:`/v1/deliveries/0/${kind}`,headers:f.headers(name,{'idempotency-key':key}),payload});
+  await setState('ReadyForPickup');
+  assert.equal((await issue('pickup-acceptances','other')).statusCode,403);
+  assert.equal((await issue('pickup-acceptances','courier')).statusCode,403);
+  assert.equal((await issue('pickup-acceptances','customer','')).statusCode,400);
+  const first=await issue('pickup-acceptances');assert.equal(first.statusCode,201,first.body);
+  const same=await issue('pickup-acceptances');assert.deepEqual(same.json(),first.json());
+  assert.equal((await f.db.query('SELECT count(*)::int AS n FROM monosfer.proof_issuances WHERE stream=$1',[f.stream])).rows[0].n,1);
+  rpc.fixture.used=true;assert.equal((await issue('pickup-acceptances')).statusCode,503);rpc.fixture.used=false;
+  await setState('ReturnRequired');const returned=await issue('return-acceptances');assert.equal(returned.statusCode,201);
+  assert.notEqual(returned.json().acceptance.action,first.json().acceptance.action);
+  await setState('InTransit');assert.equal((await issue('pickup-acceptances')).statusCode,409);
+  const input={proofType:'otp',code:'OPS_PRIVATE_CODE'};
+  assert.equal((await issue('pod-attestations','customer','proof-pod-key-0001',input)).statusCode,403);
+  const pod=await issue('pod-attestations','courier','proof-pod-key-0001',input);assert.equal(pod.statusCode,201,pod.body);
+  const result=pod.json();assert.equal((await recoverTypedDataAddress({...result.typedData,signature:result.signature})).toLowerCase(),rpc.signer.address.toLowerCase());
+  assert.deepEqual((await issue('pod-attestations','courier','proof-pod-key-0001',input)).json(),result);
+  assert.equal((await issue('pod-attestations','courier','proof-pod-key-0001',{...input,code:'different'})).statusCode,409);
+  const stored=(await f.db.query('SELECT * FROM monosfer.proof_issuances WHERE stream=$1',[f.stream])).rows;
+  for(const secret of ['OPS_PRIVATE_CODE',result.signature])assert.equal(JSON.stringify(stored).includes(secret),false);
+  for(let i=0;i<4;i++)assert.equal((await issue('pod-attestations','courier',`wrong-proof-key-${i}`,{...input,code:'wrong'})).statusCode,403);
+  assert.equal((await issue('pod-attestations','courier','wrong-proof-key-5',{...input,code:'wrong'})).statusCode,429);
+  await f.db.query('UPDATE monosfer.indexer_streams SET integrity_ok=false WHERE stream=$1',[f.stream]);
+  assert.equal((await issue('pod-attestations','courier','proof-pod-key-0001',input)).statusCode,503);
+  for(const secret of ['OPS_PRIVATE_CODE',result.signature,'PROOF_RPC_PRIVATE_SECRET'])assert.equal((logs.join('')+JSON.stringify(document)).includes(secret),false);
+  assert.equal(rpc.fixture.requests.some(x=>/send|sign/i.test(x)),false);
+});

@@ -4,22 +4,65 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nodemon src/server.js",
-    "start": "node --env-file=.env src/server.js",
-    "test": "node --test"
+    "dev": "nodemon --config nodemon.v2.json",
+    "build": "tsc -p tsconfig.json && node scripts/prepare-contracts.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node --env-file-if-exists=.env dist/main.js",
+    "dev:legacy": "nodemon src/server.js",
+    "test": "npm run build && node --test tests/v2/*.test.mjs",
+    "test:legacy": "node --test tests/*.test.js",
+    "test:integration": "npm run build && node --env-file-if-exists=.env --test --test-concurrency=1 tests/integration/*.test.mjs",
+    "db:migrate": "node --env-file-if-exists=.env scripts/migrate.mjs",
+    "openapi:export": "npm run build && node scripts/export-openapi.mjs",
+    "private:inventory": "npm run build && node --env-file-if-exists=.env scripts/private-inventory.mjs",
+    "private:migrate": "npm run build && node --env-file-if-exists=.env scripts/private-migrate.mjs",
+    "indexer": "npm run build && node --env-file-if-exists=.env scripts/indexer.mjs",
+    "quote:worker": "npm run build && node --env-file-if-exists=.env scripts/quote-worker.mjs",
+    "realtime": "npm run build && node --env-file-if-exists=.env dist/realtime.js",
+    "provider:worker": "npm run build && node --env-file-if-exists=.env scripts/provider-worker.mjs",
+    "ops:preflight": "npm run build && node --env-file-if-exists=.env scripts/ops-preflight.mjs",
+    "ops:testnet-smoke": "npm run build && node --env-file-if-exists=.env scripts/ops-testnet-smoke.mjs",
+    "ops:rebuild-projections": "npm run build && node --env-file-if-exists=.env scripts/ops-rebuild-projections.mjs",
+    "ops:restore-drill": "npm run build && node --env-file-if-exists=.env scripts/ops-restore-drill.mjs"
   },
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": ">=24.0.0 <25"
+  },
+  "overrides": {
+    "fastify": "$fastify"
   },
   "dependencies": {
+    "@fastify/cookie": "11.1.2",
+    "@fastify/cors": "11.3.0",
+    "@fastify/helmet": "13.1.1",
+    "@fastify/static": "10.1.3",
+    "@nestjs/common": "11.2.3",
+    "@nestjs/core": "11.2.3",
+    "@nestjs/platform-fastify": "11.2.3",
+    "@nestjs/swagger": "11.4.7",
+    "@signinwithethereum/siwe": "4.2.1",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.15.1",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "fastify": "5.12.3",
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.2.0",
-    "mongoose": "^9.5.0"
+    "mongoose": "^9.5.0",
+    "pg": "8.23.0",
+    "pino": "10.3.1",
+    "redis": "5.12.1",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "viem": "2.56.3"
   },
   "devDependencies": {
+    "@nestjs/testing": "11.2.3",
+    "@types/node": "24.13.3",
+    "@types/pg": "8.23.1",
     "node-mocks-http": "^1.17.2",
-    "nodemon": "^3.1.14"
+    "node-pg-migrate": "9.0.0",
+    "nodemon": "^3.1.14",
+    "typescript": "5.9.3"
   }
 }
