@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { PhVault, PhScales, PhCrown, PhChartLineUp } from '@phosphor-icons/vue'
-import { onSpotlightMouseMove } from '@/composables/useSpotlight'
+import { onSpotlightMouseMove, onTiltMouseMove, onTiltMouseLeave } from '@/composables/useSpotlight'
+
+function onCardMouseMove(e: MouseEvent) {
+  onSpotlightMouseMove(e)
+  onTiltMouseMove(e)
+}
 
 const features = [
   {
@@ -41,21 +46,25 @@ const features = [
 
       <div class="grid gap-5 sm:grid-cols-2">
         <div
-          v-for="f in features"
+          v-for="(f, i) in features"
           :key="f.title"
+          v-reveal="{ delay: i * 80, type: '3d' }"
           class="card card-hover spotlight-card rounded-xl bg-white p-6"
-          @mousemove="onSpotlightMouseMove"
+          @mousemove="onCardMouseMove"
+          @mouseleave="onTiltMouseLeave"
         >
-          <div class="mb-4 flex items-start justify-between">
-            <div class="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-amber-50 text-orange-600 ring-1 ring-orange-200/60">
-              <component :is="f.icon" class="size-6" weight="duotone" />
+          <div class="tilt-card">
+            <div class="mb-4 flex items-start justify-between">
+              <div class="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-amber-50 text-orange-600 ring-1 ring-orange-200/60">
+                <component :is="f.icon" class="size-6" weight="duotone" />
+              </div>
+              <span class="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-0.5 text-xs font-medium text-orange-600">
+                {{ f.tag }}
+              </span>
             </div>
-            <span class="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-0.5 text-xs font-medium text-orange-600">
-              {{ f.tag }}
-            </span>
+            <h3 class="mb-1.5 font-semibold text-stone-900">{{ f.title }}</h3>
+            <p class="text-sm leading-relaxed text-stone-500">{{ f.desc }}</p>
           </div>
-          <h3 class="mb-1.5 font-semibold text-stone-900">{{ f.title }}</h3>
-          <p class="text-sm leading-relaxed text-stone-500">{{ f.desc }}</p>
         </div>
       </div>
     </div>

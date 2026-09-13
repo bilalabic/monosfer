@@ -1,7 +1,9 @@
 @import "tailwindcss";
+@import "./styles/delivery-journey.css";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
 
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -142,13 +144,33 @@ button, input, textarea, select {
     opacity: 1;
   }
 
-  .gradient-text {
-    background: linear-gradient(110deg, hsl(25 95% 50%) 0%, hsl(10 90% 55%) 45%, hsl(35 95% 55%) 75%, hsl(25 95% 50%) 100%);
-    background-size: 250% 100%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: gradient-shimmer 6s ease-in-out infinite;
+  /* Solid-color emphasis with a hand-drawn highlighter sweep — draws in once
+     the ancestor .reveal element becomes visible (see app/plugins/reveal.ts).
+     Deliberately not a gradient/shimmer: reads as designed, not AI-generated. */
+  .text-mark {
+    position: relative;
+    display: inline-block;
+    color: hsl(25 90% 45%);
+  }
+  .text-mark::after {
+    content: "";
+    position: absolute;
+    left: -3%;
+    right: -3%;
+    bottom: 0.06em;
+    height: 0.26em;
+    background: hsl(25 95% 53% / 0.22);
+    border-radius: 3px;
+    z-index: -1;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.5s;
+  }
+  .reveal.is-visible .text-mark::after {
+    transform: scaleX(1);
+  }
+  .text-mark--2::after {
+    transition-delay: 0.68s;
   }
 
   .btn-primary {
@@ -219,11 +241,42 @@ button, input, textarea, select {
     border-color: hsl(var(--primary));
     box-shadow: 0 0 0 3px hsl(25 95% 53% / 0.12);
   }
+
+  /* Faint grid texture behind a section — pairs with the aurora blobs in the hero */
+  .grid-texture {
+    position: relative;
+  }
+  .grid-texture::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(hsl(var(--foreground) / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground) / 0.05) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 85% 65% at 50% 0%, black 40%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 85% 65% at 50% 0%, black 40%, transparent 100%);
+    pointer-events: none;
+  }
 }
 
 /* ─────────────────────────────────────────
    Animations
 ───────────────────────────────────────── */
+/* Courier route "trail" — a solid stroke that draws itself in sync with the
+   moving marker (see HeroSection.vue). `pathLength="100"` on the SVG path
+   normalizes its length to 100 units so this dasharray/offset math works
+   regardless of the path's actual geometry. */
+.route-trail {
+  stroke-dasharray: 100;
+  animation: route-trail-draw 4s linear infinite;
+}
+@keyframes route-trail-draw {
+  from { stroke-dashoffset: 100; }
+  to { stroke-dashoffset: 0; }
+}
+
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
@@ -237,11 +290,6 @@ button, input, textarea, select {
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
-}
-
-@keyframes gradient-shimmer {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
 }
 
 @keyframes aurora-float-1 {
@@ -308,6 +356,16 @@ button, input, textarea, select {
   animation: aurora-float-1 20s ease-in-out infinite reverse;
 }
 
+/* Generic crossfade — pair with Vue's <Transition name="fade"> */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
 /* Scroll/entrance reveal — driven by the v-reveal directive (app/plugins/reveal.ts) */
 .reveal {
   opacity: 0;
@@ -318,16 +376,37 @@ button, input, textarea, select {
   opacity: 1;
   transform: translateY(0);
 }
+
+/* 3D card entrance — same directive, `v-reveal="{ type: '3d' }"`. Cards tip
+   forward out of the page (rotateX) instead of just sliding up. */
+.reveal-3d {
+  opacity: 0;
+  transform: perspective(1000px) rotateX(-35deg) translateY(24px);
+  transform-origin: 50% 100%;
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal-3d.is-visible {
+  opacity: 1;
+  transform: perspective(1000px) rotateX(0deg) translateY(0);
+}
 @media (prefers-reduced-motion: reduce) {
-  .reveal {
+  .reveal,
+  .reveal-3d {
     opacity: 1;
     transform: none;
     transition: none;
   }
-  .gradient-text,
   .aurora-blob,
   .animate-pulse-dot {
     animation: none;
+  }
+  .text-mark::after {
+    transition: none;
+    transform: scaleX(1);
+  }
+  .route-trail {
+    animation: none;
+    stroke-dashoffset: 0;
   }
   .btn-primary::after {
     display: none;

@@ -6,9 +6,9 @@ import type { Directive } from 'vue'
 // library can. `mounted` never runs during SSR, so the server always renders
 // the static "reveal" class (invisible) and the client alone decides when to
 // add "is-visible", which keeps the two renders identical (no mismatch).
-const vReveal: Directive<HTMLElement, { delay?: number } | undefined> = {
+const vReveal: Directive<HTMLElement, { delay?: number; type?: '3d' } | undefined> = {
   mounted(el, binding) {
-    el.classList.add('reveal')
+    el.classList.add(binding.value?.type === '3d' ? 'reveal-3d' : 'reveal')
     const delay = binding.value?.delay
     if (delay) el.style.transitionDelay = `${delay}ms`
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { PhArrowRight as ArrowRight, PhVault, PhCircuitry, PhCrown } from '@phosphor-icons/vue'
 import { onSpotlightMouseMove, onTiltMouseMove, onTiltMouseLeave } from '@/composables/useSpotlight'
 
@@ -12,10 +13,24 @@ const features = [
   { icon: PhCircuitry, label: 'Monad Blockchain' },
   { icon: PhCrown, label: 'Liderlik Tablosu' },
 ]
+
+const stats = [
+  { label: 'Toplam Teslimat', value: '1,247' },
+  { label: 'Başarı Oranı', value: '98.4%' },
+  { label: 'Aktif Kurye', value: '342' },
+  { label: 'Dağıtılan MON', value: '24,680' },
+]
+
+// Route marker animation is purely decorative — skip it under prefers-reduced-motion.
+const routePath = 'M20,150 C120,20 260,180 380,40'
+const reduceMotion = ref(false)
+onMounted(() => {
+  reduceMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+})
 </script>
 
 <template>
-  <section class="relative isolate overflow-hidden px-5 pt-14 pb-20 sm:px-8">
+  <section class="grid-texture relative isolate overflow-hidden px-5 pt-14 pb-20 sm:px-8">
     <div class="aurora-bg" aria-hidden="true">
       <div class="aurora-blob aurora-blob--1" />
       <div class="aurora-blob aurora-blob--2" />
@@ -36,10 +51,10 @@ const features = [
         <div>
           <h1
             v-reveal="{ delay: 100 }"
-            class="mb-5 text-4xl font-extrabold leading-tight tracking-tight text-stone-900 sm:text-5xl"
+            class="font-heading mb-5 text-4xl font-bold leading-[0.95] tracking-tighter text-stone-900 sm:text-6xl lg:text-7xl"
           >
             Teslimatı güvenli,<br />
-            <span class="gradient-text">ücretlendirmeyi adil</span><br />
+            <span class="text-mark">ücretlendirmeyi</span> <span class="text-mark text-mark--2">adil</span><br />
             hale getiriyoruz.
           </h1>
           <p
@@ -74,7 +89,7 @@ const features = [
           </div>
         </div>
 
-        <!-- Right — Stats card -->
+        <!-- Right — Live route visual + stats -->
         <div
           v-reveal="{ delay: 200 }"
           class="spotlight-card rounded-2xl border border-stone-200 bg-white shadow-sm transition-shadow duration-300 hover:shadow-lg"
@@ -82,23 +97,58 @@ const features = [
           @mouseleave="onTiltMouseLeave"
         >
           <div class="tilt-card p-6">
-            <p class="mb-5 text-xs font-semibold uppercase tracking-widest text-stone-400">Platform Özeti</p>
-            <div class="space-y-4">
-              <div class="flex items-center justify-between rounded-xl bg-orange-50 px-4 py-3.5">
-                <span class="text-sm font-medium text-stone-700">Toplam Teslimat</span>
-                <span class="text-xl font-bold text-orange-600">1,247</span>
-              </div>
-              <div class="flex items-center justify-between rounded-xl bg-orange-50 px-4 py-3.5">
-                <span class="text-sm font-medium text-stone-700">Başarı Oranı</span>
-                <span class="text-xl font-bold text-orange-600">98.4%</span>
-              </div>
-              <div class="flex items-center justify-between rounded-xl bg-orange-50 px-4 py-3.5">
-                <span class="text-sm font-medium text-stone-700">Aktif Kurye</span>
-                <span class="text-xl font-bold text-orange-600">342</span>
-              </div>
-              <div class="flex items-center justify-between rounded-xl bg-orange-50 px-4 py-3.5">
-                <span class="text-sm font-medium text-stone-700">Dağıtılan MON</span>
-                <span class="text-xl font-bold text-orange-600">24,680</span>
+            <div class="mb-4 flex items-center gap-2">
+              <span class="size-1.5 rounded-full bg-orange-500 animate-pulse-dot" />
+              <p class="text-xs font-semibold uppercase tracking-widest text-stone-400">Canlı Teslimat Takibi</p>
+            </div>
+
+            <!-- Route mockup -->
+            <svg viewBox="0 0 400 200" class="h-40 w-full sm:h-44" aria-hidden="true">
+              <path
+                :d="routePath"
+                fill="none"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-dasharray="2 10"
+                class="stroke-orange-300"
+              />
+              <!-- lit-up trail chasing the courier marker -->
+              <path
+                v-if="!reduceMotion"
+                :d="routePath"
+                pathLength="100"
+                fill="none"
+                stroke-width="3"
+                stroke-linecap="round"
+                class="route-trail stroke-orange-500"
+              />
+              <!-- origin -->
+              <circle cx="20" cy="150" r="6" class="fill-stone-400" />
+              <text x="20" y="172" text-anchor="middle" class="fill-stone-500 text-[10px] font-medium">Depo</text>
+              <!-- destination -->
+              <circle cx="380" cy="40" r="9" class="fill-orange-500/20">
+                <animate attributeName="r" values="9;14;9" dur="2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.6;0;0.6" dur="2s" repeatCount="indefinite" />
+              </circle>
+              <circle cx="380" cy="40" r="6" class="fill-orange-500" />
+              <text x="380" y="24" text-anchor="middle" class="fill-orange-600 text-[10px] font-medium">Teslim Noktası</text>
+              <!-- moving courier (parked at the origin when motion is reduced) -->
+              <g :transform="reduceMotion ? 'translate(20,150)' : undefined">
+                <circle r="10" class="fill-orange-500/25">
+                  <animate attributeName="r" values="9;15;9" dur="1.4s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.5;0;0.5" dur="1.4s" repeatCount="indefinite" />
+                </circle>
+                <circle r="8" class="fill-stone-900" />
+                <circle r="8" fill="none" stroke-width="1.5" class="stroke-white/70" />
+                <polygon points="-2,-3.5 4,0 -2,3.5" class="fill-white" />
+                <animateMotion v-if="!reduceMotion" :path="routePath" dur="4s" repeatCount="indefinite" rotate="auto" />
+              </g>
+            </svg>
+
+            <div class="mt-2 grid grid-cols-2 gap-3">
+              <div v-for="s in stats" :key="s.label" class="rounded-xl bg-orange-50 px-3.5 py-3">
+                <p class="text-[11px] font-medium text-stone-500">{{ s.label }}</p>
+                <p class="text-lg font-bold text-orange-600">{{ s.value }}</p>
               </div>
             </div>
           </div>

@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import { PhLockKey, PhSealCheck, PhShieldChevron, PhGavel } from '@phosphor-icons/vue'
+import { onSpotlightMouseMove, onTiltMouseMove, onTiltMouseLeave } from '@/composables/useSpotlight'
+
+function onCardMouseMove(e: MouseEvent) {
+  onSpotlightMouseMove(e)
+  onTiltMouseMove(e)
+}
 
 const layers = [
   {
@@ -51,19 +57,24 @@ const layers = [
 
         <div class="space-y-3">
           <div
-            v-for="layer in layers"
+            v-for="(layer, i) in layers"
             :key="layer.num"
-            class="flex items-start gap-4 rounded-xl border border-orange-200 bg-orange-50 p-4"
+            v-reveal="{ delay: i * 100, type: '3d' }"
+            class="spotlight-card card-hover flex items-start gap-4 rounded-xl border border-orange-200 bg-orange-50 p-4"
+            @mousemove="onCardMouseMove"
+            @mouseleave="onTiltMouseLeave"
           >
-            <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-amber-50 text-orange-500 ring-1 ring-orange-200/60">
-              <component :is="layer.icon" class="size-5" weight="duotone" />
-            </div>
-            <div>
-              <div class="mb-0.5 flex items-center gap-2">
-                <span class="text-xs font-bold text-stone-400">Katman {{ layer.num }}</span>
-                <h3 class="text-sm font-semibold text-stone-900">{{ layer.title }}</h3>
+            <div class="tilt-card flex w-full items-start gap-4">
+              <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-amber-50 text-orange-500 ring-1 ring-orange-200/60">
+                <component :is="layer.icon" class="size-5" weight="duotone" />
               </div>
-              <p class="text-xs leading-relaxed text-stone-600">{{ layer.desc }}</p>
+              <div>
+                <div class="mb-0.5 flex items-center gap-2">
+                  <span class="text-xs font-bold text-stone-400">Katman {{ layer.num }}</span>
+                  <h3 class="text-sm font-semibold text-stone-900">{{ layer.title }}</h3>
+                </div>
+                <p class="text-xs leading-relaxed text-stone-600">{{ layer.desc }}</p>
+              </div>
             </div>
           </div>
         </div>

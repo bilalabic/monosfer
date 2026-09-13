@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { PhPackage, PhBicycle, PhCheckCircle, PhCoins } from '@phosphor-icons/vue'
 import { onSpotlightMouseMove, onTiltMouseMove, onTiltMouseLeave } from '@/composables/useSpotlight'
 
 function onCardMouseMove(e: MouseEvent) {
@@ -8,10 +9,10 @@ function onCardMouseMove(e: MouseEvent) {
 }
 
 const stats = [
-  { value: 1247, suffix: '', label: 'Toplam Teslimat' },
-  { value: 342, suffix: '+', label: 'Aktif Kurye' },
-  { value: 98.4, suffix: '%', label: 'Başarı Oranı' },
-  { value: 24680, suffix: '', label: 'Dağıtılan MON' },
+  { value: 1247, suffix: '', label: 'Toplam Teslimat', icon: PhPackage },
+  { value: 342, suffix: '+', label: 'Aktif Kurye', icon: PhBicycle },
+  { value: 98.4, suffix: '%', label: 'Başarı Oranı', icon: PhCheckCircle },
+  { value: 24680, suffix: '', label: 'Dağıtılan MON', icon: PhCoins },
 ]
 
 const displayed = ref(stats.map(() => 0))
@@ -52,11 +53,15 @@ onMounted(() => {
         <div
           v-for="(stat, i) in stats"
           :key="stat.label"
+          v-reveal="{ delay: i * 100, type: '3d' }"
           class="spotlight-card rounded-xl border border-stone-200 bg-white shadow-sm transition-shadow duration-300 hover:shadow-lg"
           @mousemove="onCardMouseMove"
           @mouseleave="onTiltMouseLeave"
         >
           <div class="tilt-card p-5 text-center">
+            <div class="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-orange-50">
+              <component :is="stat.icon" class="size-5 text-orange-500" weight="duotone" />
+            </div>
             <div class="text-3xl font-extrabold tabular-nums text-orange-600">
               {{ stat.suffix === '%' ? Number(displayed[i] ?? 0).toFixed(1) : Number(displayed[i] ?? 0).toLocaleString('tr-TR') }}{{ stat.suffix }}
             </div>

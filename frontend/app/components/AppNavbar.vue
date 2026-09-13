@@ -2,10 +2,12 @@
 import { ref, computed } from 'vue'
 import { PhPackage as Package, PhTrophy as Trophy, PhPlus as Plus, PhSignOut as LogOut, PhList as Menu, PhX as X, PhUser as User, PhMapPin as MapPin, PhNavigationArrow as Navigation } from '@phosphor-icons/vue'
 import { useWalletStore } from '@/stores/useWalletStore'
+import { useNavbarVisibility } from '@/composables/useNavbarVisibility'
 
 const wallet = useWalletStore()
 const router = useRouter()
 const mobileOpen = ref(false)
+const navbarHidden = useNavbarVisibility()
 
 const navLinks = [
   { to: '/deliveries', label: 'Teslimatlar', icon: Package },
@@ -27,7 +29,10 @@ function handleCreate() {
 </script>
 
 <template>
-  <header class="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-stone-200">
+  <header
+    class="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-stone-200 transition-transform duration-300 ease-out"
+    :class="navbarHidden ? '-translate-y-full' : 'translate-y-0'"
+  >
     <div class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5 sm:px-8">
       <!-- Logo -->
       <NuxtLink to="/" class="flex items-center gap-2.5 group" @click="mobileOpen = false">

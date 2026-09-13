@@ -12,7 +12,7 @@ import { PhRocketLaunch, PhCrown } from '@phosphor-icons/vue'
     <HeroSection />
     <StatsSection v-reveal />
     <FeaturesSection v-reveal />
-    <HowItWorksSection v-reveal />
+    <how-it-works-section />
     <SecuritySection v-reveal />
 
     <!-- CTA -->
