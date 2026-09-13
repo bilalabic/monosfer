@@ -1,5 +1,9 @@
 # Backend V2 İlerleme Kaydı
 
+## 2026-09-13 — Contract Sync commit teslim kaydı
+
+Önceki kullanım limiti engeli sonrasında kullanıcı commit ve push işlemini yeniden istedi. `origin/Monosfer-V2` fetch edilip yerel dalla aynı başlangıçta olduğu doğrulandı. Uygulama ve frontend/contract handoff notları `c7eb33c` — `feat(backend): sync V2 contracts and add delivery proofs` commit'ine kaydedildi; 45 dosyanın tamamı `backend/` altında. Bu takip kaydı ayrı docs commit'idir. Kod değişmediği için önceki 87 unit/inject, 40 integration, 13 legacy ve başarılı canlı read-only Testnet sonuçları geçerlidir; staged diff kontrolü başarılı. Kullanıcı isteğiyle iki commit `origin/Monosfer-V2` hedefine normal push için hazırlandı; deploy/transaction yapılmaz.
+
 ## 2026-09-13 — Contract Sync / CS.1–CS.6
 
 Teslim notu: Yerel commit komutu otomatik onay incelemesinde kullanım limiti nedeniyle reddedildi; commit oluşmadı ve push yapılmadı. Kod değişiklikleri stage edildi; ardından frontend/contract handoff notları genişletildi. FE-CS-1–7 ve CT-CS-1–5 işleri, eksik imza aktarım kanalı ve export sonrası gereken backend işi ayrıca belirtildi. Doküman güncellemesi sonrası `git diff --check` ile kontrol yapıldı; kod testleri yukarıdaki teslimle aynı uygulamayı doğrular. Yeni reputation/support response assertion'ları için ayrıca release integration testi 10/10 geçti.
