@@ -1,49 +1,73 @@
 <script setup lang="ts">
+import { PhArrowUpRight, PhPackage } from '@phosphor-icons/vue'
+
+const linkGroups = [
+  {
+    title: 'Keşfet',
+    links: [
+      { to: '/deliveries', label: 'Teslimatlar' },
+      { to: '/couriers', label: 'Kuryeler' },
+      { to: '/map', label: 'Teslimat haritası' },
+    ],
+  },
+  {
+    title: 'Başlarken',
+    links: [
+      { to: '/#how-it-works', label: 'Nasıl çalışır?' },
+      { to: '/#security', label: 'Güvenlik' },
+      { to: '/register', label: 'Hesap oluştur' },
+      { to: '/login', label: 'Giriş yap' },
+      { to: '/support', label: 'Destek' },
+    ],
+  },
+]
+const year = new Date().getFullYear()
 </script>
 
 <template>
-  <footer class="mt-16 border-t border-stone-200 bg-white">
-    <div class="mx-auto max-w-6xl px-5 py-10 sm:px-8">
-      <div class="grid gap-8 sm:grid-cols-3">
-        <div>
-          <div class="mb-3 flex items-center gap-2">
-            <img src="/gemini-svg-_1_.png" alt="Delivera" class="size-7 rounded-lg object-cover">
-            <span class="font-bold text-stone-900">Delivera</span>
+  <footer class="site-footer" aria-label="Site alt bilgisi">
+    <div class="footer-surface">
+      <div class="footer-content">
+        <div class="footer-main">
+          <div class="footer-intro">
+            <nuxt-link to="/" class="footer-brand" aria-label="Delivera ana sayfa">
+              <img src="/gemini-svg-_1_.png" alt="" width="36" height="36">
+              <span>Delivera<span>.</span></span>
+            </nuxt-link>
+            <p class="footer-statement">Her teslimatta,<br>birbirimize <span>daha yakın.</span></p>
+            <p class="footer-description">Yolları birleştiren, güveni paylaşan<br>merkeziyetsiz teslimat ağı.</p>
+            <nuxt-link to="/create" class="footer-start">Bir teslimat başlat <span><ph-arrow-up-right weight="bold" aria-hidden="true" /></span></nuxt-link>
           </div>
-          <p class="text-sm leading-relaxed text-stone-500">
-            Merkeziyetsiz, güvenli ve rekabetçi teslimat ağı.
-          </p>
-          <div class="mt-4 flex items-center gap-2">
-            <span class="size-1.5 rounded-full bg-green-500 animate-pulse-dot" />
-            <span class="text-xs text-stone-400">Monad Testnet'te Canlı</span>
+
+          <nav v-for="group in linkGroups" :key="group.title" class="footer-links" :aria-label="`Alt menü: ${group.title}`">
+            <h2>{{ group.title }}</h2>
+            <ul>
+              <li v-for="link in group.links" :key="link.to">
+                <nuxt-link :to="link.to">{{ link.label }}<ph-arrow-up-right aria-hidden="true" /></nuxt-link>
+              </li>
+            </ul>
+          </nav>
+        </div>
+
+        <div class="footer-signature" aria-hidden="true">
+          <span class="footer-wordmark">Delivera<span>.</span></span>
+          <div class="footer-route">
+            <span class="footer-route-label">BİR PAKET. BİNLERCE OLASILIK.</span>
+            <svg viewBox="0 0 360 100" fill="none">
+              <path class="footer-route-guide" d="M14 70H346" />
+              <path class="footer-route-line" d="M14 70H74C122 70 110 20 164 20H201C243 20 227 70 278 70H346" />
+              <circle cx="14" cy="70" r="5" /><circle cx="346" cy="70" r="9" class="footer-route-destination" /><circle cx="346" cy="70" r="3" />
+            </svg>
+            <span class="footer-route-package"><ph-package weight="duotone" /></span>
           </div>
         </div>
 
-        <div>
-          <h4 class="mb-3 text-sm font-semibold text-stone-900">Platform</h4>
-          <ul class="space-y-2 text-sm text-stone-500">
-            <li><NuxtLink to="/deliveries" class="hover:text-stone-900 transition">Teslimatlar</NuxtLink></li>
-            <li><NuxtLink to="/couriers" class="hover:text-stone-900 transition">Leaderboard</NuxtLink></li>
-            <li><NuxtLink to="/create" class="hover:text-stone-900 transition">Teslimat Oluştur</NuxtLink></li>
-          </ul>
+        <div class="footer-bottom">
+          <p>© {{ year }} Delivera <span>·</span> Monad Hackathon</p>
+          <a href="https://monad.xyz" target="_blank" rel="noopener noreferrer" class="footer-network" aria-label="Monad üzerinde geliştirildi — Monad sitesini yeni sekmede aç">
+            <span class="footer-network-dot" /> Monad üzerinde geliştirildi <ph-arrow-up-right aria-hidden="true" />
+          </a>
         </div>
-
-        <div>
-          <h4 class="mb-3 text-sm font-semibold text-stone-900">Teknoloji</h4>
-          <ul class="space-y-2 text-sm text-stone-500">
-            <li>Monad Blockchain</li>
-            <li>Solidity Akıllı Sözleşmeler</li>
-            <li>Escrow & Teminat</li>
-            <li>Merkeziyetsiz Jüri</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="mt-8 border-t border-stone-100 pt-6 flex flex-col items-center justify-between gap-3 sm:flex-row">
-        <p class="text-xs text-stone-400">© 2026 Delivera · Monad Hackathon</p>
-        <a href="https://monad.xyz" target="_blank" rel="noopener" class="text-xs text-stone-400 hover:text-stone-600 transition">
-          Built on Monad ↗
-        </a>
       </div>
     </div>
   </footer>

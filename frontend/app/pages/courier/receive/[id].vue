@@ -1,346 +1,168 @@
 <script setup lang="ts">
 definePageMeta({ requiresAuth: true })
 
-import { ref, computed, onMounted, watchEffect } from 'vue'
-import {
-  PhArrowLeft, PhCheckCircle, PhPackage, PhCoins,
-  PhQrCode, PhCopy, PhArrowRight,
-  PhTruck, PhMapPin, PhCircleNotch, PhWarning
-} from '@phosphor-icons/vue'
+import { computed, ref } from 'vue'
+import { formatEther } from 'viem'
+import { PhArrowLeft, PhCheckCircle, PhCircleNotch, PhPackage, PhTruck, PhWarning } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
-import { MONAD_TESTNET } from '@/config/chain'
-import QrCode from '@/components/QrCode.vue'
-import TokenAmount from '@/components/TokenAmount.vue'
+import AcceptanceQrScanner from '@/components/AcceptanceQrScanner.client.vue'
 
 const route = useRoute()
 const router = useRouter()
-const dStore = useDeliveryStore()
+const deliveries = useDeliveryStore()
 const wallet = useWalletStore()
+const id = route.params.id as string
 
-const delivery = computed(() => dStore.getDelivery(route.params.id as string))
-const assignedBid = computed(() =>
-  delivery.value?.bids.find(b => b.id === delivery.value?.selectedBidId)
-)
+if (!deliveries.getDelivery(id)) await deliveries.fetchDelivery(id)
 
-const isAssignedCourier = computed(() =>
-  !!wallet.address && !!delivery.value?.assignedCourierId &&
-  wallet.address.toLowerCase() === delivery.value.assignedCourierId.toLowerCase()
-)
+const delivery = computed(() => deliveries.getDelivery(id))
+const isAssignedCourier = computed(() => delivery.value?.assignedCourierId === wallet.address.toLowerCase())
+const indexerReady = computed(() => delivery.value?.indexing.status === 'ready')
+const acceptancePackage = ref('')
+const deliveryCode = ref('')
+const processing = ref(false)
+const error = ref('')
+const message = ref('')
 
-onMounted(() => {
-  if (dStore.deliveries.length === 0) dStore.loadDeliveries()
-})
-
-watchEffect(() => {
-  if (delivery.value && !isAssignedCourier.value) {
-    router.replace('/deliveries')
+async function run(action: () => Promise<unknown>, success: string) {
+  processing.value = true
+  error.value = ''
+  message.value = ''
+  try {
+    await action()
+    message.value = success
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'İşlem başarısız oldu'
+  } finally {
+    processing.value = false
   }
-})
-
-const verifyCode = computed(() => {
-  const id = delivery.value?.id ?? 'x'
-  const sum = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
-  return `MON-${id.toUpperCase()}-${sum.toString(16).toUpperCase().padStart(4, '0')}`
-})
-
-const appOrigin = computed(() => {
-  if (typeof window === 'undefined') return ''
-  return window.location.origin
-})
-const pickupConfirmUrl = computed(() =>
-  `${appOrigin.value}/delivery/${delivery.value?.id}/confirm?step=pickup&code=${encodeURIComponent(verifyCode.value)}`,
-)
-const deliveryConfirmUrl = computed(() =>
-  `${appOrigin.value}/delivery/${delivery.value?.id}/confirm?step=delivery&code=${encodeURIComponent(`${verifyCode.value}-DEL`)}`,
-)
-const pickupConfirmed = computed(() =>
-  delivery.value?.timeline.some(step => step.step === 'pickup' && step.completed),
-)
-
-type Phase = 'pickup_qr' | 'pickup_confirming' | 'delivery_qr' | 'success'
-const phase = ref<Phase>('pickup_qr')
-const txHash = ref('')
-const copied = ref(false)
-const receiveError = ref('')
-const earnedAmount = computed(() => assignedBid.value?.tokenAmount ?? 0)
-const txExplorerUrl = computed(() =>
-  txHash.value ? `https://testnet.monadexplorer.com/tx/${txHash.value}` : '',
-)
-
-watchEffect(() => {
-  if (delivery.value?.status === 'completed') {
-    phase.value = 'success'
-  } else if (pickupConfirmed.value && phase.value === 'pickup_qr') {
-    phase.value = 'delivery_qr'
-  }
-})
-
-async function ensureMonadTestnet() {
-  const ethereum = (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum
-  if (!ethereum) throw new Error('MetaMask bulunamadi')
-  const currentChain = await ethereum.request({ method: 'eth_chainId' }) as string
-  if (currentChain === MONAD_TESTNET.chainIdHex) return
-  await ethereum.request({
-    method: 'wallet_switchEthereumChain',
-    params: [{ chainId: MONAD_TESTNET.chainIdHex }],
-  })
 }
 
-async function sendAnchorTx(): Promise<string> {
-  const ethereum = (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum
-  if (!ethereum || !wallet.address) throw new Error('Cuzdan bagli degil')
-  await ensureMonadTestnet()
-  const hash = await ethereum.request({
-    method: 'eth_sendTransaction',
-    params: [{ from: wallet.address, to: wallet.address, value: '0x0' }],
-  }) as string
-
-  while (true) {
-    const receipt = await ethereum.request({
-      method: 'eth_getTransactionReceipt',
-      params: [hash],
-    }) as { status?: string } | null
-    if (receipt?.status === '0x1') return hash
-    await wait(1200)
-  }
+async function fund() {
+  if (!delivery.value) return
+  await run(async () => {
+    const result = await deliveries.fundCourier(delivery.value!.id)
+    message.value = `${formatEther(result.value)} MON ek teminatla kurye payı fonlandı.`
+  }, 'Kurye payı fonlandı.')
 }
 
 async function confirmPickup() {
-  receiveError.value = ''
-  phase.value = 'pickup_confirming'
-  try {
-    const hash = await sendAnchorTx()
-    txHash.value = hash
-    await dStore.confirmPickup(delivery.value!.id, hash)
-    phase.value = 'delivery_qr'
-  } catch (e) {
-    receiveError.value = e instanceof Error ? e.message : 'Teslim alım onaylanamadı, tekrar deneyin.'
-    phase.value = 'pickup_qr'
-  }
+  if (!delivery.value || !acceptancePackage.value.trim()) return
+  await run(
+    () => deliveries.confirmPickup(delivery.value!.id, acceptancePackage.value.trim()),
+    'Paket devri zincirde doğrulandı.',
+  )
+  acceptancePackage.value = ''
 }
 
-async function refreshDelivery() {
-  await dStore.loadDeliveries()
+async function confirmReturn() {
+  if (!delivery.value || !acceptancePackage.value.trim()) return
+  await run(
+    () => deliveries.confirmReturn(delivery.value!.id, acceptancePackage.value.trim()),
+    'İade zincirde doğrulandı.',
+  )
+  acceptancePackage.value = ''
 }
 
-function copyHash() {
-  navigator.clipboard.writeText(txHash.value)
-  copied.value = true
-  setTimeout(() => (copied.value = false), 2000)
+async function submitPod() {
+  if (!delivery.value || !deliveryCode.value.trim()) return
+  await run(
+    () => deliveries.completeDeliveryWithRecipientCode(delivery.value!.id, deliveryCode.value.trim()),
+    'PoD attestation zincire gönderildi; itiraz penceresi açıldı.',
+  )
+  deliveryCode.value = ''
 }
-
-const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
 </script>
 
 <template>
   <div class="mx-auto max-w-lg px-5 py-10 sm:px-8">
-    <button
-      v-if="phase === 'pickup_qr'"
-      class="mb-6 flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 transition"
-      @click="router.back()"
-    >
+    <button class="mb-6 flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900" @click="router.back()">
       <PhArrowLeft class="size-4" weight="bold" /> Geri
     </button>
 
-    <div v-if="!delivery || !assignedBid" class="py-20 text-center">
-      <p class="text-stone-500">Aktif teslimat bulunamadı.</p>
-      <button class="btn-primary mt-4" @click="router.push('/deliveries')">Teslimatlar</button>
+    <div v-if="!delivery" class="py-20 text-center text-stone-500">Teslimat bulunamadı.</div>
+    <div v-else-if="!isAssignedCourier" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      Bu işlem yalnız finalized projection içindeki atanmış kurye tarafından yapılabilir.
     </div>
+    <div v-else class="space-y-5">
+      <div>
+        <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-orange-500">Kurye Akışı</p>
+        <h1 class="text-2xl font-bold text-stone-900">Teslimat #{{ delivery.id }}</h1>
+        <p class="mt-1 text-sm text-stone-500">Zincir durumu: {{ delivery.chainState }}</p>
+      </div>
 
-    <template v-else>
-      <!-- PICKUP QR -->
-      <div v-if="phase === 'pickup_qr'" class="space-y-5">
-        <div>
-          <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-orange-500">Kurye Paneli</p>
-          <h1 class="text-2xl font-bold text-stone-900">Paket Teslim Alma</h1>
-          <p class="mt-1 text-sm text-stone-500">
-            Göndericideki QR kodu okutarak paketi teslim aldığını onayla.
-          </p>
+      <section v-if="delivery.chainState === 'AwaitingFunding'" class="card space-y-4 rounded-xl bg-white p-5">
+        <div class="flex gap-3">
+          <PhTruck class="mt-0.5 size-6 shrink-0 text-orange-500" weight="duotone" />
+          <p class="text-sm text-stone-600">Kurye teminatını tamamlayın. Yalnız eksik collateral tutarı işlem değeri olarak gönderilir.</p>
         </div>
-
-        <!-- Delivery info -->
-        <div class="card rounded-xl bg-white p-4">
-          <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">Teslimat Bilgisi</p>
-          <p class="mb-3 text-sm font-semibold text-stone-900">{{ delivery.title }}</p>
-          <div class="space-y-2">
-            <div class="flex items-center gap-2.5">
-              <PhMapPin class="size-3.5 shrink-0 text-green-500" weight="fill" />
-              <span class="text-xs text-stone-500">Alış: {{ delivery.pickupAddress }}</span>
-            </div>
-            <div class="flex items-center gap-2.5">
-              <PhMapPin class="size-3.5 shrink-0 text-red-400" weight="fill" />
-              <span class="text-xs text-stone-500">Teslim: {{ delivery.dropoffAddress }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Pickup instruction -->
-        <div class="flex flex-col items-center gap-4 rounded-xl border-2 border-dashed border-orange-200 bg-orange-50 p-6 text-center">
-          <div class="flex items-center gap-2 text-sm font-semibold text-orange-700">
-            <PhQrCode class="size-4" weight="bold" />
-            Göndericideki QR'ı Okut
-          </div>
-          <div class="rounded-lg bg-white px-4 py-2 shadow-sm">
-            <p class="text-center font-mono text-sm font-bold tracking-widest text-stone-900">{{ verifyCode }}</p>
-            <p class="mt-0.5 text-center text-[10px] text-stone-400">Doğrulama Kodu</p>
-          </div>
-          <p class="max-w-xs text-xs leading-relaxed text-stone-600">
-            Paketi teslim alırken ilan sahibinin teslimat detayındaki QR kodunu telefonunuzla okutun. Açılan sayfada onay verdiğinizde teslimat yola çıkar.
-          </p>
-        </div>
-
-        <!-- Earnings preview -->
-        <div class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50 p-4">
-          <div class="flex items-center gap-2">
-            <PhCoins class="size-5 text-amber-500" weight="duotone" />
-            <span class="text-sm text-stone-600">Teslimat Kazancı</span>
-          </div>
-          <TokenAmount :amount="earnedAmount" size="md" />
-        </div>
-
-        <a class="btn-primary w-full justify-center" :href="pickupConfirmUrl" target="_blank" rel="noopener">
-          <PhPackage class="size-4" weight="bold" />
-          QR Onay Sayfasını Aç
-        </a>
-        <button
-          class="w-full rounded-lg border border-orange-200 bg-orange-50 py-2.5 text-sm font-medium text-orange-700 transition hover:bg-orange-100"
-          @click="confirmPickup"
-        >
-          QR Okutamıyorum, Cüzdanımla Onaylayayım
+        <button class="btn-primary w-full justify-center" :disabled="processing || delivery.courierFunded || !indexerReady" @click="fund">
+          <PhCircleNotch v-if="processing" class="size-4 animate-spin" />
+          {{ delivery.courierFunded ? 'Kurye payı fonlandı' : 'Kurye Payını Fonla' }}
         </button>
-        <button class="w-full rounded-lg border border-stone-200 py-2.5 text-sm text-stone-600 transition hover:bg-stone-50" @click="refreshDelivery">
-          Durumu Yenile
+      </section>
+
+      <section v-else-if="delivery.chainState === 'ReadyForPickup'" class="card space-y-4 rounded-xl bg-white p-5">
+        <div>
+          <h2 class="font-semibold text-stone-900">Müşteri kabulünü doğrula</h2>
+          <p class="mt-1 text-xs leading-relaxed text-stone-500">Müşterinin kısa ömürlü EIP-712 kabul paketini yapıştırın. Paket URL’ye veya kalıcı depolamaya yazılmaz.</p>
+        </div>
+        <AcceptanceQrScanner @scanned="acceptancePackage = $event" />
+        <textarea v-model.trim="acceptancePackage" rows="6" class="input resize-none font-mono text-[10px]" placeholder="İmzalı kabul paketi JSON" />
+        <button class="btn-primary w-full justify-center" :disabled="processing || !acceptancePackage || !indexerReady" @click="confirmPickup">
+          <PhCircleNotch v-if="processing" class="size-4 animate-spin" />
+          <PhPackage v-else class="size-4" weight="bold" />
+          Paketi Teslim Aldım
         </button>
-        <p v-if="receiveError" class="flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-          <PhWarning class="size-3.5 shrink-0" weight="fill" /> {{ receiveError }}
-        </p>
-      </div>
+      </section>
 
-      <!-- PICKUP CONFIRMING -->
-      <div v-else-if="phase === 'pickup_confirming'" class="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center">
-        <div class="relative">
-          <div class="flex size-20 items-center justify-center rounded-full bg-orange-100">
-            <PhPackage class="size-10 text-orange-500" weight="duotone" />
-          </div>
-          <div class="absolute -right-1 -top-1 flex size-7 items-center justify-center rounded-full bg-orange-400">
-            <PhCircleNotch class="size-4 animate-spin text-white" weight="bold" />
-          </div>
-        </div>
+      <section v-else-if="delivery.chainState === 'InTransit'" class="card space-y-4 rounded-xl bg-white p-5">
         <div>
-          <h2 class="text-lg font-bold text-stone-900">Teslim Alım Kaydediliyor</h2>
-          <p class="mt-1 text-sm text-stone-500">Blockchain'e yazılıyor…</p>
-          <p class="mt-2 text-xs text-purple-600">⚡ Monad — 400ms finality</p>
+          <h2 class="font-semibold text-stone-900">Teslim kanıtı</h2>
+          <p class="mt-1 text-xs leading-relaxed text-stone-500">Alıcıdan aldığınız kod backend’de doğrulanır. Ham OTP hiçbir zaman kontrata gönderilmez.</p>
         </div>
-      </div>
-
-      <!-- DELIVERY QR -->
-      <div v-else-if="phase === 'delivery_qr'" class="space-y-5">
-        <div>
-          <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-green-600">Paket Yolda</p>
-          <h1 class="text-2xl font-bold text-stone-900">Teslimat QR</h1>
-          <p class="mt-1 text-sm text-stone-500">
-            Alıcı bu QR kodu tarar, göndericinin verdiği teslim kodunu girer ve ödeme serbest kalır.
-          </p>
-        </div>
-
-        <!-- Progress indicator -->
-        <div class="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 p-3">
-          <PhCheckCircle class="size-5 shrink-0 text-green-500" weight="fill" />
-          <p class="text-xs text-stone-600">Paket teslim alındı. Şimdi {{ delivery.dropoffAddress }} adresine götür.</p>
-        </div>
-
-        <!-- QR Code -->
-        <div class="flex flex-col items-center gap-4 rounded-xl border-2 border-dashed border-green-200 bg-green-50 p-6">
-          <div class="flex items-center gap-2 text-sm font-semibold text-green-700">
-            <PhTruck class="size-4" weight="bold" />
-            Alıcı İçin — Teslimat QR
-          </div>
-          <div class="rounded-2xl bg-white p-3 shadow-md">
-            <QrCode :value="deliveryConfirmUrl" :size="200" />
-          </div>
-          <div class="rounded-lg bg-white px-4 py-2 shadow-sm">
-            <p class="text-center font-mono text-sm font-bold tracking-widest text-stone-900">{{ verifyCode }}-DEL</p>
-            <p class="mt-0.5 text-center text-[10px] text-stone-400">QR Referansı</p>
-          </div>
-        </div>
-
-        <!-- Earnings preview -->
-        <div class="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <div>
-            <p class="text-xs text-amber-600">Onaylandığında kazanacaksın</p>
-            <div class="mt-0.5">
-              <TokenAmount :amount="earnedAmount" size="md" />
-            </div>
-          </div>
-          <PhCoins class="size-8 text-amber-400" weight="duotone" />
-        </div>
-
-        <a class="btn-primary w-full justify-center" :href="deliveryConfirmUrl" target="_blank" rel="noopener">
-          <PhTruck class="size-4" weight="bold" />
-          Alıcı Onay Sayfasını Aç
-        </a>
-        <button class="w-full rounded-lg border border-stone-200 py-2.5 text-sm text-stone-600 transition hover:bg-stone-50" @click="refreshDelivery">
-          Durumu Yenile
+        <input v-model.trim="deliveryCode" type="password" autocomplete="one-time-code" maxlength="64" class="input text-center font-mono tracking-widest" placeholder="Teslim kodu" />
+        <button class="btn-primary w-full justify-center" :disabled="processing || !deliveryCode || !indexerReady" @click="submitPod">
+          <PhCircleNotch v-if="processing" class="size-4 animate-spin" />
+          <PhCheckCircle v-else class="size-4" weight="fill" />
+          Teslim Kanıtını Gönder
         </button>
-      </div>
+      </section>
 
-      <!-- SUCCESS -->
-      <div v-else class="flex min-h-[60vh] flex-col items-center gap-6 pt-10 text-center">
-        <div class="flex size-24 items-center justify-center rounded-full bg-green-100">
-          <PhCoins class="size-14 text-amber-500" weight="duotone" />
-        </div>
+      <section v-else-if="delivery.chainState === 'ReturnRequired'" class="card space-y-4 rounded-xl bg-white p-5">
         <div>
-          <p class="text-xs font-semibold uppercase tracking-widest text-green-600">Ödeme Alındı</p>
-          <h2 class="mt-1 text-3xl font-extrabold text-stone-900">{{ earnedAmount }} MON</h2>
-          <p class="mt-1 text-sm text-stone-500">Cüzdanınıza başarıyla aktarıldı</p>
+          <h2 class="font-semibold text-stone-900">Müşterinin iade kabulünü doğrula</h2>
+          <p class="mt-1 text-xs leading-relaxed text-stone-500">Paketi müşteriye iade ettiğinizde imzalı iade kabul paketini okutun veya yapıştırın.</p>
         </div>
+        <AcceptanceQrScanner @scanned="acceptancePackage = $event" />
+        <textarea v-model.trim="acceptancePackage" rows="6" class="input resize-none font-mono text-[10px]" placeholder="İmzalı iade kabul paketi JSON" />
+        <button class="btn-primary w-full justify-center" :disabled="processing || !acceptancePackage || !indexerReady" @click="confirmReturn">
+          <PhCircleNotch v-if="processing" class="size-4 animate-spin" />
+          <PhPackage v-else class="size-4" weight="bold" />
+          İadeyi Teslim Ettim
+        </button>
+      </section>
 
-        <div class="w-full max-w-xs space-y-3">
-          <div v-if="txHash" class="rounded-xl border border-stone-200 bg-stone-50 p-4 text-left">
-            <div class="mb-2 flex items-center justify-between">
-              <p class="text-xs font-semibold text-stone-500">TX Hash</p>
-              <button
-                class="flex items-center gap-1 text-xs text-orange-600 transition hover:text-orange-500"
-                @click="copyHash"
-              >
-                <PhCopy class="size-3" weight="bold" />
-                {{ copied ? 'Kopyalandı!' : 'Kopyala' }}
-              </button>
-            </div>
-            <p class="break-all font-mono text-[10px] text-stone-600">{{ txHash }}</p>
-            <a
-              :href="txExplorerUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="mt-2 inline-block text-[11px] font-semibold text-purple-600 hover:text-purple-500"
-            >
-              Explorer'da Gor
-            </a>
-          </div>
-          <div class="flex justify-between rounded-xl border border-green-200 bg-green-50 p-3 text-sm">
-            <span class="text-stone-500">Yeni Bakiye</span>
-            <span class="font-bold text-stone-900">{{ wallet.balance.toFixed(2) }} MON</span>
-          </div>
-          <div class="flex justify-between rounded-xl border border-purple-200 bg-purple-50 p-3 text-sm">
-            <span class="text-stone-500">Ağ</span>
-            <span class="font-semibold text-purple-700">Monad Testnet</span>
-          </div>
-        </div>
-
-        <div class="flex w-full max-w-xs flex-col gap-2">
-          <button class="btn-primary w-full justify-center" @click="router.push('/dashboard')">
-            <PhArrowRight class="size-4" weight="bold" />
-            Panele Dön
-          </button>
-          <button
-            class="w-full rounded-lg border border-stone-200 py-2.5 text-sm text-stone-600 transition hover:bg-stone-50"
-            @click="router.push('/deliveries')"
-          >
-            Tüm Teslimatlar
-          </button>
-        </div>
+      <div v-else-if="delivery.chainState === 'DeliveredPending'" class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+        Teslim kanıtı kaydedildi. Müşteri onayı veya challenge süresinin dolması bekleniyor.
       </div>
-    </template>
+      <div v-else-if="delivery.chainState === 'Completed'" class="rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-700">
+        <PhCheckCircle class="mr-2 inline size-5" weight="fill" /> Teslimat tamamlandı.
+      </div>
+      <div v-else-if="delivery.chainState === 'Returned'" class="rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm font-semibold text-purple-700">
+        <PhCheckCircle class="mr-2 inline size-5" weight="fill" /> İade tamamlandı.
+      </div>
+      <div v-else class="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+        <PhWarning class="mt-0.5 size-4 shrink-0" weight="fill" /> Bu zincir durumunda kurye aksiyonu yok.
+      </div>
+
+      <p v-if="!indexerReady" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+        Finalized indexer durumu {{ delivery.indexing.status }}. State-changing işlem projection hazır olana kadar kapalıdır.
+      </p>
+
+      <p v-if="message" class="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">{{ message }}</p>
+      <p v-if="error" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
+    </div>
   </div>
 </template>

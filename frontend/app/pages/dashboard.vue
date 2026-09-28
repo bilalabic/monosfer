@@ -4,6 +4,8 @@ definePageMeta({ requiresAuth: true })
 import { ref, computed, onMounted, watch, type Component } from 'vue'
 import { useWalletStore } from '@/stores/useWalletStore'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
+import { vehicleLabel, type VehicleType } from '@/composables/useVehicleMeta'
+import type { UserRole } from '@/api/auth'
 import {
   PhUser, PhPackage, PhClockCounterClockwise, PhPhone, PhEnvelopeSimple,
   PhStar, PhTruck, PhMapPin, PhCheckCircle, PhClock,
@@ -21,6 +23,8 @@ const activeTab = ref<TabKey>('tracking')
 
 const editPhone = ref(wallet.userProfile.phone)
 const editName = ref(wallet.userProfile.name)
+const editRole = ref<UserRole>(wallet.userProfile.role)
+const editVehicleType = ref<VehicleType | null>(wallet.userProfile.vehicleType)
 const savedMsg = ref('')
 const saveError = ref('')
 const savingProfile = ref(false)
@@ -28,11 +32,20 @@ const approvingBidId = ref('')
 const incomingActionError = ref('')
 const incomingActionSuccess = ref('')
 
+const vehicleTypeOptions: VehicleType[] = ['on_foot', 'bicycle', 'motorcycle', 'car']
+
 watch(
-  () => ({ name: wallet.userProfile.name, phone: wallet.userProfile.phone }),
-  ({ name, phone }) => {
+  () => ({
+    name: wallet.userProfile.name,
+    phone: wallet.userProfile.phone,
+    role: wallet.userProfile.role,
+    vehicleType: wallet.userProfile.vehicleType,
+  }),
+  ({ name, phone, role, vehicleType }) => {
     editName.value = name
     editPhone.value = phone
+    editRole.value = role
+    editVehicleType.value = vehicleType
   },
   { immediate: true },
 )
@@ -42,7 +55,14 @@ async function saveSettings() {
   saveError.value = ''
   savingProfile.value = true
   try {
-    await wallet.updateProfile({ phone: editPhone.value, name: editName.value })
+    await wallet.updateProfile({
+      displayName: editName.value,
+      phone: editPhone.value,
+      role: editRole.value,
+      courierProfile: editRole.value === 'courier'
+        ? { vehicleType: editVehicleType.value ?? 'on_foot' }
+        : null,
+    })
     savedMsg.value = 'Ayarlar kaydedildi!'
     setTimeout(() => savedMsg.value = '', 3000)
   } catch (error) {
@@ -53,7 +73,10 @@ async function saveSettings() {
 }
 
 const activeDelivery = computed(() => deliveryStore.deliveries.find(d => d.status === 'in_progress'))
-const pastDeliveries = computed(() => deliveryStore.deliveries.filter(d => d.status === 'completed'))
+const pastDeliveries = computed(() => {
+  const terminalStatuses = ['completed', 'returned', 'resolved', 'cancelled', 'expired']
+  return deliveryStore.deliveries.filter(delivery => terminalStatuses.includes(delivery.status))
+})
 const myBidRows = computed(() => {
   const address = wallet.address.toLowerCase()
   if (!address) return []
@@ -118,12 +141,6 @@ const roleConfig: Record<string, { label: string; color: string; icon: Component
   recipient: { label: 'Alıcı',     color: 'bg-green-100 text-green-700', icon: PhBell },
   system:    { label: 'Sistem',    color: 'bg-stone-100 text-stone-600', icon: PhShieldCheck },
 }
-
-const profileRoleLabel = computed(() => {
-  if (wallet.userProfile.role === 'courier') return 'Kurye'
-  if (wallet.userProfile.role === 'both') return 'Müşteri + Kurye'
-  return 'Müşteri'
-})
 
 const statusLabel: Record<string, string> = {
   open: 'Teklif bekliyor',
@@ -508,11 +525,24 @@ onMounted(() => {
 
               <div>
                 <label class="mb-1.5 block text-sm font-medium text-stone-700">Hesap Türü</label>
-                <div class="flex items-center gap-2 rounded-lg border border-stone-100 bg-stone-50 px-3 py-2.5">
-                  <PhHandshake class="size-4 text-stone-400" />
-                  <span class="text-sm text-stone-700 capitalize">
-                    {{ profileRoleLabel }}
-                  </span>
+                <div class="relative">
+                  <PhHandshake class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
+                  <select v-model="editRole" class="input pl-10">
+                    <option value="customer">Müşteri</option>
+                    <option value="courier">Kurye</option>
+                  </select>
+                </div>
+              </div>
+
+              <div v-if="editRole === 'courier'">
+                <label class="mb-1.5 block text-sm font-medium text-stone-700">Araç Türü</label>
+                <div class="relative">
+                  <PhTruck class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
+                  <select v-model="editVehicleType" class="input pl-10">
+                    <option v-for="type in vehicleTypeOptions" :key="type" :value="type">
+                      {{ vehicleLabel(type) }}
+                    </option>
+                  </select>
                 </div>
               </div>
 

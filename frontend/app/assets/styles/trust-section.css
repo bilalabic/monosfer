@@ -1,0 +1,114 @@
+/* 4-layer trust showcase: same dark, isometric visual language as the delivery
+   journey section above it, but a static, auto-cycling panel — no pinned scroll. */
+.trust-section {
+  --trust-bg: #141918;
+  --trust-surface: #1d2421;
+  --trust-border: #ffffff14;
+  --trust-text: #f8f8f2;
+  --trust-muted: #a6afa9;
+  --trust-orange: var(--color-orange-400);
+  --trust-green: #b7e6bc;
+  --trust-ease: cubic-bezier(.22, 1, .36, 1);
+  padding: 64px 20px;
+  background: hsl(var(--background));
+}
+.trust-container { max-width: 1152px; margin: 0 auto; }
+.trust-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.trust-kicker { display: flex; align-items: center; gap: 8px; color: var(--color-orange-600); font-size: 11px; font-weight: 700; letter-spacing: .17em; margin-bottom: 14px; }
+.trust-kicker > span { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.trust-heading h2 { font-family: var(--font-heading); font-size: clamp(28px, 3vw, 38px); font-weight: 700; line-height: 1.15; letter-spacing: -.055em; color: hsl(var(--foreground)); }
+.trust-heading h2 > span { color: var(--color-orange-500); }
+.trust-heading > p { flex-shrink: 0; max-width: 380px; color: hsl(var(--muted-foreground)); font-size: 13px; line-height: 1.8; }
+
+.trust-panel { overflow: hidden; border-radius: 24px; background: var(--trust-bg); color: var(--trust-text); border: 1px solid var(--trust-border); box-shadow: 0 24px 60px -30px #17251d55; }
+.trust-topline { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 20px 28px; border-bottom: 1px solid var(--trust-border); }
+.trust-topline > span:first-child { display: flex; align-items: center; gap: 9px; font-size: 10px; letter-spacing: .15em; font-weight: 600; }
+.trust-topline > span:first-child svg { width: 17px; height: 17px; color: var(--trust-orange); }
+.trust-tags { display: flex; flex-wrap: wrap; gap: 14px; }
+.trust-tags > span { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--trust-muted); }
+.trust-tags i { display: block; width: 5px; height: 5px; border-radius: 50%; background: var(--trust-orange); font-style: normal; }
+
+.trust-body { display: grid; grid-template-columns: 1fr 1.05fr; min-height: 380px; }
+.trust-scene { position: relative; isolation: isolate; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 32px; border-right: 1px solid var(--trust-border); }
+.trust-scene-glow { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, #eb8c3320, transparent 65%); }
+.trust-scene-inner { position: relative; display: flex; flex-direction: column; align-items: center; gap: 18px; z-index: 1; }
+.trust-scene-caption { max-width: 220px; text-align: center; font-size: 11px; line-height: 1.6; color: var(--trust-muted); }
+
+/* Layer 1 — escrow vault: idle float + a one-shot "locked" badge that pops in and stays. */
+.trust-vault-wrap { position: relative; }
+.trust-vault { display: grid; place-items: center; width: 96px; height: 96px; border-radius: 26px; background: linear-gradient(135deg, #fb923c, #ea6a12); color: #2a1704; box-shadow: 0 20px 40px -12px #ea6a1266; animation: trust-levitate 4.5s ease-in-out infinite; }
+.trust-vault svg { width: 42px; height: 42px; }
+.trust-vault-badge { position: absolute; bottom: -6px; right: -6px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--trust-green); color: var(--trust-bg); border: 4px solid var(--trust-surface); opacity: 0; animation: trust-pop .5s var(--trust-ease) .6s both; }
+.trust-vault-badge svg { width: 14px; height: 14px; }
+
+/* Layer 2 — two-step approval: check, line fills, second check — plays once, then holds. */
+.trust-approval { display: flex; align-items: center; gap: 10px; }
+.trust-approval-step { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 92px; padding: 14px 10px; border: 1px solid var(--trust-border); border-radius: 14px; background: linear-gradient(130deg, #2c352e, #1e2521); }
+.trust-approval-avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #ffffff0c; color: var(--trust-green); }
+.trust-approval-avatar svg { width: 18px; height: 18px; }
+.trust-approval-label { font-size: 8px; text-align: center; color: var(--trust-muted); }
+.trust-approval-check { position: absolute; top: -8px; right: -8px; display: grid; place-items: center; width: 20px; height: 20px; color: var(--trust-bg); background: var(--trust-green); border-radius: 50%; opacity: 0; animation: trust-pop .5s var(--trust-ease) .5s both; }
+.trust-approval-check svg { width: 11px; height: 11px; }
+.trust-approval-line { position: relative; width: 34px; height: 2px; background: #ffffff1a; border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+.trust-approval-line > span { position: absolute; inset: 0; background: var(--trust-green); transform: scaleX(0); transform-origin: left; animation: trust-line-fill .8s var(--trust-ease) .5s both; }
+
+/* Layer 3 — collateral: coin flies from courier into the shield once, shield settles lit. */
+.trust-deposit { position: relative; display: flex; align-items: center; gap: 28px; }
+.trust-deposit-courier { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #3a332a, #241f1a); border: 1px solid var(--trust-border); color: var(--trust-orange); }
+.trust-deposit-courier svg { width: 26px; height: 26px; }
+.trust-deposit-coin { position: absolute; left: 62px; top: 50%; width: 26px; height: 26px; translate: 0 -50%; opacity: 0; filter: drop-shadow(0 4px 8px #0005); animation: trust-coin-drop 1.2s var(--trust-ease) .4s both; }
+.trust-deposit-shield { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 20px; background: linear-gradient(135deg, #2f3a2f, #1c2420); border: 1px solid var(--trust-green); color: var(--trust-green); animation: trust-shield-receive .6s var(--trust-ease) 1.3s both; }
+.trust-deposit-shield svg { width: 30px; height: 30px; }
+
+/* Layer 4 — jury: an ongoing deliberation, so this one keeps looping while shown. */
+.trust-jury { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 168px; padding-top: 34px; }
+.trust-juror { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #ffffff0a; color: var(--trust-muted); animation: trust-juror-pulse 2.8s ease-in-out infinite; animation-delay: calc(var(--juror-index) * -.3s); }
+.trust-juror svg { width: 18px; height: 18px; }
+.trust-juror.is-voting { color: var(--trust-orange); background: #fb923c1c; }
+.trust-gavel { position: absolute; left: 50%; top: 0; width: 30px; height: 30px; translate: -50% 0; color: var(--trust-orange); transform-origin: 20% 80%; animation: trust-gavel-strike 2.8s ease-in-out infinite; }
+
+.trust-list { display: grid; grid-template-rows: repeat(4, 1fr); }
+.trust-item { position: relative; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 6px; padding: 16px 28px; text-align: left; cursor: pointer; border-bottom: 1px solid var(--trust-border); transition: background .3s; }
+.trust-item:last-child { border-bottom: none; }
+.trust-item:hover { background: #ffffff04; }
+.trust-item.is-active { background: linear-gradient(#fb923c12, transparent); }
+.trust-item-track { position: absolute; top: 0; left: 0; right: 0; height: 2px; background: #ffffff1a; }
+.trust-item-track > span { display: block; height: 100%; width: 100%; background: var(--trust-orange); transform-origin: left; }
+.trust-item-top { display: flex; align-items: center; gap: 8px; }
+.trust-item-icon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--trust-border); color: var(--trust-muted); transition: background .3s, color .3s, border-color .3s; }
+.trust-item-icon svg { width: 14px; height: 14px; }
+.trust-item.is-active .trust-item-icon { background: var(--trust-orange); border-color: var(--trust-orange); color: var(--trust-bg); }
+.trust-item-num { font-family: var(--font-heading); font-size: 9px; letter-spacing: .1em; color: var(--trust-muted); }
+.trust-item-title { font-size: 13px; font-weight: 500; color: var(--trust-text); }
+.trust-item-desc { font-size: 11px; line-height: 1.6; color: var(--trust-muted); max-width: 320px; opacity: 1; transition: opacity .25s ease; }
+.trust-item-desc.is-hidden { opacity: 0; }
+
+.trust-scene-enter-active, .trust-scene-leave-active { transition: opacity .25s ease, transform .4s var(--trust-ease); }
+.trust-scene-enter-from { opacity: 0; transform: translateY(16px) scale(.95); }
+.trust-scene-leave-to { opacity: 0; transform: translateY(-10px) scale(.97); }
+
+@keyframes trust-levitate { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+@keyframes trust-pop { 0% { opacity: 0; transform: scale(.4); } 60% { opacity: 1; transform: scale(1.15); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes trust-line-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes trust-coin-drop { 0% { translate: 0 -50%; opacity: 0; } 15% { opacity: 1; } 88% { opacity: 1; } 100% { translate: 46px -50%; opacity: 0; } }
+@keyframes trust-shield-receive { 0% { box-shadow: 0 0 0 0 #b7e6bc00; } 60% { box-shadow: 0 0 0 10px #b7e6bc30; } 100% { box-shadow: 0 0 0 3px #b7e6bc40; } }
+@keyframes trust-juror-pulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes trust-gavel-strike { 0%, 20% { transform: translateX(-50%) rotate(-28deg); } 30% { transform: translateX(-50%) rotate(6deg); } 40%, 100% { transform: translateX(-50%) rotate(-28deg); } }
+
+@media (max-width: 900px) {
+  .trust-body { grid-template-columns: 1fr; }
+  .trust-scene { border-right: none; border-bottom: 1px solid var(--trust-border); padding: 28px; min-height: 220px; }
+}
+@media (max-width: 640px) {
+  .trust-heading { flex-direction: column; align-items: start; }
+  .trust-heading > p { max-width: none; }
+  .trust-topline { flex-direction: column; align-items: flex-start; }
+  .trust-item { padding: 14px 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trust-section *, .trust-section *::before { animation: none !important; transition: none !important; }
+  .trust-vault-badge, .trust-approval-check { opacity: 1; }
+  .trust-deposit-coin { opacity: 0; }
+  .trust-deposit-shield { box-shadow: 0 0 0 3px #b7e6bc40; }
+  .trust-approval-line > span { transform: scaleX(1); }
+}

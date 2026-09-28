@@ -303,6 +303,8 @@
   .journey-section *, .journey-section *::before { animation: none !important; transition: none !important; }
   .journey-transfer-coin, .journey-confetti { display: none; }
   .journey-map-route { stroke-dashoffset: 0; }
+  .journey-phone-status, .journey-phone-check { opacity: 1; }
+  .journey-qr-scan { display: none; }
 }
 
 /* Full-viewport chapters follow native page scroll. The navbar hides itself

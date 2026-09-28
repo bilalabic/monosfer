@@ -14,7 +14,7 @@ async function handleMetaMask() {
   const result = await mm.connect()
   if (!result) return
   try {
-    await wallet.connectMetaMask(result.address)
+    await wallet.authenticate(result.address, mm.signMessage)
     router.push('/dashboard')
   } catch (e) {
     loginError.value = e instanceof Error ? e.message : 'Giriş yapılamadı, tekrar deneyin.'

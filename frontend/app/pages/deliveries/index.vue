@@ -10,7 +10,7 @@ const store = useDeliveryStore()
 const wallet = useWalletStore()
 const router = useRouter()
 
-type Filter = 'all' | 'open' | 'in_progress' | 'completed'
+type Filter = 'all' | 'open' | 'in_progress' | 'terminal'
 type LiveScenario = {
   key: 'sender' | 'courier'
   deliveryId: string
@@ -45,11 +45,11 @@ useSeoMeta({
 const liveScenarios = computed<LiveScenario[]>(() => {
   const addr = wallet.address.toLowerCase()
   const senderDelivery = store.deliveries.find(d =>
-    d.status === 'open' &&
+    d.chainState === 'AwaitingFunding' &&
     d.senderId?.toLowerCase() === addr &&
-    d.escrowAmount <= 0,
+    !d.customerFunded,
   )
-  const courierDelivery = store.deliveries.find(d => d.status === 'in_progress' && d.selectedBidId && d.assignedCourierId === addr)
+  const courierDelivery = store.deliveries.find(d => ['AwaitingFunding', 'ReadyForPickup', 'InTransit', 'DeliveredPending'].includes(d.chainState) && d.selectedBidId && d.assignedCourierId === addr)
   const scenarios: LiveScenario[] = []
 
   if (senderDelivery) {
@@ -105,13 +105,16 @@ const filters: { key: Filter; label: string }[] = [
   { key: 'all', label: 'Aktif' },
   { key: 'open', label: 'Açık' },
   { key: 'in_progress', label: 'Devam Eden' },
-  { key: 'completed', label: 'Tamamlanan' },
+  { key: 'terminal', label: 'Sonuçlanan' },
 ]
 
 const filtered = computed(() => {
   let list = store.deliveries
+  const terminalStatuses = ['completed', 'returned', 'resolved', 'cancelled', 'expired']
   if (filter.value === 'all') {
-    list = list.filter(d => d.status !== 'completed')
+    list = list.filter(d => !terminalStatuses.includes(d.status))
+  } else if (filter.value === 'terminal') {
+    list = list.filter(d => terminalStatuses.includes(d.status))
   } else {
     list = list.filter(d => d.status === filter.value)
   }

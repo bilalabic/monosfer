@@ -1,40 +1,84 @@
-export function getToken(): string | null {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem('auth_token')
+let csrfToken = ''
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code?: string,
+    readonly requestId?: string,
+    readonly retryAfter?: number,
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
 }
 
-export function setToken(token: string) {
-  if (typeof window === 'undefined') return
-  localStorage.setItem('auth_token', token)
+export function setCsrfToken(token?: string | null) {
+  csrfToken = token ?? ''
 }
 
-export function clearToken() {
-  if (typeof window === 'undefined') return
-  localStorage.removeItem('auth_token')
+export function clearSessionState() {
+  csrfToken = ''
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const base = useRuntimeConfig().public.apiBase
-  const token = getToken()
-  const res = await fetch(`${base}${path}`, {
-    ...options,
+export function createIdempotencyKey() {
+  if (typeof crypto === 'undefined' || !crypto.randomUUID) {
+    throw new Error('Güvenli istek kimliği üretilemedi')
+  }
+  return crypto.randomUUID()
+}
+
+interface ApiOptions {
+  headers?: Record<string, string>
+  idempotencyKey?: string
+  signal?: AbortSignal
+}
+
+async function request<T>(path: string, init: RequestInit = {}, options: ApiOptions = {}): Promise<T> {
+  const base = String(useRuntimeConfig().public.apiBase).replace(/\/$/, '')
+  const absoluteBase = import.meta.server && base.startsWith('/') ? `${useRequestURL().origin}${base}` : base
+  const method = (init.method ?? 'GET').toUpperCase()
+  const mutating = !['GET', 'HEAD', 'OPTIONS'].includes(method)
+  const response = await fetch(`${absoluteBase}${path}`, {
+    ...init,
+    credentials: 'include',
+    signal: options.signal,
     headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers as Record<string, string> || {}),
+      ...(init.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...(mutating && csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+      ...(options.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : {}),
+      ...options.headers,
     },
   })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err?.error?.message || res.statusText || 'API hatası')
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({})) as {
+      error?: { code?: string; message?: string; requestId?: string }
+    }
+    if (response.status === 401) {
+      clearSessionState()
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('monosfer:unauthorized'))
+    }
+    const retryAfter = Number(response.headers.get('retry-after'))
+    throw new ApiError(
+      payload.error?.message || response.statusText || 'API isteği başarısız oldu',
+      response.status,
+      payload.error?.code,
+      payload.error?.requestId,
+      Number.isFinite(retryAfter) ? retryAfter : undefined,
+    )
   }
-  return res.json()
+
+  if (response.status === 204) return undefined as T
+  return response.json() as Promise<T>
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
-  patch: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'PATCH', body: body !== undefined ? JSON.stringify(body) : undefined }),
+  get: <T>(path: string, options?: ApiOptions) => request<T>(path, {}, options),
+  post: <T>(path: string, body: unknown, options?: ApiOptions) =>
+    request<T>(path, { method: 'POST', body: JSON.stringify(body) }, options),
+  patch: <T>(path: string, body: unknown, options?: ApiOptions) =>
+    request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }, options),
+  delete: <T = void>(path: string, options?: ApiOptions) =>
+    request<T>(path, { method: 'DELETE' }, options),
 }

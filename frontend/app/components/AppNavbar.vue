@@ -1,138 +1,120 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { PhPackage as Package, PhTrophy as Trophy, PhPlus as Plus, PhSignOut as LogOut, PhList as Menu, PhX as X, PhUser as User, PhMapPin as MapPin, PhNavigationArrow as Navigation } from '@phosphor-icons/vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { PhArrowUpRight, PhList, PhMapPin, PhNavigationArrow, PhPackage, PhPath, PhPlus, PhSignOut, PhTrophy, PhUser, PhX } from '@phosphor-icons/vue'
 import { useWalletStore } from '@/stores/useWalletStore'
 import { useNavbarVisibility } from '@/composables/useNavbarVisibility'
 
 const wallet = useWalletStore()
 const router = useRouter()
+const route = useRoute()
 const mobileOpen = ref(false)
+const header = ref<HTMLElement | null>(null)
+const menuToggle = ref<HTMLButtonElement | null>(null)
 const navbarHidden = useNavbarVisibility()
 
 const navLinks = [
-  { to: '/deliveries', label: 'Teslimatlar', icon: Package },
-  { to: '/couriers', label: 'Kuryeler', icon: Trophy },
-  { to: '/map', label: 'Harita', icon: MapPin },
+  { to: '/deliveries', label: 'Teslimatlar', description: 'Yola çıkacak paketleri keşfet', icon: PhPackage },
+  { to: '/couriers', label: 'Kuryeler', description: 'Teslimat ağıyla tanış', icon: PhTrophy },
+  { to: '/map', label: 'Harita', description: 'Yakınındaki teslimatları gör', icon: PhMapPin },
 ]
-
 const authLinks = [
-  { to: '/kuryem-nerede', label: 'Kuryem Nerede', icon: Navigation },
-  { to: '/dashboard', label: 'Panel', icon: User },
+  { to: '/kuryem-nerede', label: 'Kuryem Nerede', description: 'Teslimatının durumunu takip et', icon: PhNavigationArrow },
+  { to: '/dashboard', label: 'Panel', description: 'Tüm işlemlerin tek yerde', icon: PhUser },
 ]
+const guideLink = { to: '/#how-it-works', label: 'Nasıl çalışır?', description: 'Altı adımda teslimat yolculuğu', icon: PhPath }
+const visibleNavLinks = computed(() => [...navLinks, ...(wallet.connected ? authLinks : [guideLink])])
+const accountName = computed(() => wallet.userProfile.name || wallet.displayAddress())
 
-const visibleNavLinks = computed(() => wallet.connected ? [...navLinks, ...authLinks] : navLinks)
-
-function handleCreate() {
-  mobileOpen.value = false
-  router.push('/create')
+function isActive(to: string) {
+  return to.includes('#') ? route.fullPath === to : route.path === to || route.path.startsWith(`${to}/`)
 }
+function closeMenu(restoreFocus = false) {
+  mobileOpen.value = false
+  if (restoreFocus) menuToggle.value?.focus()
+}
+function onOutsidePointer(event: PointerEvent) {
+  if (mobileOpen.value && event.target instanceof Node && !header.value?.contains(event.target)) closeMenu()
+}
+function onFocusOut(event: FocusEvent) {
+  if (event.relatedTarget instanceof Node && !header.value?.contains(event.relatedTarget)) closeMenu()
+}
+async function handleDisconnect() {
+  closeMenu()
+  await wallet.disconnect()
+  await router.push('/')
+}
+watch(() => route.fullPath, () => closeMenu())
+watch(navbarHidden, hidden => { if (hidden) closeMenu() })
+onMounted(() => document.addEventListener('pointerdown', onOutsidePointer))
+onUnmounted(() => document.removeEventListener('pointerdown', onOutsidePointer))
 </script>
 
 <template>
   <header
-    class="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-stone-200 transition-transform duration-300 ease-out"
-    :class="navbarHidden ? '-translate-y-full' : 'translate-y-0'"
+    ref="header" class="site-header" :class="{ 'is-hidden': navbarHidden, 'has-session': wallet.connected, 'is-menu-open': mobileOpen }"
+    :inert="navbarHidden" @keydown.esc="closeMenu(true)" @focusout="onFocusOut"
   >
-    <div class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5 sm:px-8">
-      <!-- Logo -->
-      <NuxtLink to="/" class="flex items-center gap-2.5 group" @click="mobileOpen = false">
-        <img
-          src="/gemini-svg-_1_.png"
-          alt="Delivera"
-          class="size-8 rounded-xl object-cover shadow-sm transition-transform group-hover:scale-105"
-        >
-        <span class="text-lg font-bold tracking-tight text-stone-900">Delivera</span>
-      </NuxtLink>
+    <div class="site-nav">
+      <nuxt-link to="/" class="site-brand" aria-label="Delivera ana sayfa" @click="closeMenu()">
+        <span class="site-brand-mark"><img src="/gemini-svg-_1_.png" alt="" width="38" height="38"></span>
+        <span class="site-brand-name">Delivera<span>.</span></span>
+      </nuxt-link>
 
-      <!-- Desktop Nav -->
-      <nav class="hidden items-center gap-0.5 md:flex">
-        <NuxtLink
-          v-for="link in visibleNavLinks"
-          :key="link.to"
-          :to="link.to"
-          class="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium text-stone-500 transition-all hover:bg-stone-100 hover:text-stone-900"
-          active-class="bg-stone-100 text-stone-900"
+      <nav class="site-nav-links" aria-label="Ana gezinme">
+        <nuxt-link
+          v-for="link in visibleNavLinks" :key="link.to" :to="link.to"
+          class="site-nav-link" :class="{ 'is-active': isActive(link.to) }" :aria-current="isActive(link.to) ? 'page' : undefined"
         >
-          <component :is="link.icon" class="size-4" weight="bold" />
-          {{ link.label }}
-        </NuxtLink>
+          <component :is="link.icon" weight="duotone" aria-hidden="true" />
+          <span>{{ link.label }}</span>
+        </nuxt-link>
       </nav>
 
-      <!-- Actions -->
-      <div class="flex items-center gap-2.5">
+      <div class="site-nav-actions">
+        <template v-if="!wallet.connected">
+          <nuxt-link to="/login" class="site-nav-login">Giriş yap</nuxt-link>
+          <nuxt-link to="/register" class="site-nav-cta">Kayıt ol <ph-arrow-up-right weight="bold" aria-hidden="true" /></nuxt-link>
+        </template>
+        <template v-else>
+          <nuxt-link to="/create" class="site-nav-cta site-nav-create"><ph-plus weight="bold" aria-hidden="true" /> Teslimat oluştur</nuxt-link>
+          <div class="site-account">
+            <nuxt-link to="/dashboard" class="site-account-profile" :aria-label="`${accountName}, hesabımı aç`">
+              <span class="site-account-avatar"><ph-user weight="duotone" aria-hidden="true" /><i /></span>
+              <span class="site-account-info"><strong>{{ accountName }}</strong><small>{{ wallet.balance }} MON</small></span>
+            </nuxt-link>
+            <button type="button" class="site-account-exit" aria-label="Oturumu kapat" @click="handleDisconnect"><ph-sign-out aria-hidden="true" /></button>
+          </div>
+        </template>
         <button
-          v-if="wallet.connected"
-          class="hidden btn-primary md:flex"
-          @click="handleCreate"
+          ref="menuToggle" type="button" class="site-menu-toggle" :aria-expanded="mobileOpen" aria-controls="site-mobile-menu"
+          :aria-label="mobileOpen ? 'Menüyü kapat' : 'Menüyü aç'" @click="mobileOpen = !mobileOpen"
         >
-          <Plus class="size-4" weight="bold" />
-          Teslimat Oluştur
-        </button>
-
-        <div v-if="!wallet.connected" class="hidden sm:flex items-center gap-2">
-          <NuxtLink to="/login" class="text-sm font-medium text-stone-600 hover:text-stone-900 px-2 py-2 transition">
-            Giriş Yap
-          </NuxtLink>
-          <NuxtLink to="/register" class="rounded-lg border border-orange-200 bg-orange-50 px-3.5 py-2 text-sm font-medium text-orange-700 shadow-sm transition hover:bg-orange-100 hover:border-orange-300">
-            Kayıt Ol
-          </NuxtLink>
-        </div>
-
-        <div v-else class="flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-1.5 shadow-sm hover:bg-stone-50 transition cursor-pointer" @click="router.push('/dashboard')">
-          <span class="size-2 rounded-full bg-green-500 animate-pulse-dot" />
-          <span class="hidden text-sm font-medium text-stone-700 sm:inline">{{ wallet.userProfile.name || wallet.displayAddress() }}</span>
-          <span class="text-sm font-semibold text-orange-600">{{ wallet.balance }} MON</span>
-          <button class="ml-1 rounded p-0.5 text-stone-400 hover:text-stone-700 hover:bg-stone-200 transition" @click.stop="wallet.disconnect(); router.push('/')">
-            <LogOut class="size-3.5" />
-          </button>
-        </div>
-
-        <button
-          class="flex size-9 items-center justify-center rounded-lg border border-stone-200 bg-white md:hidden"
-          @click="mobileOpen = !mobileOpen"
-        >
-          <Menu v-if="!mobileOpen" class="size-4 text-stone-600" />
-          <X v-else class="size-4 text-stone-600" />
+          <ph-x v-if="mobileOpen" weight="bold" aria-hidden="true" /><ph-list v-else weight="bold" aria-hidden="true" />
         </button>
       </div>
     </div>
 
-    <!-- Mobile Menu -->
-    <Transition
-      enter-active-class="transition-all duration-200"
-      enter-from-class="opacity-0 -translate-y-1"
-      enter-to-class="opacity-100 translate-y-0"
-      leave-active-class="transition-all duration-150"
-      leave-from-class="opacity-100 translate-y-0"
-      leave-to-class="opacity-0 -translate-y-1"
-    >
-      <div v-if="mobileOpen" class="border-t border-stone-100 bg-white px-5 py-3 md:hidden">
-        <nav class="flex flex-col gap-1">
-          <NuxtLink
-            v-for="link in visibleNavLinks"
-            :key="link.to"
-            :to="link.to"
-            class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-stone-600 transition hover:bg-stone-50 hover:text-stone-900"
-            active-class="bg-stone-100 text-stone-900"
-            @click="mobileOpen = false"
+    <transition name="site-menu">
+      <div v-if="mobileOpen" id="site-mobile-menu" class="site-mobile-menu">
+        <div class="site-menu-heading"><span>KEŞFET</span><span>Bir paketle başlar.</span></div>
+        <nav aria-label="Mobil gezinme" class="site-mobile-links">
+          <nuxt-link
+            v-for="link in visibleNavLinks" :key="link.to" :to="link.to" class="site-mobile-link"
+            :class="{ 'is-active': isActive(link.to) }" :aria-current="isActive(link.to) ? 'page' : undefined" @click="closeMenu()"
           >
-            <component :is="link.icon" class="size-4" weight="bold" />
-            {{ link.label }}
-          </NuxtLink>
-          <div v-if="!wallet.connected" class="mt-2 grid grid-cols-2 gap-2">
-            <NuxtLink to="/login" class="flex justify-center rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50" @click="mobileOpen = false">
-              Giriş Yap
-            </NuxtLink>
-            <NuxtLink to="/register" class="flex justify-center rounded-lg border border-orange-200 bg-orange-50 px-3 py-2.5 text-sm font-medium text-orange-700 transition hover:bg-orange-100" @click="mobileOpen = false">
-              Kayıt Ol
-            </NuxtLink>
-          </div>
-          <button v-if="wallet.connected" class="mt-2 btn-primary w-full justify-center" @click="handleCreate">
-            <Plus class="size-4" weight="bold" />
-            Teslimat Oluştur
-          </button>
+            <span class="site-mobile-icon"><component :is="link.icon" weight="duotone" aria-hidden="true" /></span>
+            <span><strong>{{ link.label }}</strong><small>{{ link.description }}</small></span>
+            <ph-arrow-up-right class="site-mobile-arrow" aria-hidden="true" />
+          </nuxt-link>
         </nav>
+        <div class="site-menu-footer">
+          <span><strong>{{ wallet.connected ? 'Yeni bir yolculuk başlat.' : 'Paketin güvenle yola çıksın.' }}</strong><small>Her adımda kontrol sende.</small></span>
+          <nuxt-link :to="wallet.connected ? '/create' : '/register'" class="site-nav-cta" @click="closeMenu()">
+            {{ wallet.connected ? 'Oluştur' : 'Başla' }} <ph-arrow-up-right weight="bold" aria-hidden="true" />
+          </nuxt-link>
+        </div>
+        <nuxt-link v-if="!wallet.connected" to="/login" class="site-mobile-login" @click="closeMenu()">Zaten hesabın var mı? <strong>Giriş yap <ph-arrow-up-right aria-hidden="true" /></strong></nuxt-link>
       </div>
-    </Transition>
+    </transition>
   </header>
 </template>

@@ -14,8 +14,6 @@ export type MetaMaskError = 'not_installed' | 'user_rejected' | 'unknown'
 
 export interface ConnectResult {
   address: string
-  signature: string
-  message: string
 }
 
 export function useMetaMask() {
@@ -45,10 +43,7 @@ export function useMetaMask() {
 
       await switchChainAsync({ chainId: monadTestnetChain.id })
 
-      const message = `Delivera'ya giriş yapıyorum: ${Date.now()}`
-      const signature = await signMessageAsync({ account: address, message })
-
-      return { address, signature, message }
+      return { address }
     } catch (err: unknown) {
       const code = (err as { code?: number })?.code
       error.value = code === 4001 ? 'user_rejected' : 'unknown'
@@ -58,5 +53,15 @@ export function useMetaMask() {
     }
   }
 
-  return { isInstalled, connecting, error, connect }
+  async function signMessage(message: string, account: string) {
+    try {
+      return await signMessageAsync({ account: account as `0x${string}`, message })
+    } catch (err: unknown) {
+      const code = (err as { code?: number })?.code
+      error.value = code === 4001 ? 'user_rejected' : 'unknown'
+      throw err
+    }
+  }
+
+  return { isInstalled, connecting, error, connect, signMessage }
 }

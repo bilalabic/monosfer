@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, defineAsyncComponent } from 'vue'
 import { PhArrowLeft as ArrowLeft, PhMapPin as MapPin, PhClock as Clock, PhBarbell as Weight, PhPackage as Package, PhShieldCheck as Shield, PhUsers as Users, PhMagnifyingGlass, PhLockKey, PhQrCode, PhStar } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
@@ -7,9 +7,11 @@ import StatusBadge from '@/components/StatusBadge.vue'
 import TokenAmount from '@/components/TokenAmount.vue'
 import CourierBidCard from '@/components/CourierBidCard.vue'
 import DeliveryTimeline from '@/components/DeliveryTimeline.vue'
-import QrCode from '@/components/QrCode.vue'
-// DeliveryTrackingMap is auto-imported from DeliveryTrackingMap.client.vue
-// (Nuxt renders .client components only in the browser — Leaflet needs `window`).
+import DeliveryEvidencePanel from '@/components/DeliveryEvidencePanel.vue'
+
+// Dynamic import + <ClientOnly> (below): leaflet touches `window` at module load,
+// and this page is server-rendered, so the map must never be resolved on the server.
+const DeliveryTrackingMap = defineAsyncComponent(() => import('@/components/DeliveryTrackingMap.client.vue'))
 
 const route = useRoute()
 const router = useRouter()
@@ -34,6 +36,8 @@ const ratingComment = ref('')
 const ratingSaving = ref(false)
 const ratingError = ref('')
 const ratingMessage = ref('')
+const returnRequesting = ref(false)
+const returnError = ref('')
 
 const isOwner = computed(() =>
   !!wallet.address &&
@@ -46,25 +50,7 @@ const isAssignedCourier = computed(() =>
   wallet.address.toLowerCase() === delivery.value.assignedCourierId.toLowerCase()
 )
 const selectedBid = computed(() => delivery.value?.bids.find(bid => bid.id === delivery.value?.selectedBidId))
-const canRate = computed(() => delivery.value?.status === 'completed' && isOwner.value && !delivery.value?.isRated && !!selectedBid.value)
-const isEscrowLocked = computed(() => (delivery.value?.escrowAmount || 0) > 0)
-const pickupConfirmed = computed(() =>
-  delivery.value?.timeline.some(step => step.step === 'pickup' && step.completed),
-)
-const verifyCode = computed(() => {
-  const id = delivery.value?.id ?? 'x'
-  const sum = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
-  return `MON-${id.toUpperCase()}-${sum.toString(16).toUpperCase().padStart(4, '0')}`
-})
-const pickupConfirmUrl = computed(() => {
-  if (typeof window === 'undefined' || !delivery.value) return ''
-  return `${window.location.origin}/delivery/${delivery.value.id}/confirm?step=pickup&code=${encodeURIComponent(verifyCode.value)}`
-})
-const showTrackingMap = computed(() =>
-  isOwner.value &&
-  (delivery.value?.status === 'in_progress' || delivery.value?.status === 'completed')
-)
-
+const canRate = computed(() => delivery.value?.chainState === 'Completed' && isOwner.value && !delivery.value?.isRated && !!selectedBid.value)
 function formatDate(s: string) {
   return new Date(s).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
@@ -81,6 +67,19 @@ async function submitRating() {
     ratingError.value = error instanceof Error ? error.message : 'Puan kaydedilemedi'
   } finally {
     ratingSaving.value = false
+  }
+}
+
+async function requestReturnAction() {
+  if (!delivery.value || returnRequesting.value) return
+  returnRequesting.value = true
+  returnError.value = ''
+  try {
+    await store.requestReturn(delivery.value.id)
+  } catch (error) {
+    returnError.value = error instanceof Error ? error.message : 'İade talebi gönderilemedi'
+  } finally {
+    returnRequesting.value = false
   }
 }
 </script>
@@ -155,12 +154,6 @@ async function submitRating() {
           <p class="text-sm leading-relaxed text-stone-600">{{ delivery.description }}</p>
         </div>
 
-        <!-- Kurye Takip Haritası: Sadece gönderen + kurye kargoyu aldıktan sonra -->
-        <DeliveryTrackingMap
-          v-if="showTrackingMap"
-          :delivery-id="delivery.id"
-        />
-
         <!-- Bids -->
         <div class="card rounded-xl bg-white p-5">
           <p class="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
@@ -191,16 +184,33 @@ async function submitRating() {
           <DeliveryTimeline :timeline="delivery.timeline" />
         </div>
 
-        <div v-if="isOwner && delivery.status === 'in_progress' && selectedBid && !pickupConfirmed" class="card rounded-xl bg-white p-5">
-          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">Kurye Teslim Alma QR</p>
-          <p class="text-sm font-semibold text-stone-900">{{ selectedBid.courierName }} paketi alırken bu QR'ı okutsun</p>
-          <div class="mt-4 flex justify-center rounded-xl border-2 border-dashed border-orange-200 bg-orange-50 p-4">
-            <div class="rounded-2xl bg-white p-3 shadow-sm">
-              <QrCode :value="pickupConfirmUrl" :size="180" />
-            </div>
-          </div>
-          <p class="mt-3 text-center font-mono text-xs font-bold tracking-widest text-stone-900">{{ verifyCode }}</p>
-          <p class="mt-1 text-center text-xs text-stone-500">Kurye bu kodu okutup paketi teslim aldığını onaylar.</p>
+        <!-- Explicit import bypasses Nuxt's filename-based .client.vue SSR skip, and
+             leaflet touches `window` at module load — ClientOnly is the real guard. -->
+        <ClientOnly>
+          <DeliveryTrackingMap
+            :key="delivery.id"
+            :delivery-id="delivery.id"
+            :chain-state="delivery.chainState"
+            :is-owner="isOwner"
+            :is-assigned-courier="isAssignedCourier"
+            :courier-name="selectedBid?.courierName"
+          />
+        </ClientOnly>
+
+        <DeliveryEvidencePanel
+          v-if="isOwner || isAssignedCourier"
+          :key="`evidence-${delivery.id}`"
+          :delivery-id="delivery.id"
+          :chain-state="delivery.chainState"
+        />
+
+        <div v-if="isOwner && delivery.chainState === 'ReadyForPickup' && selectedBid" class="card rounded-xl bg-white p-5">
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">Teslim Alma Onayı</p>
+          <p class="text-sm font-semibold text-stone-900">{{ selectedBid.courierName }} için süreli EIP-712 kabul paketi oluşturun</p>
+          <p class="mt-1 text-xs leading-relaxed text-stone-500">İmza URL'ye veya tarayıcı depolamasına yazılmaz; paketi doğrudan atanmış kuryeye iletin.</p>
+          <button class="btn-primary mt-4 w-full justify-center" @click="router.push(`/delivery/${delivery.id}/confirm`)">
+            Kabul Paketini Oluştur
+          </button>
         </div>
 
         <div v-if="canRate || delivery.isRated" class="card rounded-xl bg-white p-5">
@@ -210,7 +220,6 @@ async function submitRating() {
               <PhStar v-for="star in 5" :key="star" class="size-5" :weight="star <= (delivery.rating || 0) ? 'fill' : 'regular'" />
             </div>
             <p class="mt-2 text-sm font-semibold text-stone-900">{{ selectedBid?.courierName || 'Kurye' }} puanlandı</p>
-            <p v-if="delivery.ratingComment" class="mt-1 text-xs leading-relaxed text-stone-500">{{ delivery.ratingComment }}</p>
           </template>
           <template v-else>
             <p class="text-sm font-semibold text-stone-900">{{ selectedBid?.courierName }} için puan ver</p>
@@ -258,7 +267,7 @@ async function submitRating() {
         <!-- Action buttons -->
         <template v-if="wallet.connected">
           <button
-            v-if="delivery.status === 'open' && isOwner && !isEscrowLocked"
+            v-if="delivery.chainState === 'AwaitingFunding' && isOwner && !delivery.customerFunded"
             class="btn-primary w-full justify-center"
             @click="router.push(`/payment/${delivery.id}`)"
           >
@@ -266,20 +275,37 @@ async function submitRating() {
             Ödemeyi Kilitle (Escrow)
           </button>
           <div
-            v-else-if="delivery.status === 'open' && isOwner && isEscrowLocked"
+            v-else-if="delivery.chainState === 'AwaitingFunding' && isOwner && delivery.customerFunded"
             class="flex w-full items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700"
           >
             <PhLockKey class="size-4" weight="bold" />
             Ödeme Escrow'da Kilitli
           </div>
           <button
-            v-if="delivery.status === 'in_progress' && delivery.selectedBidId && isAssignedCourier"
+            v-if="['AwaitingFunding', 'ReadyForPickup', 'InTransit', 'DeliveredPending'].includes(delivery.chainState) && delivery.selectedBidId && isAssignedCourier"
             class="w-full justify-center rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 flex items-center gap-2 text-sm font-semibold text-orange-700 hover:bg-orange-100 transition"
             @click="router.push(`/courier/receive/${delivery.id}`)"
           >
             <PhQrCode class="size-4" weight="bold" />
-            Kurye QR & Ödeme Ekranı
+            Kurye Teslimat Akışı
           </button>
+          <div v-if="delivery.chainState === 'InTransit' && (isOwner || isAssignedCourier)" class="space-y-1.5">
+            <button
+              class="w-full justify-center rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-center gap-2 text-sm font-semibold text-red-700 hover:bg-red-100 transition disabled:opacity-60"
+              :disabled="returnRequesting"
+              @click="requestReturnAction"
+            >
+              {{ returnRequesting ? 'Gönderiliyor...' : 'İade Talep Et' }}
+            </button>
+            <p v-if="returnError" class="text-center text-xs font-medium text-red-600">{{ returnError }}</p>
+          </div>
+          <div v-if="isOwner && delivery.chainState === 'ReturnRequired'" class="card rounded-xl bg-white p-5">
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">İade Onayı</p>
+            <p class="text-sm text-stone-600">Kuryenin iadeyi teslim almasını onaylamak için süreli EIP-712 kabul paketi oluşturun.</p>
+            <button class="btn-primary mt-4 w-full justify-center" @click="router.push(`/delivery/${delivery.id}/confirm`)">
+              İade Kabul Paketini Oluştur
+            </button>
+          </div>
         </template>
       </div>
     </div>

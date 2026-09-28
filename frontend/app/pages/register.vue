@@ -35,7 +35,8 @@ async function handleSubmit() {
       walletAddress: connectedAddress.value,
       name: name.value,
       phone: phone.value,
-      role: 'both',
+      role: 'customer',
+      signer: mm.signMessage,
     })
     router.push('/dashboard')
   } catch (e) {

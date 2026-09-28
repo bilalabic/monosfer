@@ -1,11 +1,6 @@
 <script setup lang="ts">
-import { PhLockKey, PhSealCheck, PhShieldChevron, PhGavel } from '@phosphor-icons/vue'
-import { onSpotlightMouseMove, onTiltMouseMove, onTiltMouseLeave } from '@/composables/useSpotlight'
-
-function onCardMouseMove(e: MouseEvent) {
-  onSpotlightMouseMove(e)
-  onTiltMouseMove(e)
-}
+import { onMounted, onUnmounted, ref } from 'vue'
+import { PhBicycle, PhCheck, PhGavel, PhLockKey, PhSealCheck, PhShieldCheck, PhShieldChevron, PhUser, PhUserCircle } from '@phosphor-icons/vue'
 
 const layers = [
   {
@@ -29,53 +24,161 @@ const layers = [
     desc: 'Uyuşmazlıkta rastgele token sahipleri delilleri inceler. Karar blockchain\'e yazılır.',
   },
 ]
+
+const CYCLE_MS = 4200
+
+const section = ref<HTMLElement | null>(null)
+const activeLayer = ref(0)
+const progress = ref(0)
+const reducedMotion = ref(false)
+const visible = ref(false)
+
+let raf = 0
+let lastTs = 0
+let observer: IntersectionObserver | undefined
+let preference: MediaQueryList | undefined
+
+function tick(ts: number) {
+  if (!lastTs) lastTs = ts
+  const delta = ts - lastTs
+  lastTs = ts
+  if (visible.value && !reducedMotion.value) {
+    progress.value += (delta / CYCLE_MS) * 100
+    if (progress.value >= 100) {
+      progress.value = 0
+      activeLayer.value = (activeLayer.value + 1) % layers.length
+    }
+  }
+  raf = requestAnimationFrame(tick)
+}
+
+function selectLayer(i: number) {
+  activeLayer.value = i
+  progress.value = 0
+}
+
+function syncReducedMotion() {
+  reducedMotion.value = preference?.matches ?? false
+}
+
+function trackScale(i: number) {
+  if (i < activeLayer.value) return 1
+  if (i > activeLayer.value) return 0
+  return progress.value / 100
+}
+
+onMounted(() => {
+  preference = window.matchMedia('(prefers-reduced-motion: reduce)')
+  syncReducedMotion()
+  preference.addEventListener('change', syncReducedMotion)
+  if (section.value) {
+    observer = new IntersectionObserver(
+      ([entry]) => { visible.value = entry?.isIntersecting ?? false },
+      { threshold: 0.35 },
+    )
+    observer.observe(section.value)
+  }
+  raf = requestAnimationFrame(tick)
+})
+onUnmounted(() => {
+  cancelAnimationFrame(raf)
+  observer?.disconnect()
+  preference?.removeEventListener('change', syncReducedMotion)
+})
 </script>
 
 <template>
-  <section class="px-5 py-16 sm:px-8">
-    <div class="mx-auto max-w-6xl">
-      <div class="grid gap-10 lg:grid-cols-2 lg:items-start">
+  <section id="security" ref="section" class="trust-section">
+    <div class="trust-container">
+      <header class="trust-heading">
         <div>
-          <p class="mb-2 text-xs font-semibold uppercase tracking-widest text-orange-500">Güvenlik</p>
-          <h2 class="mb-4 text-2xl font-bold text-stone-900 sm:text-3xl">4 Katmanlı Güven</h2>
-          <p class="text-stone-500 leading-relaxed">
-            Teslimat sektörünün en büyük sorunu güvensizliktir. Delivera, her işlemi
-            blockchain güvencesiyle sararak bu sorunu tamamen çözer.
-          </p>
-          <div class="mt-6 flex flex-wrap gap-3 text-sm">
-            <span class="flex items-center gap-1.5 text-stone-600">
-              <span class="size-2 rounded-full bg-orange-400" />Sıfır güven riski
-            </span>
-            <span class="flex items-center gap-1.5 text-stone-600">
-              <span class="size-2 rounded-full bg-orange-400" />Tamamen şeffaf
-            </span>
-            <span class="flex items-center gap-1.5 text-stone-600">
-              <span class="size-2 rounded-full bg-orange-400" />Değiştirilemez
-            </span>
-          </div>
+          <p class="trust-kicker"><span /> GÜVENLİK</p>
+          <h2>4 Katmanlı <span>Güven</span></h2>
+        </div>
+        <p>Teslimat sektörünün en büyük sorunu güvensizliktir. Delivera, her işlemi blockchain güvencesiyle sarar.</p>
+      </header>
+    </div>
+
+    <div class="trust-container">
+      <div class="trust-panel">
+        <div class="trust-topline">
+          <span><ph-shield-check weight="duotone" /> GÜVEN KATMANLARI</span>
+          <span class="trust-tags">
+            <span><i />Sıfır güven riski</span>
+            <span><i />Tamamen şeffaf</span>
+            <span><i />Değiştirilemez</span>
+          </span>
         </div>
 
-        <div class="space-y-3">
-          <div
-            v-for="(layer, i) in layers"
-            :key="layer.num"
-            v-reveal="{ delay: i * 100, type: '3d' }"
-            class="spotlight-card card-hover flex items-start gap-4 rounded-xl border border-orange-200 bg-orange-50 p-4"
-            @mousemove="onCardMouseMove"
-            @mouseleave="onTiltMouseLeave"
-          >
-            <div class="tilt-card flex w-full items-start gap-4">
-              <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-amber-50 text-orange-500 ring-1 ring-orange-200/60">
-                <component :is="layer.icon" class="size-5" weight="duotone" />
+        <div class="trust-body">
+          <div class="trust-scene">
+            <div class="trust-scene-glow" aria-hidden="true" />
+            <Transition name="trust-scene" mode="out-in">
+              <div :key="activeLayer" class="trust-scene-inner">
+                <template v-if="activeLayer === 0">
+                  <div class="trust-vault-wrap">
+                    <div class="trust-vault"><ph-lock-key weight="duotone" /></div>
+                    <span class="trust-vault-badge"><ph-check weight="bold" /></span>
+                  </div>
+                  <p class="trust-scene-caption">Ödeme, akıllı sözleşmede kilitli — teslim edilene kadar kimse dokunamaz.</p>
+                </template>
+
+                <template v-else-if="activeLayer === 1">
+                  <div class="trust-approval">
+                    <div class="trust-approval-step">
+                      <span class="trust-approval-avatar"><ph-bicycle weight="duotone" /></span>
+                      <span class="trust-approval-label">Kurye alım onayı</span>
+                      <span class="trust-approval-check"><ph-check weight="bold" /></span>
+                    </div>
+                    <span class="trust-approval-line"><span /></span>
+                    <div class="trust-approval-step">
+                      <span class="trust-approval-avatar"><ph-user weight="duotone" /></span>
+                      <span class="trust-approval-label">Alıcı teslim onayı</span>
+                      <span class="trust-approval-check" style="animation-delay: 1.4s"><ph-check weight="bold" /></span>
+                    </div>
+                  </div>
+                  <p class="trust-scene-caption">İki taraf da onaylamadan ödeme serbest kalmaz.</p>
+                </template>
+
+                <template v-else-if="activeLayer === 2">
+                  <div class="trust-deposit">
+                    <span class="trust-deposit-courier"><ph-bicycle weight="duotone" /></span>
+                    <img src="/monad-coin.svg" alt="" class="trust-deposit-coin">
+                    <div class="trust-deposit-shield"><ph-shield-chevron weight="duotone" /></div>
+                  </div>
+                  <p class="trust-scene-caption">Kurye teklif verirken teminat yatırır — işi bırakırsa müşteriye gider.</p>
+                </template>
+
+                <template v-else>
+                  <div class="trust-jury">
+                    <ph-gavel class="trust-gavel" weight="fill" />
+                    <span v-for="n in 7" :key="n" class="trust-juror" :class="{ 'is-voting': n === 4 }" :style="{ '--juror-index': n }">
+                      <ph-user-circle weight="fill" />
+                    </span>
+                  </div>
+                  <p class="trust-scene-caption">Rastgele seçilen token sahipleri delilleri inceler, karar zincire yazılır.</p>
+                </template>
               </div>
-              <div>
-                <div class="mb-0.5 flex items-center gap-2">
-                  <span class="text-xs font-bold text-stone-400">Katman {{ layer.num }}</span>
-                  <h3 class="text-sm font-semibold text-stone-900">{{ layer.title }}</h3>
-                </div>
-                <p class="text-xs leading-relaxed text-stone-600">{{ layer.desc }}</p>
-              </div>
-            </div>
+            </Transition>
+          </div>
+
+          <div class="trust-list">
+            <button
+              v-for="(layer, i) in layers"
+              :key="layer.num"
+              type="button"
+              class="trust-item"
+              :class="{ 'is-active': i === activeLayer }"
+              @click="selectLayer(i)"
+            >
+              <span class="trust-item-track"><span :style="{ transform: `scaleX(${trackScale(i)})` }" /></span>
+              <span class="trust-item-top">
+                <span class="trust-item-icon"><component :is="layer.icon" weight="duotone" /></span>
+                <span class="trust-item-num">Katman {{ layer.num }}</span>
+              </span>
+              <strong class="trust-item-title">{{ layer.title }}</strong>
+              <p class="trust-item-desc" :class="{ 'is-hidden': i !== activeLayer }">{{ layer.desc }}</p>
+            </button>
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { PhArrowRight as ArrowRight, PhVault, PhCircuitry, PhCrown } from '@phosphor-icons/vue'
+import { PhArrowRight as ArrowRight, PhVault, PhCircuitry, PhShieldCheck } from '@phosphor-icons/vue'
 import { onSpotlightMouseMove, onTiltMouseMove, onTiltMouseLeave } from '@/composables/useSpotlight'
 
 function onCardMouseMove(e: MouseEvent) {
@@ -11,14 +11,14 @@ function onCardMouseMove(e: MouseEvent) {
 const features = [
   { icon: PhVault, label: 'Escrow Güvenceli' },
   { icon: PhCircuitry, label: 'Monad Blockchain' },
-  { icon: PhCrown, label: 'Liderlik Tablosu' },
+  { icon: PhShieldCheck, label: 'Finalized Doğrulama' },
 ]
 
 const stats = [
-  { label: 'Toplam Teslimat', value: '1,247' },
-  { label: 'Başarı Oranı', value: '98.4%' },
-  { label: 'Aktif Kurye', value: '342' },
-  { label: 'Dağıtılan MON', value: '24,680' },
+  { label: 'Ağ', value: 'Monad' },
+  { label: 'Veri Durumu', value: 'Finalized' },
+  { label: 'Oturum', value: 'SIWE' },
+  { label: 'Teslim Kanıtı', value: 'OTP + EIP-712' },
 ]
 
 // Route marker animation is purely decorative — skip it under prefers-reduced-motion.
@@ -30,7 +30,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="grid-texture relative isolate overflow-hidden px-5 pt-14 pb-20 sm:px-8">
+  <section class="home-hero grid-texture relative isolate overflow-hidden px-5 pb-20 sm:px-8">
     <div class="aurora-bg" aria-hidden="true">
       <div class="aurora-blob aurora-blob--1" />
       <div class="aurora-blob aurora-blob--2" />
@@ -99,7 +99,7 @@ onMounted(() => {
           <div class="tilt-card p-6">
             <div class="mb-4 flex items-center gap-2">
               <span class="size-1.5 rounded-full bg-orange-500 animate-pulse-dot" />
-              <p class="text-xs font-semibold uppercase tracking-widest text-stone-400">Canlı Teslimat Takibi</p>
+              <p class="text-xs font-semibold uppercase tracking-widest text-stone-400">Zincir Üstü Teslimat Akışı</p>
             </div>
 
             <!-- Route mockup -->

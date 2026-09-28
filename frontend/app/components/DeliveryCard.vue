@@ -14,7 +14,6 @@ const wallet = useWalletStore()
 
 const isOwner = computed(() => !!wallet.address && wallet.address.toLowerCase() === props.delivery.senderId?.toLowerCase())
 const isAssignedCourier = computed(() => !!wallet.address && wallet.address.toLowerCase() === props.delivery.assignedCourierId?.toLowerCase())
-const isEscrowLocked = computed(() => props.delivery.escrowAmount > 0)
 const hasUserBid = computed(() =>
   !!wallet.address &&
   props.delivery.bids.some(bid => bid.courierId.toLowerCase() === wallet.address.toLowerCase()),
@@ -82,24 +81,24 @@ function formatTime(dateStr: string) {
           Teklif verildi
         </div>
         <button
-          v-if="delivery.status === 'open' && isOwner && !isEscrowLocked"
+          v-if="delivery.chainState === 'AwaitingFunding' && isOwner && !delivery.customerFunded"
           class="flex items-center justify-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-medium text-orange-700 transition hover:bg-orange-100"
           @click="router.push(`/payment/${delivery.id}`)"
         >
           <PhLockKey class="size-3.5" weight="bold" /> Öde
         </button>
         <div
-          v-else-if="delivery.status === 'open' && isOwner && isEscrowLocked"
+          v-else-if="delivery.chainState === 'AwaitingFunding' && isOwner && delivery.customerFunded"
           class="flex items-center justify-center gap-1 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-medium text-green-700"
         >
           <PhLockKey class="size-3.5" weight="bold" /> Kilitli
         </div>
         <button
-          v-if="delivery.status === 'in_progress' && delivery.selectedBidId && isAssignedCourier"
+          v-if="['AwaitingFunding', 'ReadyForPickup', 'InTransit', 'DeliveredPending'].includes(delivery.chainState) && delivery.selectedBidId && isAssignedCourier"
           class="flex items-center justify-center gap-1 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-medium text-green-700 transition hover:bg-green-100"
           @click="router.push(`/courier/receive/${delivery.id}`)"
         >
-          <PhQrCode class="size-3.5" weight="bold" /> QR
+          <PhQrCode class="size-3.5" weight="bold" /> Kurye Akışı
         </button>
         <NuxtLink
           :to="`/delivery/${delivery.id}`"

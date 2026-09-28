@@ -1,5 +1,8 @@
 import tailwindcss from '@tailwindcss/vite'
 
+const backendOrigin = process.env.NUXT_BACKEND_ORIGIN || 'http://127.0.0.1:3001'
+const realtimeOrigin = process.env.NUXT_REALTIME_ORIGIN || 'http://127.0.0.1:3002'
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2026-08-19',
@@ -25,8 +28,13 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    // Server-only: the tracking SSE stream is served by a separate realtime
+    // process, proxied same-origin by server/middleware/tracking-events-proxy.ts.
+    realtimeOrigin,
     public: {
-      apiBase: 'https://monad.arslanyusuf.com/api',
+      // V2 is intentionally a separate, same-origin /v1 surface. There is no
+      // legacy /api fallback because its JWT and delivery state semantics differ.
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || '/v1',
     },
   },
 
@@ -38,12 +46,14 @@ export default defineNuxtConfig({
   // note this must be a routeRule, NOT `definePageMeta({ ssr: false })`,
   // which is not a recognized page-meta key.
   routeRules: {
+    '/v1/**': { proxy: `${backendOrigin}/v1/**` },
     '/dashboard': { ssr: false },
     '/create': { ssr: false },
     '/payment/**': { ssr: false },
     '/courier/receive/**': { ssr: false },
     '/kuryem-nerede': { ssr: false },
     '/map': { ssr: false }, // Leaflet also needs `window`
+    '/support/**': { ssr: false },
   },
 
   app: {
@@ -90,7 +100,7 @@ export default defineNuxtConfig({
       // tracking data — every backend call bypasses the cache entirely.
       runtimeCaching: [
         {
-          urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+          urlPattern: ({ url }) => url.pathname.startsWith('/v1/'),
           handler: 'NetworkOnly',
         },
         {

@@ -1,4 +1,4 @@
-import { api } from './client'
+import { deliveriesApi } from './deliveries'
 
 export interface CourierApiData {
   id: string
@@ -30,6 +30,29 @@ export interface CourierLocation {
 }
 
 export const couriersApi = {
-  list: () => api.get<CourierApiData[]>('/couriers'),
-  locations: () => api.get<CourierLocation[]>('/couriers/locations'),
+  async list(): Promise<CourierApiData[]> {
+    const deliveries = await deliveriesApi.list({ limit: 100 })
+    const pages = await Promise.all(deliveries.data.map(delivery => deliveriesApi.bids(delivery.id)))
+    const wallets = new Set(pages.flatMap(page => page.data.map(bid => bid.courier.toLowerCase())))
+    return [...wallets].map((walletAddress, index) => ({
+      id: walletAddress,
+      walletAddress,
+      name: `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
+      avatar: '',
+      rating: 0,
+      totalDeliveries: 0,
+      successRate: 0,
+      onTimeRate: 0,
+      weeklyDeliveries: 0,
+      weeklyEarnings: 0,
+      monthlyEarnings: 0,
+      joinedDate: '',
+      specialties: [],
+      leaderboardScore: index,
+    }))
+  },
+  async locations(): Promise<CourierLocation[]> {
+    // V2 deliberately exposes live locations only through scoped tracking sessions.
+    return []
+  },
 }

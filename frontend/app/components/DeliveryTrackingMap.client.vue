@@ -1,223 +1,183 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { deliveriesApi, type DeliveryCourierLocation } from '@/api/deliveries'
-import { vehicleLabel } from '@/composables/useVehicleMeta'
-import { timeAgo } from '@/composables/useTimeAgo'
-import { createCourierMarkerIcon, createPointMarkerIcon } from '@/composables/useMapMarkerIcons'
-import { createLeafletMap, destroyLeafletMap, CARTO_DARK_TILE_URL } from '@/composables/useLeafletMap'
-import {
-  PhMapPin,
-  PhArrowClockwise,
-  PhWarning,
-  PhCheckCircle,
-} from '@phosphor-icons/vue'
+import { PhMapPin, PhLockKey, PhWarning, PhCircleNotch } from '@phosphor-icons/vue'
+import { trackingApi, type TrackingSession } from '@/api/tracking'
+import { useTrackingEvents, type TrackingSseEvent } from '@/composables/useTrackingEvents'
+import { createLeafletMap, destroyLeafletMap } from '@/composables/useLeafletMap'
+import { createCourierMarkerIcon } from '@/composables/useMapMarkerIcons'
+import type { ChainDeliveryState } from '@/api/deliveries'
 
-const props = defineProps<{ deliveryId: string }>()
+const props = defineProps<{
+  deliveryId: string
+  chainState: ChainDeliveryState
+  isOwner: boolean
+  isAssignedCourier: boolean
+  vehicleType?: string
+  courierName?: string
+}>()
 
-const locationData = ref<DeliveryCourierLocation | null>(null)
-const loading = ref(true)
-const error = ref('')
+// Backend only issues tracking sessions while the delivery is in one of these states.
+const TRACKABLE_STATES: ChainDeliveryState[] = ['ReadyForPickup', 'InTransit']
+const trackable = computed(() =>
+  TRACKABLE_STATES.includes(props.chainState) && (props.isOwner || props.isAssignedCourier),
+)
+
+const mapElementId = `tracking-map-${props.deliveryId}`
 const mapReady = ref(false)
+const starting = ref(false)
+const error = ref('')
+const hasLocation = ref(false)
+const lastUpdatedAt = ref<string | null>(null)
+
 let map: L.Map | null = null
-let courierMarker: L.Marker | null = null
-let pickupMarker: L.Marker | null = null
-let dropoffMarker: L.Marker | null = null
-let routeLine: L.Polyline | null = null
-let refreshTimer: ReturnType<typeof setInterval> | null = null
+let marker: L.Marker | null = null
+let session: TrackingSession | null = null
+let geoWatchId: number | null = null
+let sequence = 0
 
-function timeSince(dateStr: string | null) {
-  return timeAgo(dateStr, { suffix: 'güncellendi' })
-}
+const events = useTrackingEvents()
 
-function createCourierIcon(data: DeliveryCourierLocation) {
-  return createCourierMarkerIcon({ vehicleType: data.vehicleType, name: data.courierName, size: 44, pulse: true })
-}
-
-function createPickupIcon() {
-  return createPointMarkerIcon({ emoji: '📦', color: '#22c55e' })
-}
-
-function createDropoffIcon() {
-  return createPointMarkerIcon({ emoji: '🏠', color: '#ef4444' })
-}
-
-function updateMap(data: DeliveryCourierLocation) {
+function upsertMarker(lat: number, lng: number) {
   if (!map) return
-
-  // Kurye markeri
-  if (!courierMarker) {
-    courierMarker = L.marker([data.lat, data.lng], { icon: createCourierIcon(data), zIndexOffset: 1000 }).addTo(map)
+  if (marker) {
+    marker.setLatLng([lat, lng])
   } else {
-    courierMarker.setLatLng([data.lat, data.lng])
-    courierMarker.setIcon(createCourierIcon(data))
+    const icon = createCourierMarkerIcon({
+      vehicleType: props.vehicleType ?? 'motorcycle',
+      name: props.courierName ?? 'Kurye',
+      pulse: true,
+    })
+    marker = L.marker([lat, lng], { icon }).addTo(map)
   }
+  map.panTo([lat, lng])
+  hasLocation.value = true
+}
 
-  // Alış noktası
-  if (!pickupMarker) {
-    pickupMarker = L.marker([data.pickup.lat, data.pickup.lng], { icon: createPickupIcon() })
-      .addTo(map)
-      .bindTooltip(`📦 Alış: ${data.pickup.address}`, { permanent: false })
-  }
-
-  // Teslimat noktası
-  if (!dropoffMarker) {
-    dropoffMarker = L.marker([data.dropoff.lat, data.dropoff.lng], { icon: createDropoffIcon() })
-      .addTo(map)
-      .bindTooltip(`🏠 Teslimat: ${data.dropoff.address}`, { permanent: false })
-  }
-
-  // Rota çizgisi
-  if (routeLine) routeLine.remove()
-  routeLine = L.polyline(
-    [[data.pickup.lat, data.pickup.lng], [data.lat, data.lng], [data.dropoff.lat, data.dropoff.lng]],
-    { color: '#f97316', weight: 3, opacity: 0.6, dashArray: '8, 6' },
-  ).addTo(map)
-
-  // İlk yüklemede haritayı 3 noktayı gösterecek şekilde fit et
-  if (!mapReady.value) {
-    const bounds = L.latLngBounds([
-      [data.pickup.lat, data.pickup.lng],
-      [data.lat, data.lng],
-      [data.dropoff.lat, data.dropoff.lng],
-    ])
-    map.fitBounds(bounds, { padding: [40, 40] })
-    mapReady.value = true
+function handleSseEvent(event: TrackingSseEvent) {
+  if (event.type === 'location' && event.payload.location) {
+    lastUpdatedAt.value = event.payload.location.capturedAt
+    upsertMarker(event.payload.location.lat, event.payload.location.lng)
+  } else if (event.type === 'reset') {
+    if (event.payload) {
+      lastUpdatedAt.value = event.payload.capturedAt
+      upsertMarker(event.payload.lat, event.payload.lng)
+    } else {
+      hasLocation.value = false
+    }
+  } else if (event.type === 'closed') {
+    error.value = `Takip oturumu kapandı (${event.payload.reason}).`
   }
 }
 
-async function loadLocation() {
-  try {
-    error.value = ''
-    const data = await deliveriesApi.courierLocation(props.deliveryId)
-    locationData.value = data
-    if (map) updateMap(data)
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Konum alınamadı'
-  } finally {
-    loading.value = false
+async function startViewMode() {
+  map = createLeafletMap(mapElementId, { center: [38.7205, 35.4826], zoom: 14 })
+  mapReady.value = true
+  session = await trackingApi.startSession(props.deliveryId)
+  const current = await trackingApi.getLocation(props.deliveryId, session.trackingSession)
+  if (current.location) {
+    lastUpdatedAt.value = current.location.capturedAt
+    upsertMarker(current.location.lat, current.location.lng)
   }
+  void events.connect(props.deliveryId, session.trackingSession, handleSseEvent)
 }
 
-function initMap() {
-  const center: L.LatLngExpression = locationData.value
-    ? [locationData.value.lat, locationData.value.lng]
-    : [38.7205, 35.4826]
-
-  map = createLeafletMap('delivery-tracking-map', {
-    center,
-    zoom: 14,
-    attributionControl: false,
-    tileUrl: CARTO_DARK_TILE_URL,
-    tileOptions: { subdomains: 'abcd' },
-  })
-
-  if (locationData.value) updateMap(locationData.value)
+async function startPublishMode() {
+  session = await trackingApi.startSession(props.deliveryId)
+  if (!navigator.geolocation) {
+    error.value = 'Bu cihazda konum servisi bulunamadı.'
+    return
+  }
+  geoWatchId = navigator.geolocation.watchPosition(
+    (position) => {
+      if (!session) return
+      sequence += 1
+      trackingApi
+        .postLocation(props.deliveryId, session.trackingSession, {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          sequence,
+          capturedAt: new Date(position.timestamp).toISOString(),
+          accuracyMeters: position.coords.accuracy ?? undefined,
+        })
+        .then(() => { lastUpdatedAt.value = new Date(position.timestamp).toISOString() })
+        .catch(() => {
+          // A single missed publish tick shouldn't stop the watch — the next tick retries.
+        })
+    },
+    () => { error.value = 'Konum izni verilmedi.' },
+    { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 },
+  )
 }
 
-onMounted(async () => {
-  await loadLocation()
-  initMap()
-  // 20 saniyede bir konumu güncelle
-  refreshTimer = setInterval(loadLocation, 20000)
-})
-
-onUnmounted(() => {
-  if (refreshTimer) clearInterval(refreshTimer)
+async function teardown() {
+  events.stop()
+  if (geoWatchId !== null) {
+    navigator.geolocation.clearWatch(geoWatchId)
+    geoWatchId = null
+  }
+  if (session) {
+    const activeSession = session
+    session = null
+    await trackingApi.endSession(props.deliveryId, activeSession.trackingSession).catch(() => {})
+  }
   map = destroyLeafletMap(map)
-  courierMarker = null
-  pickupMarker = null
-  dropoffMarker = null
-  routeLine = null
+  marker = null
+  mapReady.value = false
+  hasLocation.value = false
+}
+
+async function start() {
+  if (starting.value) return
+  starting.value = true
+  error.value = ''
+  try {
+    if (props.isAssignedCourier) await startPublishMode()
+    else await startViewMode()
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Takip başlatılamadı'
+  } finally {
+    starting.value = false
+  }
+}
+
+onMounted(() => { if (trackable.value) start() })
+onUnmounted(teardown)
+watch(trackable, async (isTrackable) => {
+  await teardown()
+  if (isTrackable) await start()
 })
 </script>
 
 <template>
-  <div class="overflow-hidden rounded-2xl border border-orange-200 bg-white shadow-sm">
-    <!-- Başlık -->
-    <div class="flex items-center justify-between border-b border-orange-100 bg-gradient-to-r from-orange-50 to-amber-50 px-5 py-3.5">
-      <div class="flex items-center gap-2.5">
-        <div class="flex size-8 items-center justify-center rounded-lg bg-orange-100">
-          <PhMapPin class="size-4 text-orange-600" weight="duotone" />
-        </div>
-        <div>
-          <p class="text-sm font-semibold text-stone-800">Kuryem Nerede?</p>
-          <p class="text-xs text-stone-500">Canlı konum takibi</p>
-        </div>
-      </div>
-      <button
-        class="flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-xs font-medium text-stone-600 shadow-sm ring-1 ring-stone-200 transition hover:bg-stone-50"
-        :class="{ 'pointer-events-none opacity-60': loading }"
-        @click="loadLocation"
-      >
-        <PhArrowClockwise class="size-3.5" :class="{ 'animate-spin': loading }" weight="bold" />
-        Yenile
-      </button>
+  <div v-if="trackable" class="overflow-hidden rounded-2xl border border-stone-200 bg-white">
+    <div :id="mapElementId" class="h-64 w-full" />
+    <div class="flex items-center justify-between gap-2 border-t border-stone-100 px-4 py-2.5 text-xs">
+      <span class="flex items-center gap-1.5 text-stone-500">
+        <PhCircleNotch v-if="starting" class="size-3.5 animate-spin" />
+        <span v-else class="size-2 rounded-full" :class="hasLocation ? 'bg-green-500' : 'bg-stone-300'" />
+        {{ isAssignedCourier ? 'Konumunuz paylaşılıyor' : (hasLocation ? 'Canlı konum aktif' : 'Konum bekleniyor') }}
+      </span>
+      <span v-if="lastUpdatedAt" class="text-stone-400">{{ new Date(lastUpdatedAt).toLocaleTimeString('tr-TR') }}</span>
     </div>
+    <p v-if="error" class="border-t border-red-100 bg-red-50 px-4 py-2 text-xs text-red-600">{{ error }}</p>
+  </div>
 
-    <!-- Yükleniyor -->
-    <div v-if="loading && !locationData" class="flex h-52 items-center justify-center bg-slate-950">
-      <div class="flex flex-col items-center gap-3">
-        <svg class="size-6 animate-spin text-orange-500" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-        </svg>
-        <p class="text-sm text-slate-400">Kurye konumu alınıyor...</p>
+  <div v-else class="rounded-2xl border border-stone-200 bg-stone-50 p-5">
+    <div class="flex items-start gap-3">
+      <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-stone-200 text-stone-600">
+        <PhWarning v-if="!isOwner && !isAssignedCourier" class="size-5" weight="duotone" />
+        <PhLockKey v-else class="size-5" weight="duotone" />
       </div>
-    </div>
-
-    <!-- Hata -->
-    <div v-else-if="error && !locationData" class="flex flex-col items-center gap-3 px-6 py-10 text-center">
-      <PhWarning class="size-10 text-amber-400" weight="duotone" />
-      <p class="font-medium text-stone-700">Konum alınamadı</p>
-      <p class="text-sm text-stone-400">{{ error }}</p>
-    </div>
-
-    <!-- Harita -->
-    <template v-else-if="locationData">
-      <!-- Kurye Bilgi Satırı -->
-      <div class="flex items-center gap-3 border-b border-stone-100 px-5 py-2.5">
-        <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-700">
-          {{ locationData.courierName.slice(0, 2).toUpperCase() }}
-        </div>
-        <div class="flex-1 min-w-0">
-          <p class="truncate text-sm font-semibold text-stone-900">{{ locationData.courierName }}</p>
-          <p class="text-xs text-stone-400">{{ vehicleLabel(locationData.vehicleType) }} • {{ timeSince(locationData.locationUpdatedAt) }}</p>
-        </div>
-        <div class="flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 ring-1 ring-green-200">
-          <span class="size-1.5 animate-pulse rounded-full bg-green-500" />
-          Yolda
-        </div>
-      </div>
-
-      <!-- Harita Alanı -->
-      <div id="delivery-tracking-map" class="h-64 w-full" />
-
-      <!-- Rota Bilgisi -->
-      <div class="grid grid-cols-2 divide-x divide-stone-100 border-t border-stone-100">
-        <div class="flex items-center gap-2.5 px-4 py-3">
-          <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs">📦</span>
-          <div class="min-w-0">
-            <p class="text-xs font-semibold text-stone-500">Alış</p>
-            <p class="truncate text-xs font-medium text-stone-800">{{ locationData.pickup.address }}</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2.5 px-4 py-3">
-          <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-xs">🏠</span>
-          <div class="min-w-0">
-            <p class="text-xs font-semibold text-stone-500">Teslimat</p>
-            <p class="truncate text-xs font-medium text-stone-800">{{ locationData.dropoff.address }}</p>
-          </div>
-        </div>
-      </div>
-    </template>
-
-    <!-- Tamamlandı durumu (Delivered) -->
-    <div v-if="locationData?.deliveryStatus === 'Delivered'" class="border-t border-green-100 bg-green-50 px-5 py-3">
-      <div class="flex items-center gap-2 text-green-700">
-        <PhCheckCircle class="size-4" weight="duotone" />
-        <p class="text-sm font-semibold">Kargo teslim edildi!</p>
+      <div>
+        <p class="text-sm font-semibold text-stone-800">Canlı konum şu an kullanılamıyor</p>
+        <p class="mt-1 text-xs leading-relaxed text-stone-500">
+          Takip yalnız katılımcıya özel, süreli oturumlarla ve teslimat "Teslim Almaya Hazır" veya "Yolda" durumundayken açılır.
+        </p>
+        <p class="mt-2 flex items-center gap-1 text-xs font-medium text-stone-600">
+          <PhMapPin class="size-3.5" weight="bold" /> Teslimat {{ deliveryId }}
+        </p>
       </div>
     </div>
   </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { formatEther } from 'viem'
 import { PhX as X, PhWarningCircle as AlertCircle, PhConfetti } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
@@ -11,34 +12,44 @@ const store = useDeliveryStore()
 const wallet = useWalletStore()
 
 const tokenAmount = ref<number | null>(null)
+const returnAmount = ref<number | null>(null)
 const estimatedTime = ref('')
-const collateral = ref<number | null>(null)
+const requiredStake = ref(0n)
+const stakeLoading = ref(true)
 const submitting = ref(false)
 const submitted = ref(false)
 const errorMsg = ref('')
 
 const delivery = computed(() => store.getDelivery(props.deliveryId))
-const alreadyBid = computed(() => delivery.value?.bids.some(b => b.courierId === wallet.address.toLowerCase()))
+const alreadyBid = computed(() => delivery.value?.bids.some(b => b.active && b.courierId === wallet.address.toLowerCase()))
+const requiredStakeMon = computed(() => Number(formatEther(requiredStake.value)))
 
 function handleAmountInput(e: Event) {
   const val = Number((e.target as HTMLInputElement).value)
   tokenAmount.value = val || null
-  collateral.value = val ? Math.ceil(val * 0.2) : null
 }
 
+onMounted(async () => {
+  try {
+    requiredStake.value = (await store.bidStakeRequirement()).requiredDeposit
+  } catch (error) {
+    errorMsg.value = error instanceof Error ? error.message : 'Kurye teminatı okunamadı'
+  } finally {
+    stakeLoading.value = false
+  }
+})
+
 async function submit() {
-  if (!tokenAmount.value || !estimatedTime.value) return
+  const etaMinutes = Number.parseInt(estimatedTime.value)
+  if (!tokenAmount.value || !returnAmount.value || !Number.isSafeInteger(etaMinutes) || etaMinutes <= 0) return
   errorMsg.value = ''
   submitting.value = true
   try {
     await store.addBid(props.deliveryId, {
-      courierId: wallet.address.toLowerCase(),
-      courierName: wallet.displayAddress() || 'Sen',
-      courierAvatar: '',
-      courierRating: 0,
-      courierDeliveries: 0,
       tokenAmount: tokenAmount.value,
-      estimatedTime: estimatedTime.value,
+      returnAmount: returnAmount.value,
+      estimatedMinutes: etaMinutes,
+      requiredStake: requiredStake.value,
     })
     submitted.value = true
     setTimeout(() => emit('success'), 1400)
@@ -60,7 +71,7 @@ async function submit() {
         <div class="mb-5 flex items-center justify-between">
           <div>
             <h2 class="text-base font-semibold text-stone-900">Teklif Ver</h2>
-            <p class="text-xs text-stone-400">Teklif + %20 teminat yatır</p>
+            <p class="text-xs text-stone-400">Teklif ve zincir teminatı</p>
           </div>
           <button class="flex size-8 items-center justify-center rounded-lg border border-stone-200 text-stone-400 hover:text-stone-700" @click="emit('close')">
             <X class="size-4" weight="bold" />
@@ -101,19 +112,29 @@ async function submit() {
           </div>
 
           <div>
-            <label class="mb-1.5 block text-sm font-medium text-stone-700">Tahmini Süre</label>
-            <input v-model="estimatedTime" type="text" placeholder="Örn: 45 dk" class="input" />
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">İade Ücreti (MON)</label>
+            <div class="relative">
+              <input v-model.number="returnAmount" type="number" min="0.000001" step="any" placeholder="Örn: 10" class="input pr-14" />
+              <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-stone-400">MON</span>
+            </div>
           </div>
 
-          <div v-if="collateral" class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Tahmini Süre</label>
+            <input v-model="estimatedTime" type="number" min="1" step="1" placeholder="Örn: 45" class="input" />
+            <p class="mt-1 text-xs text-stone-400">Dakika cinsinden</p>
+          </div>
+
+          <div v-if="stakeLoading || requiredStake > 0n" class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
             <AlertCircle class="mt-0.5 size-4 shrink-0 text-amber-600" weight="fill" />
             <p class="text-xs text-amber-700">
-              <strong>{{ collateral }} MON teminat</strong> kilitlenecek. Teslimatı tamamlarsan iade edilir.
+              <span v-if="stakeLoading">Zincir teminatı kontrol ediliyor…</span>
+              <span v-else><strong>{{ requiredStakeMon }} MON stake</strong> eksik. Tekliften önce ayrı bir cüzdan işlemiyle yatırılacak.</span>
             </p>
           </div>
 
           <button
-            :disabled="!tokenAmount || !estimatedTime || submitting || !!alreadyBid"
+            :disabled="!tokenAmount || !returnAmount || !estimatedTime || submitting || stakeLoading || !!alreadyBid"
             class="btn-primary w-full justify-center disabled:opacity-40 disabled:cursor-not-allowed"
             @click="submit"
           >

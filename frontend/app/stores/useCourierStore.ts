@@ -37,18 +37,11 @@ export const useCourierStore = defineStore('courier', () => {
   }
 
   const leaderboard = computed(() => {
-    const sorted = [...couriers.value].sort((a, b) => {
-      const scoreA = a.rating * 20 + a.totalDeliveries * 0.1 + a.onTimeRate * 0.5
-      const scoreB = b.rating * 20 + b.totalDeliveries * 0.1 + b.onTimeRate * 0.5
-      return scoreB - scoreA
-    })
-    return sorted.map((c, i) => ({
-      ...c,
-      badge: i === 0 ? ('gold' as const) : i === 1 ? ('silver' as const) : i === 2 ? ('bronze' as const) : undefined,
-    }))
+    return [...couriers.value].sort((a, b) => a.name.localeCompare(b.name))
   })
 
-  const topThree = computed(() => leaderboard.value.slice(0, 3))
+  // V2 public projections expose bid participation, not a canonical reputation ranking.
+  const topThree = computed<Courier[]>(() => [])
 
   function getCourier(id: string) {
     return couriers.value.find(c => c.id === id)

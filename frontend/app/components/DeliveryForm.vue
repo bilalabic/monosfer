@@ -14,7 +14,11 @@ const submitError = ref('')
 const form = ref({
   title: '',
   pickupAddress: '',
+  pickupLat: '',
+  pickupLng: '',
   dropoffAddress: '',
+  dropoffLat: '',
+  dropoffLng: '',
   recipientType: 'person' as RecipientType,
   recipientName: '',
   businessName: '',
@@ -54,7 +58,9 @@ const recipientPreviewName = computed(() => {
 })
 
 const canNext = computed(() => {
-  if (currentStep.value === 0) return form.value.pickupAddress && form.value.dropoffAddress && form.value.title && recipientReady.value && form.value.deliveryCode
+  if (currentStep.value === 0) return form.value.pickupAddress && form.value.dropoffAddress && form.value.title &&
+    form.value.pickupLat !== '' && form.value.pickupLng !== '' && form.value.dropoffLat !== '' && form.value.dropoffLng !== '' &&
+    recipientReady.value && form.value.deliveryCode
   if (currentStep.value === 1) return form.value.weight
   if (currentStep.value === 2) return form.value.maxBudget && form.value.deadline && form.value.date
   return true
@@ -67,7 +73,11 @@ async function submit() {
     await store.createDelivery({
       title: form.value.title,
       pickupAddress: form.value.pickupAddress,
+      pickupLat: Number(form.value.pickupLat),
+      pickupLng: Number(form.value.pickupLng),
       dropoffAddress: form.value.dropoffAddress,
+      dropoffLat: Number(form.value.dropoffLat),
+      dropoffLng: Number(form.value.dropoffLng),
       recipientType: form.value.recipientType,
       recipientName: form.value.recipientName,
       businessName: form.value.businessName,
@@ -140,9 +150,29 @@ async function submit() {
           <label class="mb-1.5 block text-sm font-medium text-stone-700">Nereden (Alış)</label>
           <input v-model="form.pickupAddress" class="input" placeholder="Örn: Kadıköy, İstanbul" />
         </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Alış enlemi</label>
+            <input v-model="form.pickupLat" type="number" min="-90" max="90" step="any" class="input" placeholder="41.0082" />
+          </div>
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Alış boylamı</label>
+            <input v-model="form.pickupLng" type="number" min="-180" max="180" step="any" class="input" placeholder="28.9784" />
+          </div>
+        </div>
         <div>
           <label class="mb-1.5 block text-sm font-medium text-stone-700">Nereye (Teslim)</label>
           <input v-model="form.dropoffAddress" class="input" placeholder="Örn: Beşiktaş, İstanbul" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Teslim enlemi</label>
+            <input v-model="form.dropoffLat" type="number" min="-90" max="90" step="any" class="input" placeholder="41.0430" />
+          </div>
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-stone-700">Teslim boylamı</label>
+            <input v-model="form.dropoffLng" type="number" min="-180" max="180" step="any" class="input" placeholder="29.0094" />
+          </div>
         </div>
 
         <div>

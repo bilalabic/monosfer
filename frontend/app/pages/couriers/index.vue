@@ -3,9 +3,7 @@ import { computed, ref } from 'vue'
 import { useCourierStore } from '@/stores/useCourierStore'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
-import TopCourierCard from '@/components/TopCourierCard.vue'
-import LeaderboardTable from '@/components/LeaderboardTable.vue'
-import { PhTrophy, PhMedal, PhChartBar, PhStar, PhPackage } from '@phosphor-icons/vue'
+import { PhUsers, PhInfo, PhStar, PhPackage, PhUser } from '@phosphor-icons/vue'
 
 const store = useCourierStore()
 const deliveryStore = useDeliveryStore()
@@ -24,21 +22,15 @@ await useAsyncData('couriers-page', async () => {
 })
 
 useSeoMeta({
-  title: 'Kurye Liderlik Tablosu — Delivera',
-  description: 'En başarılı kuryeler, puanlar ve teslimat istatistikleri — Delivera liderlik tablosu.',
-})
-
-const podium = computed(() => {
-  const [first, second, third] = store.topThree
-  if (!first || !second || !third) return null
-  return { first, second, third }
+  title: 'Kurye Dizini — Delivera',
+  description: 'Finalized teslimat tekliflerinde yer alan kurye cüzdanları.',
 })
 
 const pendingRatings = computed(() => {
   const address = wallet.address.toLowerCase()
   if (!address) return []
   return deliveryStore.deliveries.filter(delivery =>
-    delivery.status === 'completed' &&
+    delivery.chainState === 'Completed' &&
     delivery.senderId?.toLowerCase() === address &&
     !delivery.isRated &&
     !!delivery.assignedCourierId,
@@ -89,42 +81,17 @@ async function submitRating(deliveryId: string) {
 <template>
   <div class="mx-auto max-w-6xl px-5 py-10 sm:px-8">
     <div class="mb-8">
-      <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-orange-500">Haftalık Sıralama</p>
+      <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-orange-500">Finalized teklif katılımcıları</p>
       <h1 class="flex items-center gap-2 text-2xl font-bold text-stone-900 sm:text-3xl">
-        <PhTrophy class="size-8 text-orange-500" weight="duotone" />
-        Kurye Liderlik Tablosu
+        <PhUsers class="size-8 text-orange-500" weight="duotone" />
+        Kurye Dizini
       </h1>
-      <p class="mt-1 text-stone-500">Her pazar gecesi ödüller akıllı sözleşme tarafından otomatik dağıtılır</p>
+      <p class="mt-1 text-stone-500">Finalized zincir projeksiyonlarında teklif vermiş cüzdanlar</p>
     </div>
 
-    <!-- Prize Pool -->
-    <div class="mb-8 rounded-xl border border-amber-200 bg-amber-50 p-5">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p class="text-xs font-semibold text-amber-600">Bu Haftanın Ödül Havuzu</p>
-          <p class="mt-1 text-3xl font-extrabold text-stone-900">2,400 MON</p>
-        </div>
-        <div class="flex gap-6 text-center text-sm">
-          <div>
-            <p class="text-lg font-bold text-amber-600">1,200</p>
-            <p class="flex items-center justify-center gap-1 text-xs text-stone-500">
-              <PhMedal class="size-4 text-amber-500" weight="fill" /> 1. Sıra
-            </p>
-          </div>
-          <div>
-            <p class="text-lg font-bold text-stone-500">720</p>
-            <p class="flex items-center justify-center gap-1 text-xs text-stone-500">
-              <PhMedal class="size-4 text-stone-400" weight="fill" /> 2. Sıra
-            </p>
-          </div>
-          <div>
-            <p class="text-lg font-bold text-orange-500">480</p>
-            <p class="flex items-center justify-center gap-1 text-xs text-stone-500">
-              <PhMedal class="size-4 text-orange-700" weight="fill" /> 3. Sıra
-            </p>
-          </div>
-        </div>
-      </div>
+    <div class="mb-8 flex items-start gap-2.5 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+      <PhInfo class="mt-0.5 size-5 shrink-0" weight="duotone" />
+      <p>Backend V2 henüz doğrulanmış itibar veya ödül sıralaması yayınlamıyor. Bu liste yalnızca finalized teklif katılımını gösterir.</p>
     </div>
 
     <div v-if="wallet.connected && pendingRatings.length > 0" class="mb-8 rounded-xl border border-stone-200 bg-white p-5">
@@ -186,30 +153,30 @@ async function submitRating(deliveryId: string) {
 
     <template v-else-if="store.couriers.length === 0">
       <div class="mb-8 rounded-2xl border border-stone-200 bg-white py-20 text-center">
-        <PhTrophy class="mx-auto mb-3 size-12 text-stone-300" weight="duotone" />
+        <PhUsers class="mx-auto mb-3 size-12 text-stone-300" weight="duotone" />
         <p class="font-semibold text-stone-900">Henüz kurye yok</p>
-        <p class="mt-1 text-sm text-stone-400">Kayıt olan kuryeler burada görünecek</p>
+        <p class="mt-1 text-sm text-stone-400">Finalized bir teklifte yer alan cüzdanlar burada görünecek</p>
       </div>
     </template>
 
     <template v-else>
-      <!-- Podium -->
-      <div v-if="podium" class="mb-8 grid items-end gap-4 sm:grid-cols-3">
-        <TopCourierCard :courier="podium.second" :rank="2" />
-        <TopCourierCard :courier="podium.first" :rank="1" />
-        <TopCourierCard :courier="podium.third" :rank="3" />
+      <h2 class="mb-4 font-semibold text-stone-900">Teklif Katılımcıları</h2>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div v-for="courier in store.leaderboard" :key="courier.id" class="card flex items-center gap-3 rounded-xl bg-white p-4">
+          <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+            <PhUser class="size-5" weight="duotone" />
+          </div>
+          <div class="min-w-0">
+            <p class="truncate text-sm font-semibold text-stone-900">{{ courier.name }}</p>
+            <p class="text-xs text-stone-500">Finalized teklifte görüldü</p>
+          </div>
+        </div>
       </div>
-
-      <!-- Full Table -->
-      <h2 class="mb-4 font-semibold text-stone-900">Tüm Kuryeler</h2>
-      <LeaderboardTable :couriers="store.leaderboard" />
     </template>
 
     <div class="mt-6 flex items-start gap-2.5 rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm text-stone-500">
-      <PhChartBar class="mt-0.5 size-5 shrink-0 text-stone-400" weight="duotone" />
-      <p>
-        <strong class="text-stone-700">Sıralama Nasıl Hesaplanır?</strong> — Kurye puanı, toplam teslimat ve zamanında teslimat oranı birleştirilerek hesaplanır. Her teslimat sonrası anında güncellenir.
-      </p>
+      <PhInfo class="mt-0.5 size-5 shrink-0 text-stone-400" weight="duotone" />
+      <p>Kanıtlanmış puan ve performans metrikleri, ilgili V2 ABI/projeksiyonları yayınlandığında bu dizine bağlanabilir.</p>
     </div>
   </div>
 </template>

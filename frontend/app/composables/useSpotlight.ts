@@ -29,3 +29,8 @@ export function onTiltMouseLeave(e: MouseEvent) {
   const el = e.currentTarget as HTMLElement
   tiltTarget(el).style.transform = ''
 }
+
+export function onSpotlightTiltMouseMove(e: MouseEvent) {
+  onSpotlightMouseMove(e)
+  onTiltMouseMove(e)
+}

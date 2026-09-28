@@ -1,5 +1,8 @@
 @import "tailwindcss";
+@import "./styles/navbar.css";
+@import "./styles/footer.css";
 @import "./styles/delivery-journey.css";
+@import "./styles/trust-section.css";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -61,6 +64,12 @@
   --ring: 25 95% 53%;
 
   --radius: 0.75rem;
+}
+
+/* Continue the hero artwork behind the floating navbar without moving its content. */
+.home-hero {
+  margin-top: calc(-1 * var(--site-header-height));
+  padding-top: calc(var(--site-header-height) + 3.5rem);
 }
 
 * {
@@ -211,18 +220,21 @@ button, input, textarea, select {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    background: hsl(var(--secondary));
+    background: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-weight: 500;
+    font-weight: 600;
     border-radius: var(--radius);
     padding: 0.625rem 1.25rem;
     font-size: 0.875rem;
     transition: all 0.15s ease;
-    border: 1px solid hsl(var(--border));
+    border: 1.5px solid hsl(20 14% 16% / 0.16);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     cursor: pointer;
   }
   .btn-secondary:hover {
-    background: hsl(36 20% 89%);
+    background: hsl(36 25% 93%);
+    border-color: hsl(20 14% 16% / 0.26);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   }
 
   .input {
@@ -356,6 +368,24 @@ button, input, textarea, select {
   animation: aurora-float-1 20s ease-in-out infinite reverse;
 }
 
+/* Final-CTA flourishes — floating icons and a breathing glow to pull the eye
+   toward the panel right before the page runs out. */
+@keyframes cta-icon-float {
+  0%, 100% { transform: translateY(0) rotate(var(--float-rot, 0deg)); }
+  50% { transform: translateY(-14px) rotate(calc(var(--float-rot, 0deg) * -1)); }
+}
+.cta-float-icon {
+  animation: cta-icon-float 4.5s ease-in-out infinite;
+  animation-delay: var(--float-delay, 0s);
+}
+@keyframes cta-glow-pulse {
+  0%, 100% { box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 0 0 0 hsl(25 95% 53% / 0.22); }
+  50% { box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 0 34px 8px hsl(25 95% 53% / 0.16); }
+}
+.cta-glow {
+  animation: cta-glow-pulse 3.2s ease-in-out infinite;
+}
+
 /* Generic crossfade — pair with Vue's <Transition name="fade"> */
 .fade-enter-active,
 .fade-leave-active {
@@ -397,7 +427,9 @@ button, input, textarea, select {
     transition: none;
   }
   .aurora-blob,
-  .animate-pulse-dot {
+  .animate-pulse-dot,
+  .cta-float-icon,
+  .cta-glow {
     animation: none;
   }
   .text-mark::after {
