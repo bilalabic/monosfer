@@ -8,35 +8,33 @@ const router = useRouter()
 const mm = useMetaMask()
 const wallet = useWalletStore()
 const loginError = ref('')
+const authenticating = ref(false)
 
 async function handleMetaMask() {
+  if (authenticating.value) return
+  authenticating.value = true
   loginError.value = ''
-  const result = await mm.connect()
-  if (!result) return
   try {
+    const result = await mm.connect()
+    if (!result) return
     await wallet.authenticate(result.address, mm.signMessage)
-    router.push('/dashboard')
+    await router.push('/dashboard')
   } catch (e) {
-    loginError.value = e instanceof Error ? e.message : 'Giriş yapılamadı, tekrar deneyin.'
+    if (!mm.error.value) {
+      loginError.value = e instanceof Error ? e.message : 'Giriş yapılamadı, tekrar deneyin.'
+    }
+  } finally {
+    authenticating.value = false
   }
 }
 
 </script>
 
 <template>
-  <div class="flex min-h-[80vh] items-center justify-center px-5 py-12 sm:px-8">
-    <div class="w-full max-w-sm">
+  <div class="auth-page flex min-h-[80vh] items-center justify-center px-5 py-12 sm:px-8">
+    <div class="w-full max-w-md">
 
-      <!-- Logo & title -->
-      <div class="mb-8 text-center">
-        <div class="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-orange-500 shadow-lg">
-          <svg class="size-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/>
-          </svg>
-        </div>
-        <h1 class="text-2xl font-bold text-stone-900">Delivera'ya Giriş</h1>
-        <p class="mt-2 text-sm text-stone-500">Cüzdanınızla bağlanın, kimliğinizi kanıtlayın</p>
-      </div>
+      <page-header compact centered eyebrow="Yolculuğa kaldığın yerden devam et" title="Delivera’ya Giriş" description="Cüzdanınla bağlan, teslimatlarını güvenle yönet." />
 
       <!-- MetaMask Card -->
       <div class="card rounded-2xl bg-white p-6 shadow-sm">
@@ -66,8 +64,8 @@ async function handleMetaMask() {
         <div v-if="mm.error.value === 'user_rejected'" class="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
           İstek reddedildi. MetaMask'ta onaylamanız gerekiyor.
         </div>
-        <div v-else-if="mm.error.value === 'unknown'" class="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-          Bağlantı hatası oluştu. Tekrar deneyin.
+        <div v-else-if="mm.error.value" class="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+          {{ mm.errorMessage.value || 'Bağlantı hatası oluştu. Tekrar deneyin.' }}
         </div>
         <div v-if="loginError" class="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
           {{ loginError }}
@@ -77,7 +75,7 @@ async function handleMetaMask() {
         <button
           class="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl px-5 py-4 font-semibold text-white transition-all disabled:opacity-60"
           :class="mm.isInstalled.value ? 'bg-[#F6851B] hover:bg-[#E2761B] shadow-md hover:shadow-lg' : 'bg-stone-300 cursor-not-allowed'"
-          :disabled="mm.connecting.value || !mm.isInstalled.value"
+          :disabled="authenticating || !mm.isInstalled.value"
           @click="handleMetaMask"
         >
           <!-- MetaMask Fox SVG -->
@@ -113,21 +111,21 @@ async function handleMetaMask() {
             <polygon fill="#F6851B" stroke="#F6851B" stroke-linecap="round" stroke-linejoin="round" points="174.6,164.6 177.9,106.9 193.1,65.8 125.6,65.8 140.6,106.9 144.1,164.6 145.3,182.8 145.4,227.6 172.9,227.6 173.1,182.8"/>
           </svg>
 
-          <span v-if="mm.connecting.value" class="flex items-center gap-2">
+          <span v-if="authenticating" class="flex items-center gap-2">
             <svg class="size-4 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
             </svg>
-            Bağlanıyor...
+            {{ mm.connecting.value ? 'Bağlanıyor...' : 'Giriş onaylanıyor...' }}
           </span>
           <span v-else>MetaMask ile Bağlan</span>
-          <PhArrowRight v-if="!mm.connecting.value" class="size-4 transition group-hover:translate-x-0.5" weight="bold" />
+          <PhArrowRight v-if="!authenticating" class="size-4 transition group-hover:translate-x-0.5" weight="bold" />
         </button>
 
         <!-- Monad badge -->
         <div class="mt-4 flex items-center justify-center gap-2 text-xs text-stone-400">
-          <span class="inline-block size-1.5 rounded-full bg-purple-400"></span>
-          Monad Testnet · 10,000 TPS · 400ms blok süresi
+          <span class="inline-block size-1.5 rounded-full bg-orange-400"></span>
+          Cüzdan imzasıyla güvenli giriş · Gaz ücreti yok
         </div>
 
         <!-- How it works -->

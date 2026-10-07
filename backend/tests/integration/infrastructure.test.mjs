@@ -15,6 +15,15 @@ const env = {
   CORS_ORIGINS: 'http://localhost:3000', CONNECTION_TIMEOUT_MS: '300',
 };
 // Integration commands intentionally fail (not skip) when local infrastructure is unavailable.
+test('realtime starts without framework errors and serves health without API telemetry', { timeout: 15000 }, async t => {
+  const logs = [];
+  const { app } = await createApplication(env, createLogger({ write: line => logs.push(JSON.parse(String(line))) }), true);
+  t.after(() => app.close());
+  assert.equal((await app.inject('/v1/health/ready')).statusCode, 200);
+  assert.equal((await app.inject('/v1/quotes/delivery')).statusCode, 404);
+  assert.equal(logs.some(entry => entry.level >= 50), false);
+});
+
 test('real PostgreSQL migration is repeatable; Redis PING, readiness and resource cleanup', { timeout: 15000 }, async t => {
   const url = new URL(env.DATABASE_URL);
   assert.ok(['127.0.0.1', 'localhost', 'postgres'].includes(url.hostname), 'Integration writes require a local PostgreSQL host');

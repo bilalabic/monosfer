@@ -1,13 +1,14 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '../config/config.js';
 import { QuotesRepository, type Issuance } from './quotes.repository.js';
+import { supportsQuoteNetwork } from './config.js';
 
 @Injectable()
 export class QuoteLinkWorker {
   constructor(private readonly config: ConfigService, private readonly repository: QuotesRepository) {}
   async once(): Promise<{ processed: number; linked: number }> {
     const s=this.config.settings;
-    if (s.environment==='production' || !s.quotes.workerEnabled || !s.indexer.enabled || s.indexer.chainId!==10143) throw new ServiceUnavailableException();
+    if (!supportsQuoteNetwork(s.environment,s.indexer.chainId,s.indexer.rpcUrl) || !s.quotes.workerEnabled || !s.indexer.enabled) throw new ServiceUnavailableException();
     let processed=0; let linked=0;
     for (let n=0;n<20;n++) {
       const result=await this.repository.transaction(async client=>{

@@ -2,7 +2,7 @@
 definePageMeta({ requiresAuth: true })
 
 import { ref, onMounted } from 'vue'
-import { PhHeadset, PhPlus, PhCaretRight } from '@phosphor-icons/vue'
+import { PhPlus, PhCaretRight } from '@phosphor-icons/vue'
 import { useSupportStore } from '@/stores/useSupportStore'
 import { supportApi, type SupportCase } from '@/api/support'
 import SupportAccessGate from '@/components/SupportAccessGate.vue'
@@ -43,16 +43,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl px-5 py-10 sm:px-8">
-    <div class="mb-6 flex items-center justify-between">
-      <div class="flex items-center gap-2.5">
-        <div class="flex size-9 items-center justify-center rounded-lg bg-orange-100">
-          <PhHeadset class="size-5 text-orange-600" weight="duotone" />
-        </div>
-        <h1 class="text-xl font-bold text-stone-900">Destek Konsolu</h1>
-      </div>
-      <NuxtLink to="/support/new" class="btn-primary"><PhPlus class="size-4" /> Yeni Vaka</NuxtLink>
-    </div>
+  <div class="page-shell page-shell--detail">
+    <page-header eyebrow="Her adımda yanında" title="Destek Konsolu" description="Teslimatlara ait destek vakalarını ve çözüm sürecini yönet.">
+      <nuxt-link to="/support/new" class="btn-primary"><PhPlus class="size-4" /> Yeni Vaka</nuxt-link>
+    </page-header>
 
     <SupportAccessGate>
       <div v-if="cases.length === 0" class="card rounded-xl bg-white p-8 text-center text-sm text-stone-500">

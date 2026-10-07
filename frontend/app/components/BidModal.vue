@@ -66,14 +66,15 @@ async function submit() {
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-stone-900/40 backdrop-blur-sm" @click="emit('close')" />
 
-      <div class="relative w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-6 shadow-xl">
+      <div class="bid-dialog relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-3xl border border-stone-200 bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="bid-dialog-title">
         <!-- Header -->
         <div class="mb-5 flex items-center justify-between">
           <div>
-            <h2 class="text-base font-semibold text-stone-900">Teklif Ver</h2>
+            <p class="page-eyebrow">Yeni bir yolculuğa katıl</p>
+            <h2 id="bid-dialog-title" class="font-heading text-2xl font-bold tracking-tight text-stone-900">Teklif Ver</h2>
             <p class="text-xs text-stone-400">Teklif ve zincir teminatı</p>
           </div>
-          <button class="flex size-8 items-center justify-center rounded-lg border border-stone-200 text-stone-400 hover:text-stone-700" @click="emit('close')">
+          <button aria-label="Teklif penceresini kapat" class="flex size-8 items-center justify-center rounded-lg border border-stone-200 text-stone-400 hover:text-stone-700" @click="emit('close')">
             <X class="size-4" weight="bold" />
           </button>
         </div>

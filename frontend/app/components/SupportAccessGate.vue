@@ -13,20 +13,20 @@ const support = useSupportStore()
     </svg>
   </div>
 
-  <div v-else-if="support.accessState === 'unauthenticated'" class="mx-auto max-w-md py-16 text-center">
+  <div v-else-if="support.accessState === 'unauthenticated'" class="page-empty mx-auto max-w-lg">
     <PhLockKey class="mx-auto mb-3 size-10 text-stone-300" weight="duotone" />
     <h2 class="font-semibold text-stone-900">Giriş gerekli</h2>
     <p class="mt-1 text-sm text-stone-500">Destek konsoluna erişmek için cüzdanınızla giriş yapın.</p>
     <NuxtLink to="/login" class="btn-primary mt-4 inline-flex">Giriş Yap</NuxtLink>
   </div>
 
-  <div v-else-if="support.accessState === 'denied'" class="mx-auto max-w-md py-16 text-center">
+  <div v-else-if="support.accessState === 'denied'" class="page-empty mx-auto max-w-lg">
     <PhProhibit class="mx-auto mb-3 size-10 text-stone-300" weight="duotone" />
     <h2 class="font-semibold text-stone-900">Erişim yok</h2>
     <p class="mt-1 text-sm text-stone-500">Bu cüzdanın destek konsolu erişimi yok.</p>
   </div>
 
-  <div v-else-if="support.accessState === 'disabled'" class="mx-auto max-w-md py-16 text-center">
+  <div v-else-if="support.accessState === 'disabled'" class="page-empty mx-auto max-w-lg">
     <PhWarningCircle class="mx-auto mb-3 size-10 text-stone-300" weight="duotone" />
     <h2 class="font-semibold text-stone-900">Destek modülü kapalı</h2>
     <p class="mt-1 text-sm text-stone-500">Bu ortamda destek/operasyon modülü etkin değil.</p>

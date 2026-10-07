@@ -73,6 +73,8 @@ function loadDeployments() {
   return readdirSync(deploymentsDir)
     .filter((f) => f.endsWith(".json"))
     .map((f) => JSON.parse(readFileSync(join(deploymentsDir, f), "utf8")))
+    // Legacy single-contract deployment records are not consumer manifests.
+    .filter((d) => d.contracts && Number.isSafeInteger(d.chainId))
     .sort((a, b) => a.chainId - b.chainId);
 }
 

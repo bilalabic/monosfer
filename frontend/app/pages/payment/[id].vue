@@ -6,6 +6,7 @@ import { formatEther } from 'viem'
 import { PhArrowLeft, PhCheckCircle, PhCircleNotch, PhLockKey, PhShieldCheck } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
+import { deliveryStateLabel } from '@/utils/delivery-state'
 import { MONAD_TESTNET } from '@/config/chain'
 
 const route = useRoute()
@@ -24,7 +25,7 @@ if (!deliveries.getDelivery(route.params.id as string)) {
 const delivery = computed(() => deliveries.getDelivery(route.params.id as string))
 const isOwner = computed(() => delivery.value?.senderId === wallet.address.toLowerCase())
 const alreadyFunded = computed(() => delivery.value?.customerFunded ?? false)
-const explorerUrl = computed(() => txHash.value ? `${MONAD_TESTNET.explorer}/tx/${txHash.value}` : '')
+const explorerUrl = computed(() => txHash.value && MONAD_TESTNET.explorer ? `${MONAD_TESTNET.explorer}/tx/${txHash.value}` : '')
 
 async function fund() {
   if (!delivery.value || !isOwner.value || alreadyFunded.value || processing.value) return
@@ -44,7 +45,7 @@ async function fund() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-lg px-5 py-10 sm:px-8">
+  <div class="page-shell page-shell--narrow">
     <button class="mb-6 flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900" @click="router.back()">
       <PhArrowLeft class="size-4" weight="bold" /> Geri
     </button>
@@ -54,11 +55,7 @@ async function fund() {
       Bu fonlama işlemini yalnız teslimatı oluşturan cüzdan yapabilir.
     </div>
     <div v-else class="space-y-5">
-      <div>
-        <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-orange-500">On-chain Fonlama</p>
-        <h1 class="text-2xl font-bold text-stone-900">Müşteri Escrow Payı</h1>
-        <p class="mt-1 text-sm text-stone-500">Tutar doğrudan DeliveryHub sözleşmesinden okunur ve aynı işlemde kilitlenir.</p>
-      </div>
+      <page-header compact eyebrow="Ödemen güvence altında" title="Müşteri Escrow Payı" description="Teslimat tutarını akıllı sözleşmede kilitle. Ödemen, teslimat tamamlanana kadar koruma altında kalsın." />
 
       <div class="card rounded-xl bg-white p-5">
         <div class="flex items-center justify-between">
@@ -67,7 +64,7 @@ async function fund() {
         </div>
         <div class="mt-3 flex items-center justify-between">
           <span class="text-sm text-stone-500">Durum</span>
-          <span class="font-semibold text-stone-900">{{ delivery.chainState }}</span>
+          <span class="font-semibold text-stone-900">{{ deliveryStateLabel(delivery.chainState) }}</span>
         </div>
         <div class="mt-3 flex items-center justify-between">
           <span class="text-sm text-stone-500">Bakiye</span>
@@ -86,7 +83,7 @@ async function fund() {
         <p class="flex items-center gap-2 text-sm font-semibold text-green-700">
           <PhCheckCircle class="size-5" weight="fill" /> Müşteri payı fonlandı<span v-if="fundedAmount">: {{ fundedAmount }} MON</span>
         </p>
-        <a v-if="explorerUrl" :href="explorerUrl" target="_blank" rel="noopener noreferrer" class="mt-2 block text-xs text-purple-700 underline">
+        <a v-if="explorerUrl" :href="explorerUrl" target="_blank" rel="noopener noreferrer" class="mt-2 block text-xs text-orange-700 underline">
           İşlemi explorer'da aç
         </a>
       </div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, defineAsyncComponent } from 'vue'
-import { PhArrowLeft as ArrowLeft, PhMapPin as MapPin, PhClock as Clock, PhBarbell as Weight, PhPackage as Package, PhShieldCheck as Shield, PhUsers as Users, PhMagnifyingGlass, PhLockKey, PhQrCode, PhStar } from '@phosphor-icons/vue'
+import { PhArrowLeft as ArrowLeft, PhMapPin as MapPin, PhClock as Clock, PhBarbell as Weight, PhShieldCheck as Shield, PhUsers as Users, PhMagnifyingGlass, PhLockKey, PhQrCode, PhStar } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
 import StatusBadge from '@/components/StatusBadge.vue'
@@ -85,30 +85,21 @@ async function requestReturnAction() {
 </script>
 
 <template>
-  <div v-if="delivery" class="mx-auto max-w-5xl px-5 py-10 sm:px-8">
+  <div v-if="delivery" class="page-shell page-shell--detail">
     <button class="mb-5 flex items-center gap-1.5 text-sm text-stone-500 transition hover:text-stone-900" @click="router.back()">
       <ArrowLeft class="size-4" weight="bold" /> Teslimatlar
     </button>
 
-    <!-- Header -->
-    <div class="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <div class="mb-2 flex items-center gap-3">
-          <div class="flex size-9 items-center justify-center rounded-lg bg-orange-100">
-            <Package class="size-5 text-orange-600" weight="duotone" />
-          </div>
-          <h1 class="text-xl font-bold text-stone-900">{{ delivery.title }}</h1>
-        </div>
-        <div class="flex flex-wrap items-center gap-3">
-          <StatusBadge :status="delivery.status" />
-          <span class="text-xs text-stone-400">{{ formatDate(delivery.createdAt) }}</span>
-        </div>
+    <page-header compact eyebrow="Teslimatın yolculuğu" :title="delivery.title" :description="`Teslimat #${delivery.id} · Rotayı, teklifleri ve teslimat adımlarını takip et.`">
+      <template #meta>
+        <status-badge :status="delivery.status" />
+        <span class="text-xs text-stone-500">{{ formatDate(delivery.createdAt) }}</span>
+      </template>
+      <div class="rounded-2xl border border-orange-100 bg-white px-5 py-4">
+        <p class="mb-1 text-xs text-stone-500">Escrow'daki tutar</p>
+        <token-amount :amount="delivery.escrowAmount" size="lg" />
       </div>
-      <div class="flex flex-col items-start sm:items-end gap-1">
-        <p class="text-xs text-stone-400">Escrow'daki tutar</p>
-        <TokenAmount :amount="delivery.escrowAmount" size="lg" />
-      </div>
-    </div>
+    </page-header>
 
     <div class="grid gap-5 lg:grid-cols-3">
       <!-- Left col -->

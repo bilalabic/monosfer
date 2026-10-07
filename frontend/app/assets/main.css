@@ -3,6 +3,7 @@
 @import "./styles/footer.css";
 @import "./styles/delivery-journey.css";
 @import "./styles/trust-section.css";
+@import "./styles/pages.css";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;

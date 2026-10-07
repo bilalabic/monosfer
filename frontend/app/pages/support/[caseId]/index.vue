@@ -58,20 +58,19 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-2xl px-5 py-10 sm:px-8">
+  <div class="page-shell page-shell--form">
     <button class="mb-6 flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900" @click="router.back()">
       <PhArrowLeft class="size-4" weight="bold" /> Geri
     </button>
 
     <SupportAccessGate>
       <div v-if="detail" class="space-y-5">
-        <div class="flex items-center justify-between">
-          <h1 class="text-xl font-bold text-stone-900">Vaka #{{ detail.id }}</h1>
-          <NuxtLink :to="`/support/${caseId}/delivery`" class="btn-secondary text-sm">
+        <page-header compact eyebrow="Destek süreci" :title="`Vaka #${detail.id}`" :description="`Teslimat #${detail.delivery_id}`">
+          <nuxt-link :to="`/support/${caseId}/delivery`" class="btn-secondary text-sm">
             <PhFileText class="size-4" /> Teslimat Detayı
-          </NuxtLink>
-        </div>
-        <p class="text-sm text-stone-500">Teslimat #{{ detail.delivery_id }} · Oluşturan: {{ detail.created_by }}</p>
+          </nuxt-link>
+        </page-header>
+        <p class="break-all text-sm text-stone-500">Oluşturan: {{ detail.created_by }}</p>
 
         <form class="card space-y-4 rounded-xl bg-white p-5" @submit.prevent="save">
           <div>

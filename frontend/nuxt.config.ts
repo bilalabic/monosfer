@@ -24,6 +24,7 @@ export default defineNuxtConfig({
   css: ['~/assets/main.css'],
 
   vite: {
+    define: { 'import.meta.env.VITE_MONOSFER_CHAIN_ID': JSON.stringify(process.env.NUXT_PUBLIC_CHAIN_ID || '10143') },
     plugins: [tailwindcss()],
   },
 
@@ -32,6 +33,7 @@ export default defineNuxtConfig({
     // process, proxied same-origin by server/middleware/tracking-events-proxy.ts.
     realtimeOrigin,
     public: {
+      chainId: Number(process.env.NUXT_PUBLIC_CHAIN_ID || 10143),
       // V2 is intentionally a separate, same-origin /v1 surface. There is no
       // legacy /api fallback because its JWT and delivery state semantics differ.
       apiBase: process.env.NUXT_PUBLIC_API_BASE || '/v1',

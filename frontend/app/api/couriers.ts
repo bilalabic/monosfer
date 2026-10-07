@@ -1,4 +1,5 @@
 import { deliveriesApi } from './deliveries'
+import { developmentDataset } from './development'
 
 export interface CourierApiData {
   id: string
@@ -31,13 +32,14 @@ export interface CourierLocation {
 
 export const couriersApi = {
   async list(): Promise<CourierApiData[]> {
-    const deliveries = await deliveriesApi.list({ limit: 100 })
-    const pages = await Promise.all(deliveries.data.map(delivery => deliveriesApi.bids(delivery.id)))
+    const nuxtApp = useNuxtApp()
+    const [deliveries, dataset] = await Promise.all([deliveriesApi.list({ limit: 100 }), developmentDataset()])
+    const pages = await nuxtApp.runWithContext(() => Promise.all(deliveries.data.map(delivery => deliveriesApi.bids(delivery.id))))
     const wallets = new Set(pages.flatMap(page => page.data.map(bid => bid.courier.toLowerCase())))
     return [...wallets].map((walletAddress, index) => ({
       id: walletAddress,
       walletAddress,
-      name: `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
+      name: dataset.couriers.find(courier => courier.walletAddress === walletAddress)?.name || `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
       avatar: '',
       rating: 0,
       totalDeliveries: 0,
@@ -46,8 +48,8 @@ export const couriersApi = {
       weeklyDeliveries: 0,
       weeklyEarnings: 0,
       monthlyEarnings: 0,
-      joinedDate: '',
-      specialties: [],
+      joinedDate: dataset.couriers.find(courier => courier.walletAddress === walletAddress)?.joinedDate || '',
+      specialties: [dataset.couriers.find(courier => courier.walletAddress === walletAddress)?.vehicleType || ''].filter(Boolean),
       leaderboardScore: index,
     }))
   },

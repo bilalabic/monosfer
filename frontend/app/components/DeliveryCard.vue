@@ -18,6 +18,11 @@ const hasUserBid = computed(() =>
   !!wallet.address &&
   props.delivery.bids.some(bid => bid.courierId.toLowerCase() === wallet.address.toLowerCase()),
 )
+const hasAction = computed(() =>
+  (props.delivery.status === 'open' && !isOwner.value)
+  || (props.delivery.chainState === 'AwaitingFunding' && isOwner.value)
+  || (['AwaitingFunding', 'ReadyForPickup', 'InTransit', 'DeliveredPending'].includes(props.delivery.chainState) && !!props.delivery.selectedBidId && isAssignedCourier.value),
+)
 
 function formatTime(dateStr: string) {
   return new Date(dateStr).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
@@ -25,31 +30,29 @@ function formatTime(dateStr: string) {
 </script>
 
 <template>
-  <div class="card card-hover flex h-full min-w-0 flex-col rounded-xl bg-white p-5">
+  <article class="delivery-card card card-hover flex h-full min-w-0 flex-col bg-white p-5">
     <!-- Header -->
-    <div class="mb-4 flex items-start justify-between gap-3">
-      <div class="flex min-w-0 items-center gap-3">
-        <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-orange-100">
-          <Package class="size-5 text-orange-600" weight="duotone" />
-        </div>
-        <div class="min-w-0">
-          <h3 class="line-clamp-2 text-sm font-semibold leading-tight text-stone-900">{{ delivery.title }}</h3>
-          <p class="text-xs text-stone-400 mt-0.5">{{ formatTime(delivery.createdAt) }} · {{ delivery.bids.length }} teklif</p>
-        </div>
+    <div class="delivery-card__top">
+      <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-orange-100">
+        <Package class="size-5 text-orange-600" weight="duotone" />
       </div>
-      <StatusBadge class="shrink-0" :status="delivery.status" />
+      <div class="delivery-card__title">
+        <h3 class="line-clamp-2 font-semibold text-stone-900">{{ delivery.title }}</h3>
+        <p class="text-xs text-stone-400 mt-0.5">{{ formatTime(delivery.createdAt) }} · {{ delivery.bids.length }} teklif</p>
+      </div>
     </div>
+    <status-badge class="mb-4 self-start" :status="delivery.status" />
 
     <!-- Route -->
-    <div class="mb-4 rounded-lg border border-stone-100 bg-stone-50 p-3 space-y-2">
+    <div class="delivery-card__route mb-4 space-y-2">
       <div class="flex items-center gap-2 text-xs">
         <span class="size-1.5 rounded-full bg-green-500 shrink-0" />
-        <span class="text-stone-600 truncate">{{ delivery.pickupAddress }}</span>
+        <span class="text-stone-600 leading-relaxed">{{ delivery.pickupAddress }}</span>
       </div>
       <div class="ml-[3px] h-3 w-px bg-stone-300" />
       <div class="flex items-center gap-2 text-xs">
         <span class="size-1.5 rounded-full bg-red-400 shrink-0" />
-        <span class="text-stone-600 truncate">{{ delivery.dropoffAddress }}</span>
+        <span class="text-stone-600 leading-relaxed">{{ delivery.dropoffAddress }}</span>
       </div>
     </div>
 
@@ -66,10 +69,10 @@ function formatTime(dateStr: string) {
         <p class="text-xs text-stone-400 mb-0.5">Maks. bütçe</p>
         <TokenAmount :amount="delivery.maxBudget" size="md" />
       </div>
-      <div class="grid grid-cols-2 gap-2">
+      <div class="delivery-card__actions" :class="{ 'delivery-card__actions--single': !hasAction }">
         <button
           v-if="delivery.status === 'open' && !isOwner && !hasUserBid"
-          class="btn-primary px-3 py-2 text-xs"
+          class="btn-primary justify-center px-3 py-2 text-xs"
           @click="emit('bid', delivery.id)"
         >
           Teklif Ver
@@ -108,5 +111,5 @@ function formatTime(dateStr: string) {
         </NuxtLink>
       </div>
     </div>
-  </div>
+  </article>
 </template>

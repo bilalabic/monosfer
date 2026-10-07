@@ -1,11 +1,13 @@
 import { getChain } from '../../../contracts/exports/index.js'
 
-const chain = getChain(10143)
+const chainId = Number(import.meta.env?.VITE_MONOSFER_CHAIN_ID || 10143)
+if (![10143, 31337].includes(chainId)) throw new Error('Desteklenmeyen uygulama ağı')
+const chain = getChain(chainId)
 
 export const MONAD_TESTNET = {
   chainIdHex: `0x${chain.chainId.toString(16)}`,
   chainId: chain.chainId,
-  chainName: 'Monad Testnet',
+  chainName: chainId === 31337 ? 'Monosfer Yerel Test' : 'Monad Testnet',
   nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
   rpcUrl: chain.rpcUrl,
   explorer: chain.explorer,
@@ -18,5 +20,5 @@ export const MONAD_TESTNET_WALLET_PARAMS = {
   chainName: MONAD_TESTNET.chainName,
   nativeCurrency: MONAD_TESTNET.nativeCurrency,
   rpcUrls: [MONAD_TESTNET.rpcUrl],
-  blockExplorerUrls: [MONAD_TESTNET.explorer],
+  ...(MONAD_TESTNET.explorer ? { blockExplorerUrls: [MONAD_TESTNET.explorer] } : {}),
 } as const

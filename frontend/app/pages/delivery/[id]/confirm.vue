@@ -5,6 +5,7 @@ import { computed, ref } from 'vue'
 import { PhArrowLeft, PhCheckCircle, PhCircleNotch, PhCopy, PhPackage, PhSealCheck } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
+import { deliveryStateLabel } from '@/utils/delivery-state'
 import AcceptanceQrCode from '@/components/AcceptanceQrCode.vue'
 
 const route = useRoute()
@@ -84,18 +85,14 @@ async function finalizeDelivery() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-lg px-5 py-10 sm:px-8">
+  <div class="page-shell page-shell--narrow">
     <button class="mb-6 flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900" @click="router.back()">
       <PhArrowLeft class="size-4" weight="bold" /> Geri
     </button>
 
     <div v-if="!delivery" class="py-20 text-center text-stone-500">Teslimat bulunamadı.</div>
     <div v-else class="space-y-5">
-      <div>
-        <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-orange-500">Doğrulanmış Teslim Akışı</p>
-        <h1 class="text-2xl font-bold text-stone-900">Teslimat #{{ delivery.id }}</h1>
-        <p class="mt-1 text-sm text-stone-500">Zincir durumu: {{ delivery.chainState }}</p>
-      </div>
+      <page-header compact eyebrow="Güvenle teslim et" :title="`Teslimat #${delivery.id}`" :description="`Teslimat durumu: ${deliveryStateLabel(delivery.chainState)}`" />
 
       <p v-if="!indexerReady" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
         Finalized indexer durumu {{ delivery.indexing.status }}. Kanıt işlemleri projection hazır olana kadar kapalıdır.
@@ -125,7 +122,7 @@ async function finalizeDelivery() {
         </div>
       </section>
 
-      <section v-else-if="delivery.chainState === 'ReadyForPickup' && isCourier" class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+      <section v-else-if="delivery.chainState === 'ReadyForPickup' && isCourier" class="page-notice">
         Müşterinin imzaladığı kabul paketini kullanmak için kurye işlem ekranına geçin.
         <button class="mt-3 block font-semibold underline" @click="router.push(`/courier/receive/${delivery.id}`)">Kurye ekranını aç</button>
       </section>
@@ -154,7 +151,7 @@ async function finalizeDelivery() {
         </div>
       </section>
 
-      <section v-else-if="delivery.chainState === 'ReturnRequired' && isCourier" class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+      <section v-else-if="delivery.chainState === 'ReturnRequired' && isCourier" class="page-notice">
         Müşterinin imzaladığı iade kabul paketini kullanmak için kurye işlem ekranına geçin.
         <button class="mt-3 block font-semibold underline" @click="router.push(`/courier/receive/${delivery.id}`)">Kurye ekranını aç</button>
       </section>
@@ -185,7 +182,7 @@ async function finalizeDelivery() {
         <PhCheckCircle class="mr-2 inline size-5" weight="fill" /> Teslimat tamamlandı.
       </div>
 
-      <div v-else-if="delivery.chainState === 'Returned'" class="rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm font-semibold text-purple-700">
+      <div v-else-if="delivery.chainState === 'Returned'" class="rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm font-semibold text-stone-700">
         <PhCheckCircle class="mr-2 inline size-5" weight="fill" /> Paket iade edildi.
       </div>
 

@@ -338,7 +338,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="relative flex h-full overflow-hidden bg-stone-50">
+  <div class="map-frame relative flex h-full overflow-hidden">
     <!-- Sol Panel / Mobilde alttan açılan panel -->
     <aside
       class="fixed inset-x-0 bottom-0 z-20 flex max-h-[75vh] flex-col overflow-hidden rounded-t-2xl border-t border-stone-200 bg-white shadow-2xl transition-transform duration-300 lg:static lg:z-10 lg:max-h-none lg:w-80 lg:shrink-0 lg:translate-y-0 lg:rounded-none lg:border-r lg:border-t-0 lg:shadow-none"
@@ -353,7 +353,7 @@ onUnmounted(() => {
             </div>
             <div>
               <h1 class="text-base font-bold text-stone-900">Kuryem Nerede?</h1>
-              <p class="text-xs text-stone-500">Kayseri canlı kurye takibi</p>
+              <p class="text-xs text-stone-500">Kayseri · Örnek rota gösterimi</p>
             </div>
           </div>
           <div class="flex items-center gap-2">
@@ -473,7 +473,7 @@ onUnmounted(() => {
       </button>
 
       <!-- Legend -->
-      <div class="absolute left-4 top-4 z-[1000] hidden rounded-xl border border-stone-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur sm:block">
+      <div class="absolute left-16 top-4 z-[1000] hidden rounded-xl border border-stone-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur sm:block">
         <p class="mb-2 text-[10px] font-bold uppercase tracking-widest text-stone-500">Harita Göstergesi</p>
         <div class="flex flex-col gap-1.5 text-xs">
           <div class="flex items-center gap-2">

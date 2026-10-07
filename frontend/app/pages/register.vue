@@ -52,14 +52,11 @@ function shortAddr(addr: string) {
 </script>
 
 <template>
-  <div class="flex min-h-[80vh] items-center justify-center px-5 py-12 sm:px-8">
-    <div class="w-full max-w-sm">
+  <div class="auth-page flex min-h-[80vh] items-center justify-center px-5 py-12 sm:px-8">
+    <div class="w-full max-w-md">
 
       <!-- Header -->
-      <div class="mb-8 text-center">
-        <h1 class="text-2xl font-bold text-stone-900">Hesap Oluştur</h1>
-        <p class="mt-2 text-sm text-stone-500">Delivera ağına cüzdanınızla katılın</p>
-      </div>
+      <page-header compact centered eyebrow="Teslimatın geleceğine katıl" title="Hesap Oluştur" description="Cüzdanını bağla. Gönderici veya kurye olarak ilk yolculuğuna başla." />
 
       <!-- Step indicator -->
       <div class="mb-6 flex items-center gap-3">
@@ -99,6 +96,9 @@ function shortAddr(addr: string) {
 
           <div v-if="mm.error.value === 'user_rejected'" class="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
             MetaMask'ta isteği reddettiniz. Tekrar deneyin.
+          </div>
+          <div v-else-if="mm.error.value" class="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+            {{ mm.errorMessage.value || 'Bağlantı hatası oluştu. Tekrar deneyin.' }}
           </div>
 
           <button

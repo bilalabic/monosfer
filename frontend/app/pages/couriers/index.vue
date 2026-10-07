@@ -3,7 +3,10 @@ import { computed, ref } from 'vue'
 import { useCourierStore } from '@/stores/useCourierStore'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
-import { PhUsers, PhInfo, PhStar, PhPackage, PhUser } from '@phosphor-icons/vue'
+import { PhUsers, PhInfo, PhStar, PhPackage, PhWallet } from '@phosphor-icons/vue'
+import { vehicleLabel, vehicleIcon, type VehicleType } from '@/composables/useVehicleMeta'
+import type { Courier } from '@/stores/useCourierStore'
+import { profileInitials, shortWallet } from '@/utils/profile'
 
 const store = useCourierStore()
 const deliveryStore = useDeliveryStore()
@@ -12,6 +15,14 @@ const ratingByDelivery = ref<Record<string, number>>({})
 const commentByDelivery = ref<Record<string, string>>({})
 const ratingSaving = ref<Record<string, boolean>>({})
 const ratingError = ref<Record<string, string>>({})
+
+function vehicle(courier: Courier): VehicleType {
+  const type = courier.specialties[0]
+  return ['bicycle', 'motorcycle', 'car', 'on_foot'].includes(type || '') ? type as VehicleType : 'on_foot'
+}
+function bidCount(address: string) {
+  return deliveryStore.deliveries.reduce((total, delivery) => total + delivery.bids.filter(bid => bid.courierId.toLowerCase() === address.toLowerCase()).length, 0)
+}
 
 await useAsyncData('couriers-page', async () => {
   await Promise.all([
@@ -79,19 +90,17 @@ async function submitRating(deliveryId: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl px-5 py-10 sm:px-8">
-    <div class="mb-8">
-      <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-orange-500">Finalized teklif katılımcıları</p>
-      <h1 class="flex items-center gap-2 text-2xl font-bold text-stone-900 sm:text-3xl">
-        <PhUsers class="size-8 text-orange-500" weight="duotone" />
-        Kurye Dizini
-      </h1>
-      <p class="mt-1 text-stone-500">Finalized zincir projeksiyonlarında teklif vermiş cüzdanlar</p>
-    </div>
+  <div class="page-shell">
+    <page-header eyebrow="Yolları birleştiren insanlar" title="Kurye Dizini" description="Teslimat ağına katılan kuryeleri keşfet. Araçlarını ve teslimatlara verdikleri teklifleri gör.">
+      <div class="page-metrics" aria-label="Kurye ağı özeti">
+        <div class="page-metric"><strong>{{ store.couriers.length }}</strong><span>Kurye</span></div>
+        <div class="page-metric"><strong>{{ deliveryStore.deliveries.reduce((total, d) => total + d.bids.length, 0) }}</strong><span>Toplam teklif</span></div>
+      </div>
+    </page-header>
 
-    <div class="mb-8 flex items-start gap-2.5 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+    <div class="page-notice">
       <PhInfo class="mt-0.5 size-5 shrink-0" weight="duotone" />
-      <p>Backend V2 henüz doğrulanmış itibar veya ödül sıralaması yayınlamıyor. Bu liste yalnızca finalized teklif katılımını gösterir.</p>
+      <p>Bu dizin, zincirde kesinleşmiş tekliflere katılan kuryeleri gösterir. Doğrulanmış puan ve performans sıralaması henüz sunulmuyor.</p>
     </div>
 
     <div v-if="wallet.connected && pendingRatings.length > 0" class="mb-8 rounded-xl border border-stone-200 bg-white p-5">
@@ -160,23 +169,33 @@ async function submitRating(deliveryId: string) {
     </template>
 
     <template v-else>
-      <h2 class="mb-4 font-semibold text-stone-900">Teklif Katılımcıları</h2>
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <div v-for="courier in store.leaderboard" :key="courier.id" class="card flex items-center gap-3 rounded-xl bg-white p-4">
-          <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
-            <PhUser class="size-5" weight="duotone" />
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-stone-900">Ağdaki kuryeler</h2>
+        <span class="text-xs text-stone-500">{{ store.couriers.length }} kişi</span>
+      </div>
+      <div class="courier-grid">
+        <article v-for="courier in store.leaderboard" :key="courier.id" class="courier-profile card bg-white">
+          <div class="flex items-center gap-3">
+            <div class="courier-profile__avatar" aria-hidden="true">{{ profileInitials(courier.name) }}</div>
+            <div class="min-w-0">
+              <h3 class="text-base font-semibold leading-snug text-stone-900">{{ courier.name }}</h3>
+              <p v-if="courier.specialties.length" class="mt-1 flex items-center gap-1.5 text-xs text-stone-500">
+                <component :is="vehicleIcon(vehicle(courier))" class="size-4" weight="duotone" />
+                {{ vehicleLabel(vehicle(courier)) }}
+              </p>
+            </div>
           </div>
-          <div class="min-w-0">
-            <p class="truncate text-sm font-semibold text-stone-900">{{ courier.name }}</p>
-            <p class="text-xs text-stone-500">Finalized teklifte görüldü</p>
+          <div class="courier-profile__wallet flex items-center gap-2">
+            <PhWallet class="size-4" weight="duotone" />
+            <span class="font-mono" :title="courier.walletAddress || courier.id">{{ shortWallet(courier.walletAddress || courier.id) }}</span>
           </div>
-        </div>
+          <div class="courier-profile__foot">
+            <span><strong class="text-stone-900">{{ bidCount(courier.id) }}</strong> teklif</span>
+            <span class="inline-flex items-center gap-1.5"><span class="size-1.5 rounded-full bg-orange-500" />Kesinleşmiş teklif</span>
+          </div>
+        </article>
       </div>
     </template>
 
-    <div class="mt-6 flex items-start gap-2.5 rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm text-stone-500">
-      <PhInfo class="mt-0.5 size-5 shrink-0 text-stone-400" weight="duotone" />
-      <p>Kanıtlanmış puan ve performans metrikleri, ilgili V2 ABI/projeksiyonları yayınlandığında bu dizine bağlanabilir.</p>
-    </div>
   </div>
 </template>

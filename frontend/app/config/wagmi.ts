@@ -1,5 +1,5 @@
 import { createConfig, http, cookieStorage, createStorage } from '@wagmi/vue'
-import { metaMask } from '@wagmi/vue/connectors'
+import { injected } from '@wagmi/vue/connectors'
 import { defineChain } from 'viem'
 import { MONAD_TESTNET } from './chain'
 
@@ -10,14 +10,16 @@ export const monadTestnetChain = defineChain({
   rpcUrls: {
     default: { http: [MONAD_TESTNET.rpcUrl] },
   },
-  blockExplorers: {
+  blockExplorers: MONAD_TESTNET.explorer ? {
     default: { name: 'Monad Explorer', url: MONAD_TESTNET.explorer },
-  },
+  } : undefined,
 })
 
 export const wagmiConfig = createConfig({
   chains: [monadTestnetChain],
-  connectors: [metaMask()],
+  // The UI connects to the installed extension, so use its EIP-1193 provider
+  // directly rather than the optional MetaMask Connect SDK.
+  connectors: [injected({ target: 'metaMask' })],
   transports: {
     [monadTestnetChain.id]: http(),
   },

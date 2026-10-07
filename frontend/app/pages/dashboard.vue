@@ -177,21 +177,18 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl px-5 py-10 sm:px-8">
+  <div class="page-shell">
     <!-- Header -->
-    <div class="mb-8 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 class="text-2xl font-bold text-stone-900 sm:text-3xl">Kullanıcı Paneli</h1>
-        <p class="mt-1 text-stone-500">Hoş geldin, {{ wallet.userProfile.name || wallet.displayAddress() }}</p>
-      </div>
-    </div>
+    <page-header eyebrow="Her yolculuk seninle başlar" title="Kullanıcı Paneli" :description="`Hoş geldin, ${wallet.userProfile.name || wallet.displayAddress()}. Teslimatlarını ve tekliflerini buradan yönet.`">
+      <nuxt-link to="/create" class="btn-primary justify-center"><PhPackage class="size-4" weight="duotone" />Teslimat oluştur</nuxt-link>
+    </page-header>
 
     <p v-if="deliveryStore.error" class="mb-6 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ deliveryStore.error }}</p>
 
     <div class="flex flex-col gap-8 md:flex-row">
       <!-- Sidebar -->
       <div class="w-full md:w-64 shrink-0">
-        <nav class="flex flex-row md:flex-col gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
+        <nav class="dashboard-nav flex flex-row md:flex-col gap-2 overflow-x-auto hide-scrollbar">
           <button
             v-for="tab in tabs"
             :key="tab.key"

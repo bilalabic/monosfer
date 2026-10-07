@@ -50,7 +50,7 @@ export class CoverageQuoteDto {
 export class QuoteDomainDto {
   @ApiProperty({ enum:['MONOSFER'] }) name!: string;
   @ApiProperty({ enum:['1'] }) version!: string;
-  @ApiProperty({ type:Number, enum:[10143] }) chainId!: number;
+  @ApiProperty({ type:Number, enum:[10143,31337] }) chainId!: number;
   @ApiProperty() verifyingContract!: string;
 }
 export class QuoteFieldDto {

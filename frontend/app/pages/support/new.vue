@@ -50,11 +50,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-lg px-5 py-10 sm:px-8">
+  <div class="page-shell page-shell--narrow">
     <button class="mb-6 flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900" @click="router.back()">
       <PhArrowLeft class="size-4" weight="bold" /> Geri
     </button>
-    <h1 class="mb-5 text-xl font-bold text-stone-900">Yeni Destek Vakası</h1>
+    <page-header compact eyebrow="Yanındayız" title="Yeni Destek Vakası" description="Teslimata ait bilgileri paylaş, destek sürecini başlat." />
 
     <SupportAccessGate>
       <form class="card space-y-4 rounded-xl bg-white p-5" @submit.prevent="submit">

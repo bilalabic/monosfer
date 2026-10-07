@@ -117,7 +117,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="relative flex h-full overflow-hidden bg-stone-50">
+  <div class="map-frame relative flex h-full overflow-hidden">
     <!-- Sol Panel / Mobilde alttan açılan panel -->
     <aside
       class="fixed inset-x-0 bottom-0 z-20 flex max-h-[75vh] flex-col overflow-hidden rounded-t-2xl border-t border-stone-200 bg-white shadow-2xl transition-transform duration-300 lg:static lg:z-10 lg:max-h-none lg:w-72 lg:shrink-0 lg:translate-y-0 lg:rounded-none lg:border-r lg:border-t-0 lg:shadow-none"
@@ -132,7 +132,7 @@ onUnmounted(() => {
             </div>
             <div>
               <h1 class="text-sm font-semibold text-stone-900">Kurye Haritası</h1>
-              <p class="text-xs text-stone-500">Canlı Konum Takibi</p>
+              <p class="text-xs text-stone-500">Teslimata özel takip</p>
             </div>
           </div>
           <div class="flex items-center gap-2">
@@ -189,7 +189,7 @@ onUnmounted(() => {
 
         <div v-else-if="couriers.length === 0" class="flex h-32 flex-col items-center justify-center gap-2 text-center">
           <PhMapPin class="size-8 text-stone-300" weight="duotone" />
-          <p class="text-sm text-stone-400">Kayıtlı kurye bulunamadı</p>
+          <p class="text-sm text-stone-400">Paylaşılan konum yok</p>
         </div>
 
         <div v-else class="flex flex-col gap-1.5">
@@ -321,10 +321,10 @@ onUnmounted(() => {
         v-if="!loading && couriers.length === 0"
         class="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center"
       >
-        <div class="rounded-2xl border border-stone-200 bg-white/90 px-8 py-6 text-center shadow-lg backdrop-blur-md">
+        <div class="max-w-sm rounded-2xl border border-stone-200 bg-white/95 px-8 py-6 text-center shadow-lg backdrop-blur-md">
           <PhMapPin class="mx-auto mb-2 size-10 text-stone-300" weight="duotone" />
-          <p class="font-semibold text-stone-900">Kayıtlı Kurye Yok</p>
-          <p class="mt-1 text-sm text-stone-500">Kuryeler kayıt olduğunda haritada görünecek</p>
+          <p class="font-semibold text-stone-900">Canlı takip teslimat detayında</p>
+          <p class="mt-1 text-sm text-stone-500">Aktif teslimatının detayını açarak kuryenin paylaştığı konumu takip edebilirsin.</p>
         </div>
       </div>
     </div>

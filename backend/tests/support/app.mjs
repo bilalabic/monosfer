@@ -29,6 +29,6 @@ export async function testApplication(options = {}) {
   for (const [provider,value] of options.providers??[]) builder.overrideProvider(provider).useValue(value);
   const module = await builder.compile();
   const app = module.createNestApplication(createAdapter(settings, logger), { logger: false });
-  const document = await configureApplication(app, settings);
+  const document = await configureApplication(app, settings, options.realtime);
   return { app, logs, document, logger };
 }

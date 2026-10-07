@@ -11,6 +11,7 @@ import {
 } from '@/api/deliveries'
 import { useDeliveryContract } from '@/composables/useDeliveryContract'
 import { useWalletStore } from '@/stores/useWalletStore'
+import { developmentDataset, type DevelopmentCourier, type DevelopmentDelivery } from '@/api/development'
 
 export type DeliveryStatus =
   | 'open'
@@ -163,27 +164,27 @@ function mapBid(bid: ChainBid): Bid {
   }
 }
 
-function mapDelivery(delivery: ChainDelivery, bids: ChainBid[], indexing: IndexerStatus): Delivery {
+function mapDelivery(delivery: ChainDelivery, bids: ChainBid[], indexing: IndexerStatus, fixture?: DevelopmentDelivery, couriers: DevelopmentCourier[] = []): Delivery {
   const courier = delivery.courier.toLowerCase() === zeroAddress ? null : delivery.courier.toLowerCase()
   const ask = toMon(delivery.courierAsk)
   const funded = delivery.customerFunded ? ask + toMon(delivery.protocolFee) + toMon(delivery.returnReserve) : 0
   return {
     id: delivery.id,
-    title: `Teslimat #${delivery.id}`,
-    pickupAddress: 'Adres yalnız doğrulanmış katılımcılara açıktır',
-    dropoffAddress: 'Adres yalnız doğrulanmış katılımcılara açıktır',
-    distance: 'Özel rota',
-    weight: `Risk seviyesi R${delivery.riskTier}`,
-    description: 'Finalized Monad teslimat kaydı',
-    maxBudget: ask || toMon(delivery.requiredCollateral),
+    title: fixture?.title || `Teslimat #${delivery.id}`,
+    pickupAddress: fixture?.pickupArea || 'Adres yalnız doğrulanmış katılımcılara açıktır',
+    dropoffAddress: fixture?.dropoffArea || 'Adres yalnız doğrulanmış katılımcılara açıktır',
+    distance: fixture?.distance || 'Özel rota',
+    weight: fixture?.weight || `Risk seviyesi R${delivery.riskTier}`,
+    description: fixture?.description || 'Finalized Monad teslimat kaydı',
+    maxBudget: fixture?.budget || ask || toMon(delivery.requiredCollateral),
     escrowAmount: funded,
     status: appStatus(delivery.state),
     chainState: delivery.state,
-    bids: bids.map(mapBid),
+    bids: bids.map(bid => ({ ...mapBid(bid), courierName: couriers.find(item => item.walletAddress === bid.courier.toLowerCase())?.name || shortAddress(bid.courier) })),
     selectedBidId: courier ?? undefined,
     senderId: delivery.customer.toLowerCase(),
     assignedCourierId: courier,
-    createdAt: unixDate(delivery.stateDeadline),
+    createdAt: fixture?.createdAt || unixDate(delivery.stateDeadline),
     deadline: unixDate(delivery.stateDeadline),
     timeline: timeline(delivery.state),
     customerFunded: delivery.customerFunded,
@@ -222,22 +223,23 @@ export const useDeliveryStore = defineStore('delivery', () => {
   }
 
   async function fetchDelivery(id: string) {
-    const [projection, bidPage] = await Promise.all([deliveriesApi.get(id), deliveriesApi.bids(id)])
+    const [projection, bidPage, dataset] = await Promise.all([deliveriesApi.get(id), deliveriesApi.bids(id), developmentDataset()])
     indexer.value = projection.indexing
     if (!projection.data) return null
-    const mapped = mapDelivery(projection.data, bidPage.data, projection.indexing)
+    const mapped = mapDelivery(projection.data, bidPage.data, projection.indexing, dataset.deliveries.find(item => item.id === id), dataset.couriers)
     replaceDelivery(mapped)
     return mapped
   }
 
   async function loadDeliveries() {
+    const nuxtApp = useNuxtApp()
     loading.value = true
     error.value = ''
     try {
-      const page = await deliveriesApi.list({ limit: 100 })
+      const [page, dataset] = await Promise.all([deliveriesApi.list({ limit: 100 }), developmentDataset()])
       indexer.value = page.indexing
-      const bidPages = await Promise.all(page.data.map(delivery => deliveriesApi.bids(delivery.id)))
-      deliveries.value = page.data.map((delivery, index) => mapDelivery(delivery, bidPages[index]?.data ?? [], page.indexing))
+      const bidPages = await nuxtApp.runWithContext(() => Promise.all(page.data.map(delivery => deliveriesApi.bids(delivery.id))))
+      deliveries.value = page.data.map((delivery, index) => mapDelivery(delivery, bidPages[index]?.data ?? [], page.indexing, dataset.deliveries.find(item => item.id === delivery.id), dataset.couriers))
       if (page.indexing.status !== 'ready') {
         error.value = `Zincir verisi ${page.indexing.status}; işlemler için finalized projection bekleniyor.`
       }

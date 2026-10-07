@@ -113,6 +113,59 @@ export const CHAINS = {
         "legacy": true
       }
     }
+  },
+  "31337": {
+    "chainId": 31337,
+    "name": "Monosfer Local Test",
+    "rpcUrl": "http://127.0.0.1:8545",
+    "explorer": "",
+    "contracts": {
+      "ProtocolAccessManager": {
+        "address": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+        "block": 13,
+        "txHash": "0x7e2ceb0c0d35aaa26cd78bd2e62e3918b10d435746a70ba5b2bf7d8fa5744779"
+      },
+      "ProtocolConfig": {
+        "address": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+        "block": 13,
+        "txHash": "0xe9423a66171c24c2d119590a2e595a8c9ac990df1b2e66ae4476c08028a21dec"
+      },
+      "SettlementVault": {
+        "address": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+        "block": 13,
+        "txHash": "0x5497fef703528c78e90a5df16298092d8c3701bfa19ede5b16c8afb650b41c6f"
+      },
+      "CourierRegistry": {
+        "address": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+        "block": 13,
+        "txHash": "0x030322ae0a7c695825c8230088fa7b32da3e119e4c4debbaf86ab81c8ba97a96"
+      },
+      "ReputationRegistry": {
+        "address": "0xdc64a140aa3e981100a9beca4e685f962f0cf6c9",
+        "block": 13,
+        "txHash": "0x9dca4f30654287be174ba4ef96dc54b577e939f5d8deca668f20054cbb179756"
+      },
+      "BadgeSBT": {
+        "address": "0x5fc8d32690cc91d4c39d9d3abcbd16989f875707",
+        "block": 13,
+        "txHash": "0xde1c523ca53a446b4616a848e321c0b2e6b7735d10c0f593493661731b4f8b6c"
+      },
+      "RewardDistributor": {
+        "address": "0x0165878a594ca255338adfa4d48449f69242eb8f",
+        "block": 13,
+        "txHash": "0xb4c1d61db2eb951daf1a01bb04de5a4d6e511b0687b0aa84bf771093fe254bc4"
+      },
+      "Referral": {
+        "address": "0xa513e6e4b8f2a923d98304ec87f64353c4d5c853",
+        "block": 13,
+        "txHash": "0x96f76aaa1da9686f15c3028ded88e838fb606ff1908c8f3533d3951169426905"
+      },
+      "DeliveryHub": {
+        "address": "0x2279b7a0a67db372996a5fab50d91eaa73d2ebe6",
+        "block": 13,
+        "txHash": "0x41fca41cfdd76e2cf7eca4e5fc3c14a287e32fb6621ce315bba13e4dd18baf16"
+      }
+    }
   }
 };
 

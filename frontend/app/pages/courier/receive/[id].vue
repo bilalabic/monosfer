@@ -6,6 +6,7 @@ import { formatEther } from 'viem'
 import { PhArrowLeft, PhCheckCircle, PhCircleNotch, PhPackage, PhTruck, PhWarning } from '@phosphor-icons/vue'
 import { useDeliveryStore } from '@/stores/useDeliveryStore'
 import { useWalletStore } from '@/stores/useWalletStore'
+import { deliveryStateLabel } from '@/utils/delivery-state'
 import AcceptanceQrScanner from '@/components/AcceptanceQrScanner.client.vue'
 
 const route = useRoute()
@@ -76,7 +77,7 @@ async function submitPod() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-lg px-5 py-10 sm:px-8">
+  <div class="page-shell page-shell--narrow">
     <button class="mb-6 flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900" @click="router.back()">
       <PhArrowLeft class="size-4" weight="bold" /> Geri
     </button>
@@ -86,11 +87,7 @@ async function submitPod() {
       Bu işlem yalnız finalized projection içindeki atanmış kurye tarafından yapılabilir.
     </div>
     <div v-else class="space-y-5">
-      <div>
-        <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-orange-500">Kurye Akışı</p>
-        <h1 class="text-2xl font-bold text-stone-900">Teslimat #{{ delivery.id }}</h1>
-        <p class="mt-1 text-sm text-stone-500">Zincir durumu: {{ delivery.chainState }}</p>
-      </div>
+      <page-header compact eyebrow="Kurye akışı" :title="`Teslimat #${delivery.id}`" :description="`Teslimat durumu: ${deliveryStateLabel(delivery.chainState)}`" />
 
       <section v-if="delivery.chainState === 'AwaitingFunding'" class="card space-y-4 rounded-xl bg-white p-5">
         <div class="flex gap-3">
@@ -144,13 +141,13 @@ async function submitPod() {
         </button>
       </section>
 
-      <div v-else-if="delivery.chainState === 'DeliveredPending'" class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+      <div v-else-if="delivery.chainState === 'DeliveredPending'" class="page-notice">
         Teslim kanıtı kaydedildi. Müşteri onayı veya challenge süresinin dolması bekleniyor.
       </div>
       <div v-else-if="delivery.chainState === 'Completed'" class="rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-700">
         <PhCheckCircle class="mr-2 inline size-5" weight="fill" /> Teslimat tamamlandı.
       </div>
-      <div v-else-if="delivery.chainState === 'Returned'" class="rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm font-semibold text-purple-700">
+      <div v-else-if="delivery.chainState === 'Returned'" class="rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm font-semibold text-stone-700">
         <PhCheckCircle class="mr-2 inline size-5" weight="fill" /> İade tamamlandı.
       </div>
       <div v-else class="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">

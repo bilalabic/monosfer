@@ -105,17 +105,13 @@ async function submit() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-xl px-5 py-12 sm:px-8">
-    <div class="mb-8">
-      <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-orange-500">Blockchain Güvenceli</p>
-      <h1 class="text-2xl font-bold text-stone-900">Yeni Teslimat Oluştur</h1>
-      <p class="mt-1 text-stone-500">Ödeme akıllı sözleşmeye kilitlenir, kuryeler teklif verir</p>
-    </div>
+  <div class="page-shell page-shell--form">
+    <page-header compact eyebrow="Bir paket. Binlerce olasılık." title="Yeni Teslimat Oluştur" description="Rotanı belirle, paketini anlat. Kuryelerin teklifleriyle yolculuğun başlasın." />
 
     <!-- Step indicator -->
-    <div class="mb-8 flex items-center">
+    <div class="mb-6 flex items-center rounded-2xl border border-stone-200 bg-white p-5" aria-label="Teslimat oluşturma adımları">
       <div v-for="(step, index) in steps" :key="step" class="flex flex-1 items-center">
-        <div class="flex flex-col items-center">
+        <div class="flex flex-col items-center" :aria-current="index === currentStep ? 'step' : undefined" :aria-label="`${index + 1}. ${step}`">
           <div :class="[
             'flex size-8 items-center justify-center rounded-full border-2 text-xs font-semibold transition-all',
             index < currentStep ? 'border-green-500 bg-green-500 text-white' : index === currentStep ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-stone-200 text-stone-400',
@@ -127,6 +123,7 @@ async function submit() {
         <div v-if="index < steps.length - 1" :class="['flex-1 h-0.5 mx-1.5', index < currentStep ? 'bg-green-400' : 'bg-stone-200']" />
       </div>
     </div>
+    <p class="mb-4 text-xs font-medium text-stone-500">Adım {{ currentStep + 1 }} / {{ steps.length }} · {{ steps[currentStep] }}</p>
 
     <!-- Success -->
     <div v-if="done" class="rounded-xl border border-green-200 bg-green-50 p-10 text-center">

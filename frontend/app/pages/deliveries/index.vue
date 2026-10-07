@@ -108,9 +108,14 @@ const filters: { key: Filter; label: string }[] = [
   { key: 'terminal', label: 'Sonuçlanan' },
 ]
 
+const terminalStatuses = ['completed', 'returned', 'resolved', 'cancelled', 'expired']
+function filterCount(key: Filter) {
+  return store.deliveries.filter(d => key === 'all' ? !terminalStatuses.includes(d.status)
+    : key === 'terminal' ? terminalStatuses.includes(d.status) : d.status === key).length
+}
+
 const filtered = computed(() => {
   let list = store.deliveries
-  const terminalStatuses = ['completed', 'returned', 'resolved', 'cancelled', 'expired']
   if (filter.value === 'all') {
     list = list.filter(d => !terminalStatuses.includes(d.status))
   } else if (filter.value === 'terminal') {
@@ -131,33 +136,35 @@ const filtered = computed(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl px-5 py-10 sm:px-8">
+  <div class="page-shell">
     <!-- Header -->
-    <div class="mb-7">
-      <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-orange-500">Blockchain Güvenceli</p>
-      <h1 class="text-2xl font-bold text-stone-900 sm:text-3xl">Aktif Teslimatlar</h1>
-      <p class="mt-1 text-stone-500">Kuryeler için açık ilanlar — teklif ver, seçil, kazan</p>
-    </div>
+    <page-header eyebrow="Bir paket. Yeni bir yolculuk." title="Aktif Teslimatlar" description="Sana uygun teslimatı bul. Teklifini ver, güvenle yola çık.">
+      <div class="page-metrics" aria-label="Teslimat özeti">
+        <div class="page-metric"><strong>{{ filterCount('open') }}</strong><span>Açık ilan</span></div>
+        <div class="page-metric"><strong>{{ filterCount('in_progress') }}</strong><span>Devam eden</span></div>
+        <div class="page-metric"><strong>{{ store.deliveries.length }}</strong><span>Toplam teslimat</span></div>
+      </div>
+    </page-header>
 
     <!-- Canli Senaryo Ozeti -->
-    <div v-if="liveScenarios.length > 0" class="mb-8 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-orange-50 p-5">
+    <div v-if="liveScenarios.length > 0" class="scenario-panel">
       <div class="mb-4 flex items-center gap-2">
-        <span class="rounded-full bg-purple-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-purple-700">Canlı Senaryolar</span>
-        <p class="text-xs text-stone-500">Uygun teslimat kayıtlarından oluşturulan ödeme akışları</p>
+        <span class="rounded-full bg-orange-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-orange-800">Sıradaki adımın</span>
+        <p class="text-xs text-stone-500">İşlem bekleyen teslimatların</p>
       </div>
 
-      <div class="grid gap-3 sm:grid-cols-2">
+      <div class="scenario-grid">
         <button
           v-for="scenario in liveScenarios"
           :key="scenario.deliveryId"
           :class="[
-            'group flex flex-col gap-3 rounded-xl border bg-white p-4 text-left transition hover:shadow-md',
+            'scenario-action group rounded-xl border bg-white p-4 text-left transition hover:shadow-md',
             scenario.borderClass,
             scenario.hoverClass,
           ]"
           @click="goToScenario(scenario.path)"
         >
-          <div class="flex items-center justify-between">
+          <div class="scenario-action__icon">
             <div :class="['flex size-9 items-center justify-center rounded-xl', scenario.iconClass]">
               <PhLockKey
                 v-if="scenario.key === 'sender'"
@@ -177,7 +184,7 @@ const filtered = computed(() => {
             <p class="mt-0.5 text-sm font-semibold text-stone-900">{{ scenario.title }}</p>
             <p class="mt-1 text-xs leading-relaxed text-stone-500">{{ scenario.description }}</p>
           </div>
-          <div :class="['flex items-center gap-2 rounded-lg border px-3 py-1.5', scenario.flowClass]">
+          <div :class="['scenario-action__flow flex items-center gap-2 rounded-lg border px-3 py-1.5', scenario.flowClass]">
             <span :class="['size-1.5 rounded-full', scenario.dotClass]" />
             <span class="text-xs">{{ scenario.flow }}</span>
           </div>
@@ -186,26 +193,26 @@ const filtered = computed(() => {
     </div>
 
     <!-- Search + Filters -->
-    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div class="relative max-w-xs flex-1">
+    <div class="page-toolbar">
+      <div class="page-search">
         <Search class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" weight="bold" />
         <input
           v-model="search"
+          aria-label="Teslimat ara"
           placeholder="Adres veya başlık ara..."
           class="input pl-10"
         />
       </div>
-      <div class="flex items-center gap-1 rounded-xl border border-stone-200 bg-stone-50 p-1">
+      <div class="page-tabs" role="group" aria-label="Teslimat durumları">
         <button
           v-for="f in filters"
           :key="f.key"
-          :class="[
-            'rounded-lg px-3 py-1.5 text-xs font-medium transition-all',
-            filter === f.key ? 'bg-white text-stone-900 shadow-sm border border-stone-200' : 'text-stone-500 hover:text-stone-700',
-          ]"
+          class="page-tab"
+          :aria-pressed="filter === f.key"
           @click="filter = f.key"
         >
           {{ f.label }}
+          <span class="page-tab__count">{{ filterCount(f.key) }}</span>
         </button>
       </div>
     </div>
@@ -215,7 +222,7 @@ const filtered = computed(() => {
     <p class="mb-4 text-sm text-stone-400">{{ filtered.length }} teslimat</p>
 
     <div v-if="filtered.length > 0" v-auto-animate class="grid items-stretch gap-5 md:grid-cols-2 xl:grid-cols-3">
-      <DeliveryCard
+      <delivery-card
         v-for="d in filtered"
         :key="d.id"
         :delivery="d"
@@ -223,13 +230,13 @@ const filtered = computed(() => {
       />
     </div>
 
-    <div v-else class="py-20 text-center">
+    <div v-else class="page-empty">
       <PhPackage class="mx-auto mb-3 size-12 text-stone-300" weight="duotone" />
       <h3 class="font-semibold text-stone-900">Teslimat bulunamadı</h3>
       <p class="mt-1 text-sm text-stone-500">Farklı filtre deneyin</p>
     </div>
 
-    <BidModal
+    <bid-modal
       v-if="bidTarget"
       :delivery-id="bidTarget"
       :max-budget="store.getDelivery(bidTarget)?.maxBudget ?? 0"

@@ -6,9 +6,9 @@ const props = defineProps<{ status: Status }>()
 
 const config = {
   open: { label: 'Açık', class: 'bg-green-50 text-green-700 border-green-200' },
-  in_progress: { label: 'Devam Ediyor', class: 'bg-blue-50 text-blue-700 border-blue-200' },
+  in_progress: { label: 'Devam Ediyor', class: 'bg-orange-50 text-orange-800 border-orange-200' },
   completed: { label: 'Tamamlandı', class: 'bg-stone-100 text-stone-600 border-stone-200' },
-  returned: { label: 'İade Edildi', class: 'bg-purple-50 text-purple-700 border-purple-200' },
+  returned: { label: 'İade Edildi', class: 'bg-stone-100 text-stone-600 border-stone-200' },
   resolved: { label: 'Çözüldü', class: 'bg-teal-50 text-teal-700 border-teal-200' },
   cancelled: { label: 'İptal Edildi', class: 'bg-red-50 text-red-700 border-red-200' },
   expired: { label: 'Süresi Doldu', class: 'bg-amber-50 text-amber-700 border-amber-200' },

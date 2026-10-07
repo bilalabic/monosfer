@@ -18,6 +18,7 @@ import { ProvidersModule } from './providers/providers.module.js';
 import { SupportModule } from './support/support.module.js';
 import { ReputationModule } from './reputation/reputation.module.js';
 import { OpsModule } from './ops/ops.module.js';
+import { DevelopmentModule } from './development/development.module.js';
 import { OpsService } from './ops/ops.service.js';
 import { cookieNames } from './security/tokens.js';
 import { LogController } from 'fastify';
@@ -30,7 +31,7 @@ import { createLogger, FrameworkLogger } from './http/logger.js';
 @Module({})
 export class AppModule {
   static register(settings: Settings): DynamicModule {
-    return { module: AppModule, imports: [ConfigModule.register(settings), HealthModule, AuthModule, UsersModule, PrivateDataModule, IndexerReadModule, QuotesModule, ProofsModule, TrackingApiModule, ProvidersModule, SupportModule, ReputationModule, OpsModule] };
+    return { module: AppModule, imports: [ConfigModule.register(settings), HealthModule, AuthModule, UsersModule, PrivateDataModule, IndexerReadModule, QuotesModule, ProofsModule, TrackingApiModule, ProvidersModule, SupportModule, ReputationModule, OpsModule, DevelopmentModule] };
   }
 }
 
@@ -48,7 +49,7 @@ export function createAdapter(settings: Settings, logger: Logger): FastifyAdapte
   });
 }
 
-export async function configureApplication(app: NestFastifyApplication, settings: Settings) {
+export async function configureApplication(app: NestFastifyApplication, settings: Settings, realtime = false) {
   app.setGlobalPrefix('v1');
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true, validationError: { target: false, value: false } }));
   app.useGlobalFilters(new ApiExceptionFilter());
@@ -66,8 +67,9 @@ export async function configureApplication(app: NestFastifyApplication, settings
     // Realtime process intentionally has no SQL telemetry dependency.
     if (ops) await ops.observe(request.id, reply.statusCode, reply.elapsedTime);
   });
-  let ops: OpsService | undefined;
-  try { ops = app.get(OpsService); } catch { /* Realtime application. */ }
+  // Realtime does not import OpsModule. A missing-provider lookup is logged
+  // by Nest even when its exception is caught, producing a false startup error.
+  const ops = realtime ? undefined : app.get(OpsService);
   const document = SwaggerModule.createDocument(app, new DocumentBuilder().setTitle('Monosfer V2 Backend').setVersion('2.0.0')
     .addCookieAuth(cookieNames(settings).session, { type: 'apiKey', in: 'cookie' }, 'session')
     .addBearerAuth({type:'http',scheme:'bearer'},'ops').build());
@@ -108,7 +110,7 @@ export async function createApplication(env: NodeJS.ProcessEnv = process.env, lo
   const settings = parseSettings(env);
   const app = await NestFactory.create<NestFastifyApplication>((realtime?RealtimeAppModule:AppModule).register(settings), createAdapter(settings, logger), { logger: new FrameworkLogger(logger), abortOnError: false });
   try {
-    await configureApplication(app, settings);
+    await configureApplication(app, settings, realtime);
     return { app, settings };
   } catch (error) { await app.close(); throw error; }
 }

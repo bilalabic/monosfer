@@ -2,7 +2,7 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { createPublicClient, http, type Address, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { ConfigService } from '../config/config.js';
-import { loadQuoteBundle } from './config.js';
+import { loadQuoteBundle, supportsQuoteNetwork } from './config.js';
 import { quoteTypes, typedQuote, type CoverageQuote } from './typed-data.js';
 import type { RiskPolicy } from './risk.js';
 
@@ -21,7 +21,7 @@ export class QuoteChain {
   }
   assertAvailable(): void {
     const s = this.config.settings; const deployment = this.bundle.chains[s.indexer.chainId];
-    if (s.environment === 'production' || s.indexer.chainId !== 10143 || !s.indexer.enabled || !s.quotes.signerPrivateKey ||
+    if (!supportsQuoteNetwork(s.environment, s.indexer.chainId, s.indexer.rpcUrl) || !s.indexer.enabled || !s.quotes.signerPrivateKey ||
       !deployment || deployment.hub.toLowerCase() !== s.indexer.deployment?.address.toLowerCase()) throw new ServiceUnavailableException();
   }
   private client() {

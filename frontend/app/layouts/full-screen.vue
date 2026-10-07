@@ -5,7 +5,7 @@ import AppNavbar from '@/components/AppNavbar.vue'
 <template>
   <div class="flex h-screen flex-col overflow-hidden">
     <AppNavbar />
-    <main class="min-h-0 flex-1">
+    <main class="map-main min-h-0 flex-1">
       <slot />
     </main>
   </div>

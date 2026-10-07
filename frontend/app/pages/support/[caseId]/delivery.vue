@@ -58,11 +58,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-2xl px-5 py-10 sm:px-8">
+  <div class="page-shell page-shell--form">
     <button class="mb-6 flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900" @click="router.back()">
       <PhArrowLeft class="size-4" weight="bold" /> Vakaya Dön
     </button>
 
+    <page-header compact eyebrow="Destek süreci" title="Teslimat incelemesi" description="Vakaya ait teslimat bilgileri ve kanıtlar." />
     <SupportAccessGate>
       <div class="space-y-5">
         <div v-if="summary" class="card rounded-xl bg-white p-5">
