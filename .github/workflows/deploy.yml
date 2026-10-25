@@ -12,6 +12,8 @@ concurrency:
 
 jobs:
   deploy:
+    # Forks and new copies must explicitly opt in before deploying.
+    if: vars.ENABLE_PRODUCTION_DEPLOY == 'true'
     name: Deploy to production server
     runs-on: ubuntu-latest
     steps:

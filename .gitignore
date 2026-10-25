@@ -1,13 +1,31 @@
-node_modules
-dist
-dist-ssr
+# Dependencies and build output
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.tsbuildinfo
+.eslintcache
+
+# Local configuration: examples are safe to commit
+.env
+.env.*
+!.env.example
+!.env.*.example
 *.local
+
+# Credentials and local key stores
+*.pem
+*.key
+*.keystore
+keystore/
+keystores/
+
+# Generated contract artifacts and local deployment state
+contracts/deployments/
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+
+# Local OS files and logs
 .DS_Store
 *.log
-contracts/.env
-contracts/.env.local
-contracts/deployments
-contracts/out
-contracts/cache
-contracts/broadcast
-.env

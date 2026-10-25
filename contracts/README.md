@@ -3,6 +3,8 @@
 Monad Testnet (`10143`) uzerinde calisan Delivera kontratlari.
 Bu dokuman backend ve frontend ekiplerinin paralel calismasini kolaylastirmak icin handoff formatinda hazirlandi.
 
+> **Entegrasyon durumu:** Web demosu su anda escrow kontratina para yatirmiyor; sifir tutarli testnet islemleri ve MongoDB kayitlari kullaniyor. Asagidaki kontrat akislari ayri script/test yollaridir. Event consumer ve web-kontrat entegrasyonu planlanan islerdir. Ana [README](../README.md) ve [guvenlik notlarini](../SECURITY.md) okuyun.
+
 ## 1) Hedef ve Kapsam
 
 Bu repo icinde iki ayri uygulama yolu vardir:
@@ -93,9 +95,12 @@ forge test -vv
 Deploy oncesi:
 
 ```bash
-echo "PRIVATE_KEY=0x..." > .env
-echo ".env" >> .gitignore
+cp .env.example .env
+# .env icindeki PRIVATE_KEY alanini yalnizca size ait testnet anahtariyla doldurun.
+# Gercek anahtari terminal komutuna veya Git gecmisine yazmayin.
+set -a
 source .env
+set +a
 ```
 
 Deploy secenekleri:
@@ -270,11 +275,11 @@ export const MONAD_TESTNET = {
   rpcUrl: "https://testnet-rpc.monad.xyz",
   explorer: "https://testnet.monadexplorer.com",
   contracts: {
-    token: "0xda4f523b0d55fb6ce61515c4d003a70ca55948cd",
-    escrow: "0x91023fb41c5a308c12ab68c037207f832426d067",
-    leaderboard: "0x5a887f8c32e3299309212686acaad9b108aa883c",
-    distributor: "0x6e7ed62ab956f79e16d870d0b3796dffca6903f2",
-    badge: "0x8b44b40e24c16174eb0df623212f341e230ae83c"
+    token: "<your deployed token address>",
+    escrow: "<your deployed escrow address>",
+    leaderboard: "<your deployed leaderboard address>",
+    distributor: "<your deployed distributor address>",
+    badge: "<your deployed badge address>"
   }
 };
 ```
@@ -294,12 +299,11 @@ Frontend sadece `abi` alanini import ederek kullanabilir.
 
 ### 10.1 Testnet Deploy Kaydi
 
-Gercek deploy kaydi:
+Deploy scripti calistirildiginda olusan yerel kayit:
 
 - `broadcast/DeploySystem.s.sol/10143/run-latest.json`
 
-Bu dosyada `transactions[].hash` ve `receipts[]` dolu oldugu icin deploy on-chain basarili tamamlanmistir.
-Backend ve frontend adresleri bu dosyadan alinmistir; mock adres kullanilmamistir.
+Bu dosya Git tarafindan ignore edilir ve bu kaynak snapshotinda bulunmaz. Kendi deployment kaydinizdaki receipt durumunu, chain ID bilgisini ve kontrat bytecode adreslerini dogrulayin. Bu dokuman mevcut adreslerin guncel agda dogrulandigi anlamina gelmez.
 
 ## 11) Test Kapsami
 
