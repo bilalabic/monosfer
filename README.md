@@ -65,8 +65,8 @@ The commands below use a Bash-compatible shell, such as Git Bash on Windows.
 ### 1. Install dependencies and create local configuration
 
 ```bash
-git clone https://github.com/bilalabic/monosfer1.git
-cd monosfer1
+git clone https://github.com/bilalabic/monosfer.git
+cd monosfer
 
 npm ci --prefix backend
 npm ci --prefix frontend
@@ -184,14 +184,12 @@ This is a prototype for development and demonstration. Before a public service l
 
 Additional known gaps include the lack of a complete dispute-resolution flow, simulated courier locations in the backend, demo QR rendering, and unaudited smart contracts. The root `npm run deploy` helper still targets a removed `Counter.sol` artifact; use the documented Delivera testnet script instead.
 
-See [SECURITY.md](SECURITY.md) for environment handling, the publication review, and remaining release steps.
+See [SECURITY.md](SECURITY.md) for environment handling, the security review, and remaining hardening steps.
 
-## Team and provenance
+## Team
 
-Developed collaboratively by [Yusuf Arslan](https://github.com/yusufarslan44), [Ahmet](https://github.com/AhmettDgn), and [Bilal Abiç](https://github.com/bilalabic), as recorded in the Git history.
-
-This repository is a personal fork of [yusufarslan44/monosfer](https://github.com/yusufarslan44/monosfer). The source repository may require access. A private fork cannot be made public independently; a public portfolio release requires an agreed, standalone repository.
+Developed collaboratively by [Yusuf Arslan](https://github.com/yusufarslan44), [Ahmet](https://github.com/AhmettDgn), and [Bilal Abiç](https://github.com/bilalabic), as recorded in the Git history. The full commit history of both branches (`main` and `Monosfer-V2`) is included.
 
 ## License
 
-No project-level license has been selected. Agree on the release terms with all contributors before publishing a standalone copy. Vendored dependencies, including `forge-std`, retain their own licenses.
+No project-level license has been selected. Vendored dependencies, including `forge-std`, retain their own licenses.

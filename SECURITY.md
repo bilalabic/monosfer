@@ -1,10 +1,12 @@
-# Security and publication review
+# Security review
 
-Review date: 2026-10-25. Source snapshot: `1139d8ff1c5ffe4fc0b040950c08d5d459f369c8`.
+Review date: 2026-10-25. Scope: the source tree on `main` and the full commit history of both branches (`main` and `Monosfer-V2`).
 
 ## Scope and findings
 
-The review enumerated all 45 commits reachable from the original main branch, their recursive file trees, all current readable text files, and 237 additional historical text blobs. It checked environment files, likely credentials, long hexadecimal literals, credential-bearing connection strings, provider-token patterns, private-key headers, and configuration references. Binary images and non-main refs were outside this text review.
+The first review enumerated the 45 commits reachable from `main`, their recursive file trees, all current readable text files, and 237 additional historical text blobs. It checked environment files, likely credentials, long hexadecimal literals, credential-bearing connection strings, provider-token patterns, private-key headers, and configuration references.
+
+A second, pattern-based review covered the diffs of all 140 commits on both branches. It looked for cloud and provider tokens, private-key headers, JWTs, connection strings with credentials for non-local hosts, RPC URLs with embedded API keys, and secret-like assignments. None of these were found. The only matches were non-sensitive: the publicly documented Anvil development key, local-only development passwords for `127.0.0.1` services, and the demo RPC key shipped inside the vendored `forge-std` library. Binary files were not inspected.
 
 | Finding | Assessment | Change |
 | --- | --- | --- |
@@ -27,13 +29,13 @@ The reviewed text did not reveal a production credential requiring confirmed rot
 
 No real service credential was generated, revoked, or rotated by this repository cleanup. Those operations require the corresponding provider account. If any previously shared credential was real, revoke/replace it at the provider; deleting a file or rewriting Git history does not revoke a key.
 
-## History and public release
+## History
 
-This update removes configuration from the current tree. It does **not** erase old commits, remote caches, other clones, or the original repository's fork network. Historical public configuration and the known Anvil key remain in that network.
+This repository contains the full commit history of both branches. Historical commits still include earlier configuration files, such as a tracked `frontend/.env` (public endpoints and contract addresses only) and the known Anvil development key. The latter is a public test key and must never hold real funds. The `Monosfer-V2` branch still tracks that `frontend/.env`; none of its values are privileged credentials.
 
-The repository is a private fork. GitHub does not allow changing its visibility independently. For a public release, agree on ownership and license terms, then create a standalone repository from the sanitized working tree. If preserving the old history is required, perform a separate history-filtering review before pushing it.
+Contributor email addresses in commit metadata use GitHub noreply addresses. Because of that, commit hashes differ from those in any older clone of the original project.
 
-Before publication, review all additional branches/tags, pull-request refs, Actions logs/artifacts, release assets, binary files, and any local configuration not available in this snapshot. These are not covered by the main-branch text review.
+The review did not cover Actions logs and artifacts, release assets, or any local configuration that is not committed. Deleting a file or rewriting Git history does not revoke a key, so replace any credential that was ever real.
 
 ## Application security work still required
 
@@ -47,7 +49,7 @@ This cleanup prepares source configuration and documentation. It does not certif
 
 ## Reporting
 
-Do not post credentials or sensitive exploit details in a public issue. Contact a repository maintainer through an established private channel. If private vulnerability reporting is enabled for the eventual public repository, use its Security tab.
+Do not post credentials or sensitive exploit details in a public issue. Contact a repository maintainer through an established private channel. If private vulnerability reporting is enabled for this repository, use its Security tab.
 
 ## Validation of this update
 
