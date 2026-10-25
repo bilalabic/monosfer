@@ -8,6 +8,8 @@ Vue 3 · TypeScript · Express · MongoDB · Solidity · Foundry
 
 **Hackathon prototype · Monad Testnet · Turkish application interface**
 
+🏆 **1st place · BuilderMare Kayseri Monad Blitz Hackathon**
+
 [Quick start](#quick-start) · [Architecture](#architecture) · [Smart contracts](contracts/README.md) · [Security](SECURITY.md)
 
 </div>
@@ -186,9 +188,13 @@ Additional known gaps include the lack of a complete dispute-resolution flow, si
 
 See [SECURITY.md](SECURITY.md) for environment handling, the security review, and remaining hardening steps.
 
+## Recognition
+
+MONOSFER won **1st place at the BuilderMare Kayseri Monad Blitz Hackathon**, hosted at Abdullah Gül University (AGÜ). The team built a transparent courier marketplace on Monad to address high commissions, unfair scoring and weak trust in delivery payments, and received top marks from the jury.
+
 ## Team
 
-Developed collaboratively by [Yusuf Arslan](https://github.com/yusufarslan44), [Ahmet](https://github.com/AhmettDgn), and [Bilal Abiç](https://github.com/bilalabic), as recorded in the Git history. The full commit history of both branches (`main` and `Monosfer-V2`) is included.
+Developed collaboratively by [Yusuf Arslan](https://github.com/yusufarslan44), [Ahmet Turan Doğan](https://github.com/AhmettDgn), and [Bilal Abiç](https://github.com/bilalabic), as recorded in the Git history. The full commit history of both branches (`main` and `Monosfer-V2`) is included.
 
 ## License
 
